@@ -75,7 +75,7 @@ logs/                       CLI/TUI logs
 - [x] ADRs for structural decisions (pix_tool_process_adr)
 - [x] `tsc --noEmit`, `node --test` (34 unit tests), OpenTUI render test
 - [x] Migrate the four legacy profiles into `~/.steam-mac/games/`
-- [ ] Archive/remove the legacy repos (with explicit confirmation)
+- [x] Archive the legacy repos (`.archive/legacy-wrapper-repos-*.tar.gz` + git bundles), then remove the four per-game repos; `steam-mac-core` is kept on request
 - [ ] Run the dev server per project convention (not applicable: no server)
 
 ## Verification status
