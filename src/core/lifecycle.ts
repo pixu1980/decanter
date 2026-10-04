@@ -16,6 +16,7 @@ import { exec, isDryRun } from "./exec.ts";
 import { exists, mkdirp, readText, remove } from "./fsx.ts";
 import { type GamePaths, resolveGamePaths, WINDOWS_STEAM_ARG, windowsSteamExe } from "./game.ts";
 import { provisionIcon } from "./icon.ts";
+import { ensureQuitHotkey } from "./hotkey.ts";
 import { die, heading, log, warn } from "./log.ts";
 import { gameAssetsDir, gameDir } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
@@ -64,6 +65,7 @@ export async function cmdSetup(slug: string): Promise<void> {
   await clearQuarantine(wine);
   await ensureSteamcmd();
   await wineboot(wine, paths.prefix);
+  await ensureQuitHotkey();
 
   const assets = gameAssetsDir(profile.slug);
   if (!exists(join(assets, "icon.icns"))) {
@@ -698,6 +700,7 @@ async function runDoctorHook(profile: GameProfile, paths: GamePaths): Promise<Do
 /** (Re)build the app bundle. */
 export async function cmdApp(slug: string): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
+  await ensureQuitHotkey();
   await buildApp(profile, paths, wine);
 }
 

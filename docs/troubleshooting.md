@@ -53,9 +53,23 @@ Quit the game (and any leftover process in Activity Monitor) and retry.
 
 ## No app menu / Cmd+Q does nothing
 
-Run `steam-mac app <game>` and relaunch from `~/Applications`. The bundle has to
-host the Wine runtime itself for macOS to give the game a normal app menu;
-`doctor` warns when that runtime is missing from an existing bundle.
+`steam-mac run <game>` opens the `.app` so macOS registers the game as an app
+(Dock icon, app registration). But a game with no **Win32 menu** (most Unity
+games) never gets a macOS app menu from Wine, so there is no File menu and Cmd+Q
+has no Quit item to trigger. `winecfg` does get a menu, which is how you can tell
+the bundle is fine and the game is the cause.
+
+Two ways to stop such a game:
+
+- `steam-mac quit <game>` terminates the prefix's Wine processes (a reliable
+  Cmd+Q substitute).
+- `setup` compiles a small Swift helper (needs `swiftc` from the Xcode Command
+  Line Tools) that registers **Cmd+Q as a global hotkey** while the game runs and
+  then runs `wineserver -k`. It is global: while the game runs, Cmd+Q ends it.
+  Without `swiftc` the helper is absent and `steam-mac quit` is the fallback.
+
+In borderless fullscreen the game also captures the pointer, so the macOS Dock
+edge-trigger does not fire. Use `steam-mac windowed <game>` for a native window.
 
 ## The game crashes on start under GPTK
 
