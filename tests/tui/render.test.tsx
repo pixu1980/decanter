@@ -34,6 +34,7 @@ test("? opens the keyboard help and esc closes it", async () => {
     await setup.renderOnce();
     const help = setup.captureCharFrame();
     assert.match(help, /Keyboard shortcuts/);
+    assert.match(help, /cancel the running action/);
 
     setup.mockInput.pressKey("ESCAPE");
     await new Promise((resolve) => setTimeout(resolve, 80));

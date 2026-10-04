@@ -47,6 +47,12 @@ const SECTIONS: Section[] = [
       { keys: "esc", label: "back" },
     ],
   },
+  {
+    title: "While an action runs",
+    shortcuts: [
+      { keys: "esc", label: "cancel the running action" },
+    ],
+  },
 ];
 
 /** Render the keyboard reference. */
@@ -58,7 +64,7 @@ export function HelpOverlay() {
       border
       borderStyle="rounded"
       borderColor={theme.border}
-      style={{ flexDirection: "column", width: 58, paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
+      style={{ flexDirection: "column", width: 58, paddingX: 2, paddingY: 1, gap: 0, backgroundColor: theme.panel }}
     >
       {SECTIONS.map((section) => (
         <box key={section.title} style={{ flexDirection: "column" }}>
@@ -71,6 +77,7 @@ export function HelpOverlay() {
           ))}
         </box>
       ))}
+      <text fg={theme.muted}>The Activity panel streams the engine log as it runs.</text>
       <text fg={theme.muted}>esc or ? to close</text>
     </box>
   );
