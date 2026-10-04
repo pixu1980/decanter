@@ -32,6 +32,7 @@ import {
   type StatusField,
 } from "../../core/lifecycle.ts";
 import { log } from "../../core/log.ts";
+import type { WineRuntime } from "../../core/profile.ts";
 import { removeGameRecord } from "../../core/registry.ts";
 import { ACTIONS, DESTRUCTIVE } from "../actions.ts";
 import { AddWizard, type AddValues } from "../components/AddWizard/index.ts";
@@ -324,7 +325,7 @@ async function submitAdd(
   setBusy(true);
   try {
     const result = await safeAction(() =>
-      addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe }),
+      addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe, runtime: values.runtime as WineRuntime | undefined }),
     );
     setStatus(result.ok ? result.message : `error: ${result.message}`);
     if (result.ok) {

@@ -34,6 +34,7 @@ test("addGame fills Graveyard Keeper 2 from the catalog", async () => {
       assert.equal(profile.depot, 4358691);
       assert.equal(profile.dataSubdir, "users/crossover/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2");
       assert.equal(profile.bundleId, "local.gravemac-keeper-2");
+      assert.equal(profile.wineRuntime, "gptk-apple");
       assert.equal(profile.window.enabled, true);
       assert.equal(profile.window.regKey, "HKCU\\Software\\Lazy Bear Games\\Graveyard Keeper 2");
       assert.deepEqual(profile.savePatterns, ["*.dat", "*.info"]);
@@ -52,6 +53,20 @@ test("an explicit --exe overrides the catalog", async () => {
       });
 
       assert.equal(profile.exe, "Custom.exe");
+    });
+  });
+});
+
+test("an explicit --runtime overrides the catalog", async () => {
+  await withTempHome(async () => {
+    await withDryRun(async () => {
+      const profile = await addGame({
+        appid: 4358690,
+        runtime: "gptk",
+        fetchImpl: fakeStore("Graveyard Keeper 2"),
+      });
+
+      assert.equal(profile.wineRuntime, "gptk");
     });
   });
 });

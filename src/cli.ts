@@ -38,6 +38,7 @@ import {
 import { CliError, die, log } from "./core/log.ts";
 import { migrateRepo } from "./core/migrate.ts";
 import { gameDir } from "./core/paths.ts";
+import type { WineRuntime } from "./core/profile.ts";
 import { listGames, removeGameRecord, resolveGame } from "./core/registry.ts";
 import { steamcmdLogin } from "./core/steamcmd.ts";
 
@@ -222,6 +223,7 @@ async function cmdAdd(args: ParsedArgs): Promise<void> {
     depot: flagNumber(args.flags, "depot"),
     slug: flagString(args.flags, "slug"),
     exe: flagString(args.flags, "exe"),
+    runtime: flagString(args.flags, "runtime") as WineRuntime | undefined,
     force: flagBool(args.flags, "force"),
   });
 }

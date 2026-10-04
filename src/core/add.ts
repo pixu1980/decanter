@@ -10,7 +10,7 @@ import { loadConfig } from "./config.ts";
 import { gameInstalled } from "./depot.ts";
 import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
-import { normalizeProfile, type GameProfile } from "./profile.ts";
+import { normalizeProfile, type GameProfile, type WineRuntime } from "./profile.ts";
 import { knownGame } from "./catalog.ts";
 import { gameExists, getGame, saveGame } from "./registry.ts";
 import { gameAssetsDir, slugify } from "./paths.ts";
@@ -24,6 +24,8 @@ export interface AddOptions {
   depot?: number;
   slug?: string;
   exe?: string;
+  /** Override the runtime (defaults to the catalog entry, then `gptk`). */
+  runtime?: WineRuntime;
   force?: boolean;
   fetchImpl?: typeof fetch;
 }
@@ -71,6 +73,7 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
     appid,
     depot: options.depot ?? known?.depot ?? 0,
     exe: options.exe ?? known?.exe,
+    wineRuntime: options.runtime ?? known?.wineRuntime,
     meta: {
       headerImage: store?.headerImage,
       libraryImage: store?.libraryImage,

@@ -13,6 +13,8 @@ export interface AddValues {
   appid?: number;
   depot?: number;
   exe?: string;
+  /** Optional runtime override (`gptk`, `gptk-apple`, `wine-devel`, ...). */
+  runtime?: string;
 }
 
 export interface AddWizardProps {
@@ -21,10 +23,10 @@ export interface AddWizardProps {
   busy: boolean;
 }
 
-type Field = "name" | "appid" | "depot" | "exe";
+type Field = "name" | "appid" | "depot" | "exe" | "runtime";
 
 /** The tab order of the form fields. */
-const ORDER: Field[] = ["name", "appid", "depot", "exe"];
+const ORDER: Field[] = ["name", "appid", "depot", "exe", "runtime"];
 
 /** Render the add-game form. */
 export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
@@ -32,6 +34,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
   const [appid, setAppid] = useState("");
   const [depot, setDepot] = useState("");
   const [exe, setExe] = useState("");
+  const [runtime, setRuntime] = useState("");
   const [field, setField] = useState<Field>("name");
 
   const submit = () =>
@@ -40,6 +43,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       appid: Number.parseInt(appid, 10) || undefined,
       depot: Number.parseInt(depot, 10) || undefined,
       exe: exe.trim() || undefined,
+      runtime: runtime.trim() || undefined,
     });
 
   useKeyboard((key) => {
@@ -77,11 +81,19 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       </Field>
 
       <Field label="Exe" focused={field === "exe"}>
-        <input placeholder="GraveyardKeeper2.exe" focused={field === "exe"} onInput={setExe} onSubmit={submit} />
+        <input placeholder="GraveyardKeeper2.exe" focused={field === "exe"} onInput={setExe} onSubmit={() => setField("runtime")} />
+      </Field>
+
+      <Field label="Runtime" focused={field === "runtime"}>
+        <input placeholder="gptk-apple" focused={field === "runtime"} onInput={setRuntime} onSubmit={submit} />
       </Field>
 
       {exe.trim() === "" ? (
         <text fg={theme.warning}>No exe set — the engine detects it after import.</text>
+      ) : null}
+
+      {runtime.trim() === "" ? (
+        <text fg={theme.muted}>Runtime empty — uses the catalog default (or gptk).</text>
       ) : null}
 
       <text fg={theme.muted}>tab next · enter add · esc cancel</text>

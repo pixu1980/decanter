@@ -235,9 +235,21 @@ async function ensureAppleGptk(runtime: WineRuntime): Promise<void> {
       log(`${runtime.label}: already installed (D3DMetal ${current}) — set appleGptkSource to rebuild`);
       return;
     }
-    die(
-      "set the Apple GPTK directory first: steam-mac config appleGptkSource='/Volumes/Evaluation environment for Windows games 4.0 beta 2'",
-    );
+    warn("Apple GPTK DMG not available — falling back to the default GPTK (D3DMetal 3.0)");
+    const baseApp = runtime.baseApp;
+    if (!baseApp) {
+      die(`no base Wine loader configured for the '${runtime.name}' runtime`);
+    }
+    const base = build({
+      name: "gptk",
+      label: "Game Porting Toolkit",
+      app: baseApp,
+      cask: runtime.cask,
+      version: runtime.version,
+    });
+    await ensureWine(base);
+    Object.assign(runtime, base);
+    return;
   }
 
   const wanted = await readD3dMetalVersion(redist);

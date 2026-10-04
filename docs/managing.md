@@ -159,8 +159,9 @@ D3DMetal for one game:
    steam-mac config appleGptkSource="/Volumes/Evaluation environment for Windows games 4.0 beta 2"
    ```
 
-3. Set the game's runtime to `gptk-apple` in
-   `~/.steam-mac/games/<slug>/game.json` (or run `steam-mac edit <game>`).
+3. Set the game's runtime to `gptk-apple`. Graveyard Keeper 2 already gets it
+   from the catalog; for other games pass `--runtime gptk-apple` to `add`, or
+   edit `~/.steam-mac/games/<slug>/game.json`.
 4. Rebuild the game:
 
    ```sh

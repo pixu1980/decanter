@@ -175,3 +175,23 @@ test("ensureWine swaps only the D3DMetal layer over a Gcenx loader", async () =>
     assert.equal(await d3dMetalVersion(runtime), "4.0b2");
   });
 });
+
+test("ensureWine falls back to gptk when the Apple DMG is unavailable", async () => {
+  await withTempHome(async () => {
+    const home = process.env.SM_HOME!;
+    const base = join(home, "base.app");
+    const wine = join(base, "Contents", "Resources", "wine");
+    await writeFileIn(join(wine, "bin", "wine64"), "#!/bin/sh\necho 'wine-7.7'\n", 0o755);
+    await writeFileIn(join(wine, "bin", "wineserver"), "#!/bin/sh\n", 0o755);
+    await writeD3dMetal(wine, "3.0");
+
+    const profile = normalizeProfile({ name: "Test", slug: "test", wineRuntime: "gptk-apple" });
+    const config = { ...defaultConfig(), gptkApp: base, appleGptkSource: "" };
+    const runtime = resolveWine(profile, config);
+    assert.equal(runtime.name, "gptk-apple");
+
+    await ensureWine(runtime);
+    assert.equal(runtime.name, "gptk", "the runtime is repointed to the stock GPTK");
+    assert.equal(runtime.distExe, join(wine, "bin", "wine64"));
+  });
+});

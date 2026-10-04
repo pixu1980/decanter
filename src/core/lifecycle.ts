@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { buildApp, bundleRuntimeReady } from "./bundle.ts";
 import { type Config, loadConfig } from "./config.ts";
-import { gameInstalled, importDepot, updateStatus, waitForDepotDownload } from "./depot.ts";
+import { clearStaleDepotState, gameInstalled, importDepot, updateStatus, waitForDepotDownload } from "./depot.ts";
 import { detectExecutable } from "./exe.ts";
 import { exec, isDryRun } from "./exec.ts";
 import { exists, mkdirp, readText, remove } from "./fsx.ts";
@@ -199,6 +199,8 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
     die("the game is running — close it before downloading");
   }
 
+  await clearStaleDepotState(profile, paths);
+
   if (!options.manual) {
     try {
       log(`steamcmd: downloading depot ${profile.depot} of app ${profile.appid} (Windows build)`);
@@ -311,12 +313,18 @@ function reportUpdateStatus(profile: GameProfile, status: Awaited<ReturnType<typ
  * starts Windows Steam when needed.
  */
 export async function cmdRun(slug: string): Promise<void> {
-  const { profile, paths, wine } = await loadContext(slug);
+  const { profile, paths, config, wine: resolved } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
     die("game not imported — run: steam-mac setup && steam-mac download");
   }
   if (await isGameRunning(profile)) {
     die("the game is already running");
+  }
+
+  let wine = resolved;
+  if (wine.name === "gptk-apple" && !exists(wine.distExe)) {
+    warn("Apple GPTK overlay not installed — falling back to the default GPTK (D3DMetal 3.0)");
+    wine = resolveWine({ ...profile, wineRuntime: "gptk" }, config);
   }
   if (!exists(wine.distExe)) {
     die(`wine not found at ${wine.distExe} — run: steam-mac setup ${slug}`);
@@ -824,7 +832,7 @@ export async function cmdUninstall(
   slug: string,
   options: { purge?: boolean; yes?: boolean },
 ): Promise<void> {
-  const { paths } = await loadContext(slug);
+  const { profile, paths } = await loadContext(slug);
   log(`this removes: ${paths.app}`);
   if (options.purge) {
     log(`and purges:   ${paths.prefix} (saves and mods included!)`);
@@ -847,6 +855,7 @@ export async function cmdUninstall(
     } else {
       log("wine prefix not found (nothing to do)");
     }
+    await clearStaleDepotState(profile, paths);
   }
 }
 

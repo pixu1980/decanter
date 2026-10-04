@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-import { depotCacheDirs, depotContentDirs, depotHasContent, findDepotDir, gameInstalled, importDepot, latestManifest, readInstalledManifest, recordManifest, updateStatus } from "../../src/core/depot.ts";
+import { clearStaleDepotState, depotCacheDirs, depotContentDirs, depotHasContent, findDepotDir, gameInstalled, importDepot, latestManifest, readInstalledManifest, recordManifest, updateStatus } from "../../src/core/depot.ts";
 import type { GamePaths } from "../../src/core/game.ts";
 import { normalizeProfile } from "../../src/core/profile.ts";
 import { withTempHome } from "./_helpers.ts";
@@ -20,8 +21,7 @@ function makePaths(older: string, prefix: string, installSubdir: string): GamePa
   };
 }
 
-test("depotContentDirs covers native Steam and SteamCMD", async () => {
-  await withTempHome(async () => {
+test("depotContentDirs covers native Steam and SteamCMD", async () => {  await withTempHome(async () => {
     const profile = normalizeProfile({ name: "Broken Sword", appid: 57640, depot: 57641 });
     const paths = makePaths("/tmp/older", "/tmp/prefix", profile.installSubdir);
     const dirs = depotContentDirs(paths, profile);
@@ -109,5 +109,26 @@ test("updateStatus reports available, waiting and current", async () => {
     await mkdir(depotDir, { recursive: true });
     await writeFile(join(depotDir, "part"), "z");
     assert.equal((await updateStatus(profile, paths)).state, "waiting");
+  });
+});
+
+test("clearStaleDepotState drops the patch only when the depot is empty", async () => {
+  await withTempHome(async () => {
+    const home = process.env.SM_HOME!;
+    const profile = normalizeProfile({ name: "Test", appid: 1, depot: 2 });
+    const paths = makePaths(home, join(home, "prefix"), profile.installSubdir);
+    const depotDir = depotContentDirs(paths, profile)[0]!;
+    const patch = join(dirname(depotDir), "state_1_2.patch");
+    await mkdir(dirname(depotDir), { recursive: true });
+    await writeFile(patch, "x");
+
+    await clearStaleDepotState(profile, paths);
+    assert.equal(existsSync(patch), false, "empty depot: the patch is dropped");
+
+    await mkdir(depotDir, { recursive: true });
+    await writeFile(join(depotDir, "part"), "x");
+    await writeFile(patch, "x");
+    await clearStaleDepotState(profile, paths);
+    assert.equal(existsSync(patch), true, "depot with content: the patch is kept");
   });
 });

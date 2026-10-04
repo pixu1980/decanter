@@ -8,7 +8,7 @@
 // docs: docs/managing.md
 
 import { readdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { exec, runShell } from "./exec.ts";
 import { exists, mkdirp, readText, remove, writeText } from "./fsx.ts";
 import type { GamePaths } from "./game.ts";
@@ -53,6 +53,27 @@ export async function findDepotDir(dirs: string[]): Promise<string | null> {
   }
 
   return null;
+}
+
+/**
+ * Clear a stale download marker so the next download is real.
+ *
+ * `import` moves the depot into the prefix and removes its folder but leaves
+ * Steam's `state_<appid>_<depot>.patch` behind. `download_depot` then believes
+ * the chunks are already present and finishes at 0 bytes. When the depot folder
+ * has no files but the state patch exists, drop the patch so the download runs.
+ */
+export async function clearStaleDepotState(profile: GameProfile, paths: GamePaths): Promise<void> {
+  for (const dir of depotContentDirs(paths, profile)) {
+    if (await depotHasContent(dir)) {
+      continue;
+    }
+    const patch = join(dirname(dir), `state_${profile.appid}_${profile.depot}.patch`);
+    if (exists(patch)) {
+      log(`clearing stale depot state: ${patch}`);
+      await remove(patch);
+    }
+  }
 }
 
 /** Newest manifest id for a depot, read from the `depotcache` folders. */

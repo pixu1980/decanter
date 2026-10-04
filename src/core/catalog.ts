@@ -32,6 +32,7 @@ export const KNOWN_GAMES: Record<number, KnownGame> = {
     installSubdir: "GK2",
     dataSubdir: "users/crossover/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2",
     manifestName: ".gk2-manifest",
+    wineRuntime: "gptk-apple",
     version: "2.0.0",
     backupLabel: "GK2",
     savePatterns: ["*.dat", "*.info"],

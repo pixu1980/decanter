@@ -6,7 +6,7 @@
 // docs: README.md
 
 /** Flags that take a value. */
-const VALUE_FLAGS = new Set(["appid", "depot", "slug", "exe", "n", "prefix", "steam-root"]);
+const VALUE_FLAGS = new Set(["appid", "depot", "slug", "exe", "runtime", "n", "prefix", "steam-root"]);
 
 /** Parsed command line. */
 export interface ParsedArgs {
