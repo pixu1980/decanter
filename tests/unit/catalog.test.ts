@@ -43,6 +43,21 @@ test("addGame fills Graveyard Keeper 2 from the catalog", async () => {
   });
 });
 
+test("addGame fills Game Dev Studio from the catalog", async () => {
+  await withTempHome(async () => {
+    await withDryRun(async () => {
+      const profile = await addGame({
+        appid: 773580,
+        fetchImpl: fakeStore("Game Dev Studio"),
+      });
+
+      assert.equal(profile.depot, 773581);
+      assert.equal(profile.exe, "game_dev_studio.exe");
+      assert.equal(profile.slug, "game-dev-studio");
+    });
+  });
+});
+
 test("an explicit --exe overrides the catalog", async () => {
   await withTempHome(async () => {
     await withDryRun(async () => {

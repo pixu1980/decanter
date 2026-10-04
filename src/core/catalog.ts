@@ -45,6 +45,12 @@ export const KNOWN_GAMES: Record<number, KnownGame> = {
       unityModeValue: "Screenmanager Fullscreen mode_h3630240806",
     },
   },
+  773580: {
+    name: "Game Dev Studio",
+    slug: "game-dev-studio",
+    depot: 773581,
+    exe: "game_dev_studio.exe",
+  },
 };
 
 /** The catalog entry for an appid, if any. */
