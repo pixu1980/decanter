@@ -106,7 +106,8 @@ export interface DepotDownloadResult {
 export function parseDepotDownload(output: string): DepotDownloadResult {
   const complete = /Depot download complete\s*:\s*"([^"]+)"(?:\s*\(\d+ files, manifest (\d+)\))?/.exec(output);
   if (complete) {
-    return { depotDir: complete[1], manifest: complete[2], output };
+    // SteamCMD on macOS reports the path with Windows separators.
+    return { depotDir: complete[1]!.replace(/\\/g, "/"), manifest: complete[2], output };
   }
 
   return { output };

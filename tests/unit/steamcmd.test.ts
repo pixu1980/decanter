@@ -39,6 +39,12 @@ test("parseDepotDownload returns nothing for unrelated output", () => {
   assert.equal(parseDepotDownload("Connecting...").depotDir, undefined);
 });
 
+test("parseDepotDownload normalizes Windows separators", () => {
+  const parsed = parseDepotDownload('Depot download complete : "C:\\steam\\steamapps\\content\\app_1\\depot_2" (5 files, manifest 9)');
+  assert.equal(parsed.depotDir, "C:/steam/steamapps/content/app_1/depot_2");
+  assert.equal(parsed.manifest, "9");
+});
+
 test("steamcmdPath lives under the runtime home", () => {
   assert.match(steamcmdPath(), /steamcmd\/steamcmd\.sh$/);
 });
