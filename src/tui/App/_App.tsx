@@ -11,7 +11,7 @@ import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useCallback, useEffect, useState } from "react";
 import { addGame } from "../../core/add.ts";
 import { type Config, loadConfig, updateConfig } from "../../core/config.ts";
-import { exec } from "../../core/exec.ts";
+import { cancel, exec } from "../../core/exec.ts";
 import { exists } from "../../core/fsx.ts";
 import { resolveGamePaths } from "../../core/game.ts";
 import {
@@ -31,7 +31,7 @@ import {
   type DoctorCheck,
   type StatusField,
 } from "../../core/lifecycle.ts";
-import { log } from "../../core/log.ts";
+import { log, type LogLevel } from "../../core/log.ts";
 import type { WineRuntime } from "../../core/profile.ts";
 import { removeGameRecord } from "../../core/registry.ts";
 import { ACTIONS, DESTRUCTIVE } from "../actions.ts";
@@ -45,6 +45,7 @@ import { HelpOverlay } from "../components/HelpOverlay/index.ts";
 import { LogsView } from "../components/LogsView/index.ts";
 import { SettingsView } from "../components/SettingsView/index.ts";
 import { StatusBar } from "../components/StatusBar/index.ts";
+import { Activity, type ActivityLine } from "../components/Activity/index.ts";
 import { refreshGames, safeAction, type GameRow } from "../helpers/index.ts";
 
 type View =
@@ -73,6 +74,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [activity, setActivity] = useState<ActivityLine[]>([]);
 
   const reload = useCallback(async () => {
     setConfig(await loadConfig());
@@ -84,6 +86,11 @@ export function App() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const appendActivity = useCallback(
+    (line: string, level: LogLevel) => setActivity((prev) => [...prev.slice(-199), { line, level }]),
+    [],
+  );
 
   const current = rows[listIndex]?.profile ?? null;
 
@@ -112,7 +119,7 @@ export function App() {
             setStatus("error: no app bundle yet — run Setup first");
             return;
           }
-          const result = await safeAction(() => exec("open", [paths.app]));
+          const result = await safeAction(() => exec("open", [paths.app]), appendActivity);
           setStatus(result.ok ? `launched ${current.name}` : `error: ${result.message}`);
           return;
         }
@@ -150,7 +157,7 @@ export function App() {
         if (!command) {
           return;
         }
-        const result = await safeAction(command);
+        const result = await safeAction(command, appendActivity);
         setStatus(result.ok ? result.message : `error: ${result.message}`);
         const next = await reload();
         if (view.name === "detail") {
@@ -166,7 +173,7 @@ export function App() {
         setBusy(false);
       }
     },
-    [config, current, reload, view.name],
+    [config, current, reload, view.name, appendActivity],
   );
 
   const runAction = useCallback(
@@ -200,7 +207,15 @@ export function App() {
       return;
     }
 
-    if (busy || view.name === "add") {
+    if (busy) {
+      if (name === "escape") {
+        cancel();
+        setStatus("cancelling…");
+      }
+      return;
+    }
+
+    if (view.name === "add") {
       return;
     }
 
@@ -295,7 +310,7 @@ export function App() {
             <AddWizard
               busy={busy}
               onCancel={() => setView({ name: "games" })}
-              onSubmit={(values) => void submitAdd(values, setBusy, setStatus, setView, reload)}
+              onSubmit={(values) => void submitAdd(values, setBusy, setStatus, setView, reload, appendActivity)}
             />
           ) : null}
           {view.name === "doctor" ? <DoctorView title="Doctor" checks={checks} /> : null}
@@ -305,6 +320,8 @@ export function App() {
           {view.name === "settings" && config ? <SettingsView config={config} /> : null}
         </box>
       )}
+
+      {busy || activity.length > 0 ? <Activity lines={activity} busy={busy} /> : null}
 
       <StatusBar message={status} busy={busy} hints={hintsFor(view)} />
     </box>
@@ -317,6 +334,7 @@ async function submitAdd(
   setStatus: (status: string) => void,
   setView: (view: View) => void,
   reload: () => Promise<unknown>,
+  appendActivity: (line: string, level: LogLevel) => void,
 ): Promise<void> {
   if (!values.name && !values.appid) {
     setStatus("error: give a name or an appid");
@@ -324,8 +342,10 @@ async function submitAdd(
   }
   setBusy(true);
   try {
-    const result = await safeAction(() =>
-      addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe, runtime: values.runtime as WineRuntime | undefined }),
+    const result = await safeAction(
+      () =>
+        addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe, runtime: values.runtime as WineRuntime | undefined }),
+      appendActivity,
     );
     setStatus(result.ok ? result.message : `error: ${result.message}`);
     if (result.ok) {

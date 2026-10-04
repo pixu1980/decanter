@@ -109,7 +109,7 @@ test("uninstall forgets the game so it leaves the list", async () => {
         "the registry record should be gone",
       );
       await setup.waitForFrame((frame) => frame.includes("No games registered yet"));
-      assert.doesNotMatch(setup.captureCharFrame(), /Test Game/);
+      assert.match(setup.captureCharFrame(), /0 game\(s\)/);
     } finally {
       setup.renderer.destroy();
     }

@@ -105,9 +105,11 @@ cannot help, the command falls back to opening the Steam console and waits for
 
 `up` / `down` move, `enter` opens or runs, `a` adds a game, `s` opens settings,
 `r` refreshes, `?` shows the full keyboard reference, `q` quits. In a game view,
-`esc` goes back and `enter` runs the selected action. Destructive actions
-(`uninstall`) ask for confirmation in the interface, then delete the app bundle
-and the Wine prefix and forget the game, so it leaves the list.
+`esc` goes back and `enter` runs the selected action. While an action runs the
+**Activity** panel streams the engine output line by line, and `esc` cancels it.
+Destructive actions (`uninstall`) ask for confirmation in the interface, then
+delete the app bundle and the Wine prefix and forget the game, so it leaves the
+list.
 
 ## Layout
 

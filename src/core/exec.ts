@@ -5,12 +5,50 @@
 //
 // docs: docs/architecture.md
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { die, log } from "./log.ts";
 
 let dryRun = false;
+
+/** Thrown when the current action was cancelled (TUI escape). */
+export class CancelledError extends Error {
+  constructor() {
+    super("cancelled");
+    this.name = "CancelledError";
+  }
+}
+
+let cancelled = false;
+const running = new Set<ChildProcess>();
+
+/**
+ * Cancel the current action: kill its running children and make the next `exec`
+ * throw. The TUI calls this on escape while an action is in flight.
+ */
+export function cancel(): void {
+  cancelled = true;
+  for (const child of running) {
+    child.kill("SIGTERM");
+  }
+  const timer = setTimeout(() => {
+    for (const child of running) {
+      child.kill("SIGKILL");
+    }
+  }, 1500);
+  timer.unref?.();
+}
+
+/** Clear the cancel flag before a new action. */
+export function resetCancel(): void {
+  cancelled = false;
+}
+
+/** Has the current action been cancelled? */
+export function isCancelled(): boolean {
+  return cancelled;
+}
 
 /** Turn dry-run mode on or off for the whole process. */
 export function setDryRun(value: boolean): void {
@@ -49,6 +87,9 @@ export async function exec(
     log(`dry-run: ${[cmd, ...args].join(" ")}`);
     return { status: 0, stdout: "", stderr: "" };
   }
+  if (cancelled) {
+    throw new CancelledError();
+  }
 
   const stdio = options.stdio ?? "capture";
   const child = spawn(cmd, args, {
@@ -56,6 +97,7 @@ export async function exec(
     env: { ...process.env, ...options.env },
     stdio: stdio === "inherit" ? "inherit" : ["pipe", "pipe", "pipe"],
   });
+  running.add(child);
 
   let stdout = "";
   let stderr = "";
@@ -75,6 +117,11 @@ export async function exec(
     child.on("error", reject);
     child.on("close", (value) => resolve(value ?? 0));
   });
+  running.delete(child);
+
+  if (cancelled) {
+    throw new CancelledError();
+  }
 
   const result = { status: code, stdout, stderr };
   if (code !== 0 && !options.allowFailure) {

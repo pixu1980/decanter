@@ -8,19 +8,44 @@
 /** An expected, user-facing failure. */
 export class CliError extends Error {}
 
-/** Print `<tag>: <message>` on stdout. */
-export function log(message: string): void {
-  process.stdout.write(`${tag()}: ${message}\n`);
+/** Severity of one engine log line. */
+export type LogLevel = "info" | "warn";
+
+/** Receives engine output instead of the console (the TUI). */
+export type LogSink = (line: string, level: LogLevel) => void;
+
+let sink: LogSink | null = null;
+
+/** Route engine output to `next`, or back to the console with `null`. */
+export function setLogSink(next: LogSink | null): void {
+  sink = next;
 }
 
-/** Print `<tag>: <message>` on stderr. */
+function write(line: string, level: LogLevel): void {
+  if (sink) {
+    sink(line, level);
+    return;
+  }
+  if (level === "warn") {
+    process.stderr.write(`${line}\n`);
+  } else {
+    process.stdout.write(`${line}\n`);
+  }
+}
+
+/** Print `<tag>: <message>`. */
+export function log(message: string): void {
+  write(`${tag()}: ${message}`, "info");
+}
+
+/** Report `<tag>: <message>` as a warning. */
 export function warn(message: string): void {
-  process.stderr.write(`${tag()}: ${message}\n`);
+  write(`${tag()}: ${message}`, "warn");
 }
 
 /** Print a blank line followed by a heading. */
 export function heading(message: string): void {
-  process.stdout.write(`\n${message}\n`);
+  write(`\n${message}`, "info");
 }
 
 /** Stop with a user-facing error. */

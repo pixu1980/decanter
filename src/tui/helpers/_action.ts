@@ -1,24 +1,33 @@
 // Run a lifecycle action from the TUI without corrupting the frame.
 //
-// Lifecycle code writes progress to `process.stdout`/`stderr`. The renderer
-// draws through its own native writer, so capturing those streams keeps the
-// interface clean while still returning the last message to the status bar.
+// Lifecycle code writes progress through the logger. The renderer draws through
+// its own native writer, so this routes those lines to the activity panel while
+// still returning the last message to the status bar.
 //
 // docs: docs/architecture.md
 
-import { CliError } from "../../core/log.ts";
+import { CancelledError, resetCancel } from "../../core/exec.ts";
+import { CliError, setLogSink, type LogLevel } from "../../core/log.ts";
 
 export interface ActionResult {
   ok: boolean;
   message: string;
 }
 
-/** Run `fn`, capturing console output; never throws. */
-export async function safeAction(fn: () => Promise<unknown>): Promise<ActionResult> {
+/** Run `fn`, streaming engine output to `onLine`; never throws. */
+export async function safeAction(
+  fn: () => Promise<unknown>,
+  onLine?: (line: string, level: LogLevel) => void,
+): Promise<ActionResult> {
+  const captured: string[] = [];
   const stdoutWrite = process.stdout.write.bind(process.stdout);
   const stderrWrite = process.stderr.write.bind(process.stderr);
-  const captured: string[] = [];
 
+  resetCancel();
+  setLogSink((line, level) => {
+    captured.push(`${line}\n`);
+    onLine?.(line, level);
+  });
   process.stdout.write = ((chunk: unknown) => {
     captured.push(String(chunk));
     return true;
@@ -32,9 +41,13 @@ export async function safeAction(fn: () => Promise<unknown>): Promise<ActionResu
     await fn();
     return { ok: true, message: lastLine(captured) || "done" };
   } catch (error) {
+    if (error instanceof CancelledError) {
+      return { ok: false, message: "cancelled" };
+    }
     const message = error instanceof CliError ? error.message : (error as Error).message;
     return { ok: false, message };
   } finally {
+    setLogSink(null);
     process.stdout.write = stdoutWrite;
     process.stderr.write = stderrWrite;
   }
