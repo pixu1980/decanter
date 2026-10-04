@@ -22,6 +22,7 @@ import {
   cmdImport,
   cmdLogs,
   cmdMods,
+  cmdQuit,
   cmdRun,
   cmdSaves,
   cmdSetup,
@@ -49,6 +50,7 @@ const SLUG_COMMANDS = new Set([
   "import",
   "update",
   "run",
+  "quit",
   "windowed",
   "fullscreen",
   "status",
@@ -153,6 +155,8 @@ async function cmdGame(args: ParsedArgs): Promise<void> {
       return cmdUpdate(slug, { check: flagBool(args.flags, "check") });
     case "run":
       return cmdRun(slug);
+    case "quit":
+      return cmdQuit(slug);
     case "windowed":
       return cmdWindowed(slug);
     case "fullscreen":
@@ -318,6 +322,7 @@ lifecycle:
   import <game>         move a finished depot download into the prefix
   update <game>         check for and install an update (--check exits 3 if any)
   run <game>            launch the game
+  quit <game>           stop the game's Wine processes (Cmd+Q substitute)
   windowed <game>       switch to a native macOS window
   fullscreen <game>     switch back to borderless fullscreen
   app <game>            (re)build the .app bundle

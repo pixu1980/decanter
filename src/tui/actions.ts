@@ -17,6 +17,7 @@ export interface ActionItem {
 /** The actions, in the order the detail screen shows them. */
 export const ACTIONS: ActionItem[] = [
   { key: "run", label: "Run", hint: "open the app bundle", group: "Play" },
+  { key: "quit", label: "Stop", hint: "end the running game", group: "Play" },
   { key: "setup", label: "Setup", hint: "runtime, prefix, icon, bundle", group: "Setup" },
   { key: "download", label: "Download", hint: "SteamCMD, or the Steam console", group: "Setup" },
   { key: "import", label: "Import", hint: "move the depot into the prefix", group: "Setup" },

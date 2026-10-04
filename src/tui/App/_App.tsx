@@ -20,6 +20,7 @@ import {
   cmdDownload,
   cmdIcon,
   cmdImport,
+  cmdQuit,
   cmdSaves,
   cmdSetup,
   cmdUninstall,
@@ -130,6 +131,7 @@ export function App() {
         }
         const commands: Record<string, () => Promise<unknown>> = {
           setup: () => cmdSetup(current.slug),
+          quit: () => cmdQuit(current.slug),
           download: () => cmdDownload(current.slug),
           import: () => cmdImport(current.slug),
           update: () => cmdUpdate(current.slug),

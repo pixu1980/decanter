@@ -302,7 +302,12 @@ function reportUpdateStatus(profile: GameProfile, status: Awaited<ReturnType<typ
 
 // --- run ----------------------------------------------------------------------
 
-/** Launch the game. */
+/**
+ * Launch the game through its `.app` bundle so macOS treats it as a normal app
+ * (Dock icon, app registration). Falls back to the raw loader when the bundle
+ * is missing. Streamed stdout is lost, but the bundle's `launch` script already
+ * starts Windows Steam when needed.
+ */
 export async function cmdRun(slug: string): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
@@ -313,6 +318,12 @@ export async function cmdRun(slug: string): Promise<void> {
   }
   if (!exists(wine.distExe)) {
     die(`wine not found at ${wine.distExe} — run: steam-mac setup ${slug}`);
+  }
+
+  if (bundleRuntimeReady(paths.app)) {
+    log(`launching ${profile.name} (app bundle) — stop with: steam-mac quit ${slug}`);
+    await exec("open", [paths.app], { allowFailure: false });
+    return;
   }
 
   const steamExe = windowsSteamExe(paths.prefix);
@@ -334,6 +345,22 @@ export async function cmdRun(slug: string): Promise<void> {
     env: { WINEPREFIX: paths.prefix },
     stdio: "inherit",
   });
+}
+
+/** Terminate every Wine process the game is using (a Cmd+Q substitute). */
+export async function cmdQuit(slug: string): Promise<void> {
+  const { profile, paths, wine } = await loadContext(slug);
+  if (!(await isGameRunning(profile))) {
+    log(`${profile.name} is not running`);
+    return;
+  }
+
+  log(`stopping ${profile.name}`);
+  await exec(wine.distServer, ["-k"], {
+    env: { WINEPREFIX: paths.prefix },
+    allowFailure: true,
+  });
+  log("stopped");
 }
 
 // --- window mode --------------------------------------------------------------
