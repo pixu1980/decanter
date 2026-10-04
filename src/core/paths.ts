@@ -49,6 +49,11 @@ export function wineBuildDir(flavor: string, version: string): string {
   return join(wineDir(), `wine-${flavor}-${version}`);
 }
 
+/** App built by overlaying Apple's DMG D3DMetal onto a Gcenx loader. */
+export function appleGptkAppDir(): string {
+  return join(wineDir(), "gptk-apple", "Game Porting Toolkit.app");
+}
+
 /** Local SteamCMD installation. */
 export function steamcmdDir(): string {
   return join(smHome(), "steamcmd");

@@ -20,6 +20,10 @@ steam-mac run <game>
 - A missing Wine runtime means run `steam-mac setup <game>`.
 - Gatekeeper warnings are cleared by `setup`, which strips the runtime's
   quarantine attribute.
+- If the app quits immediately with no window, the profile probably points at
+  the wrong executable. `steam-mac status <game>` prints the `exe` line; fix it
+  with `steam-mac edit <game>` (set `"exe": "RealName.exe"`) and rebuild with
+  `steam-mac app <game>`. Known games and freshly imported ones set it for you.
 
 ## SteamCMD cannot download the depot
 

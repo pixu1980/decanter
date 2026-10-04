@@ -15,11 +15,21 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
 ## What it does
 
 - Registers a game from the Steam store (name or appid), caching its metadata.
-- Fetches the app icon automatically: Steam library art first, the icon
-  embedded in the `.exe` as a fallback.
-- Provisions the Wine runtime: Game Porting Toolkit by default, or a pinned
-  Gcenx `wine-devel` / `wine-staging` build when GPTK's Wine 7.7 cannot run the
-  game.
+- Provisions a new game in one step: `add` runs setup, then download and import.
+- Knows Graveyard Keeper 2 out of the box (the built-in catalog fills the
+  executable, save folders and window-mode registry key); for any other game it
+  detects the executable after `import` and rebuilds the bundle.
+- Fetches the app icon automatically: Steam library art, then SteamGridDB, the
+  smaller Steam artwork, the icon embedded in the `.exe`, and finally a
+  generated placeholder.
+- Installs **SteamCMD** itself as part of `setup`, so depot downloads need no
+  manual tooling.
+- Provisions the Wine runtime: Game Porting Toolkit by default, a pinned Gcenx
+  `wine-devel` / `wine-staging` build when GPTK's Wine 7.7 cannot run the game.
+  An opt-in `gptk-apple` runtime can overlay the newer D3DMetal from Apple's
+  Game Porting Toolkit 4.0 DMG, but it does not boot games yet — D3DMetal 4.0
+  needs a matching Apple Wine build that Gcenx has not shipped (see
+  `docs/troubleshooting.md`).
 - Downloads the Windows depot with **SteamCMD**, falling back to the guided
   Steam-console flow when a login is missing.
 - Imports the depot into a Wine prefix, tracks the depot manifest and reports
@@ -41,7 +51,8 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
 
 ```sh
 pnpm install
-pnpm link --global        # or: node bin/steam-mac.mjs <command>
+pnpm setup                # links the global `steam-mac` command
+pnpm start                # opens the terminal interface from the checkout
 ```
 
 ## Quick start
@@ -50,12 +61,15 @@ pnpm link --global        # or: node bin/steam-mac.mjs <command>
 # open the terminal interface
 steam-mac
 
-# or use the CLI
+# or use the CLI: add resolves, sets up, downloads and imports in one step
 steam-mac add "Graveyard Keeper 2" --depot 4358691
-steam-mac setup graveyard-keeper-2
-steam-mac download graveyard-keeper-2
 steam-mac run graveyard-keeper-2
 ```
+
+For a game in the built-in catalog (currently Graveyard Keeper 2) `add` needs
+nothing else. For any other game, pass `--exe Name.exe` when you know it, or let
+`import` detect the executable in the game folder and rewrite the profile. The
+TUI's add wizard has the same optional **Exe** field.
 
 `download` uses SteamCMD. Anonymous downloads work for free games; for owned
 games run `steam-mac login` once so SteamCMD remembers your account. If SteamCMD
@@ -67,7 +81,7 @@ cannot help, the command falls back to opening the Steam console and waits for
 | Command | What it does |
 |---|---|
 | `list` | List registered games with size, update and app state |
-| `add "<name>"` / `add --appid N` | Register a game from the Steam store |
+| `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
 | `remove <game>` | Uninstall and forget a game (`--purge` deletes the prefix) |
 | `migrate <path>` | Import a legacy per-game repo into the registry |
 | `config [key=value ...]` | Show or change machine-wide settings |
@@ -90,8 +104,10 @@ cannot help, the command falls back to opening the Steam console and waits for
 ### TUI keys
 
 `up` / `down` move, `enter` opens or runs, `a` adds a game, `s` opens settings,
-`r` refreshes, `q` quits. In a game view, `esc` goes back and `enter` runs the
-selected action.
+`r` refreshes, `?` shows the full keyboard reference, `q` quits. In a game view,
+`esc` goes back and `enter` runs the selected action. Destructive actions
+(`uninstall`) ask for confirmation in the interface, then delete the app bundle
+and the Wine prefix and forget the game, so it leaves the list.
 
 ## Layout
 

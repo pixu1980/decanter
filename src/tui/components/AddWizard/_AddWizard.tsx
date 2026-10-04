@@ -5,11 +5,14 @@
 import { useKeyboard } from "@opentui/react";
 import { useState } from "react";
 
+import { theme } from "../../theme.ts";
+
 /** Values collected by the wizard. */
 export interface AddValues {
   name: string;
   appid?: number;
   depot?: number;
+  exe?: string;
 }
 
 export interface AddWizardProps {
@@ -18,13 +21,17 @@ export interface AddWizardProps {
   busy: boolean;
 }
 
-type Field = "name" | "appid" | "depot";
+type Field = "name" | "appid" | "depot" | "exe";
+
+/** The tab order of the form fields. */
+const ORDER: Field[] = ["name", "appid", "depot", "exe"];
 
 /** Render the add-game form. */
 export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
   const [name, setName] = useState("");
   const [appid, setAppid] = useState("");
   const [depot, setDepot] = useState("");
+  const [exe, setExe] = useState("");
   const [field, setField] = useState<Field>("name");
 
   const submit = () =>
@@ -32,6 +39,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       name: name.trim(),
       appid: Number.parseInt(appid, 10) || undefined,
       depot: Number.parseInt(depot, 10) || undefined,
+      exe: exe.trim() || undefined,
     });
 
   useKeyboard((key) => {
@@ -39,7 +47,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       return;
     }
     if (key.name === "tab") {
-      setField((current) => (current === "name" ? "appid" : current === "appid" ? "depot" : "name"));
+      setField((current) => ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]!);
       return;
     }
     if (key.name === "escape") {
@@ -53,8 +61,8 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
 
   return (
     <box style={{ flexDirection: "column", gap: 1 }}>
-      <text fg="#ffffff">Add a game</text>
-      <text fg="#6b7280">Give a name to look up on the Steam store, or an appid directly.</text>
+      <text fg={theme.strong}>Add a game</text>
+      <text fg={theme.muted}>Give a name to look up on the Steam store, or an appid directly.</text>
 
       <Field label="Name" focused={field === "name"}>
         <input placeholder="Graveyard Keeper 2" focused={field === "name"} onInput={setName} onSubmit={() => setField("appid")} />
@@ -65,17 +73,32 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       </Field>
 
       <Field label="Depot" focused={field === "depot"}>
-        <input placeholder="4358691" focused={field === "depot"} onInput={setDepot} onSubmit={submit} />
+        <input placeholder="4358691" focused={field === "depot"} onInput={setDepot} onSubmit={() => setField("exe")} />
       </Field>
 
-      <text fg="#6b7280">tab next · enter add · esc cancel</text>
+      <Field label="Exe" focused={field === "exe"}>
+        <input placeholder="GraveyardKeeper2.exe" focused={field === "exe"} onInput={setExe} onSubmit={submit} />
+      </Field>
+
+      {exe.trim() === "" ? (
+        <text fg={theme.warning}>No exe set — the engine detects it after import.</text>
+      ) : null}
+
+      <text fg={theme.muted}>tab next · enter add · esc cancel</text>
     </box>
   );
 }
 
 function Field({ label, focused, children }: { label: string; focused: boolean; children: React.ReactNode }) {
   return (
-    <box title={label} style={{ border: true, borderColor: focused ? "#61afef" : "#3c4048", width: 48, height: 3 }}>
+    <box
+      title={` ${label} `}
+      titleColor={focused ? theme.accent : theme.muted}
+      border
+      borderStyle="rounded"
+      borderColor={focused ? theme.borderActive : theme.border}
+      style={{ width: 52, height: 3 }}
+    >
       {children}
     </box>
   );

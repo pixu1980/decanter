@@ -8,14 +8,15 @@
 // docs: docs/managing.md
 
 import { join } from "node:path";
+import { loadConfig } from "./config.ts";
 import { exec, isDryRun, which } from "./exec.ts";
 import { exists, mkdirp, remove, writeBytes } from "./fsx.ts";
 import { log, warn } from "./log.ts";
 import type { GameProfile } from "./profile.ts";
-import { iconCandidates } from "./store.ts";
+import { iconCandidates, iconCandidatesExtra, steamGridDbCandidates } from "./store.ts";
 
 export interface IconResult {
-  source: "store" | "exe" | "none";
+  source: "store" | "steamgriddb" | "exe" | "placeholder" | "none";
   png?: string;
   icns?: string;
 }
@@ -49,7 +50,48 @@ export async function downloadStoreArt(
     log("dry-run: fetch the Steam library artwork");
     return null;
   }
-  for (const url of iconCandidates(profile.appid)) {
+
+  return downloadFirstImage(iconCandidates(profile.appid), assetsDir, "key-art.jpg", fetchImpl);
+}
+
+/** Download the smaller Steam artwork when the library art is missing. */
+export async function downloadStoreArtExtra(
+  profile: GameProfile,
+  assetsDir: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (isDryRun()) {
+    log("dry-run: fetch additional Steam artwork");
+    return null;
+  }
+
+  return downloadFirstImage(iconCandidatesExtra(profile.appid), assetsDir, "extra-art.jpg", fetchImpl);
+}
+
+/** Download SteamGridDB artwork, icons first; returns its path or `null`. */
+export async function downloadSteamGridArt(
+  profile: GameProfile,
+  assetsDir: string,
+  fetchImpl: typeof fetch = fetch,
+  apiKey = "",
+): Promise<string | null> {
+  if (isDryRun()) {
+    log("dry-run: fetch SteamGridDB artwork");
+    return null;
+  }
+  const urls = await steamGridDbCandidates(profile.appid, apiKey, fetchImpl);
+
+  return downloadFirstImage(urls, assetsDir, "grid-art.png", fetchImpl);
+}
+
+/** Download the first URL that returns a plausible image. */
+async function downloadFirstImage(
+  urls: string[],
+  assetsDir: string,
+  fileName: string,
+  fetchImpl: typeof fetch,
+): Promise<string | null> {
+  for (const url of urls) {
     try {
       const response = await fetchImpl(url);
       if (!response.ok) {
@@ -60,7 +102,7 @@ export async function downloadStoreArt(
         continue;
       }
       await mkdirp(assetsDir);
-      const target = join(assetsDir, "key-art.jpg");
+      const target = join(assetsDir, fileName);
       await writeBytes(target, bytes);
       return target;
     } catch {
@@ -143,8 +185,153 @@ async function largestPng(dir: string): Promise<string | null> {
   return first || null;
 }
 
+/** A 3x5 bitmap font, enough for the first letter or digit of a game name. */
+const GLYPHS: Record<string, string[]> = {
+  A: ["010", "101", "111", "101", "101"],
+  B: ["110", "101", "110", "101", "110"],
+  C: ["011", "100", "100", "100", "011"],
+  D: ["110", "101", "101", "101", "110"],
+  E: ["111", "100", "110", "100", "111"],
+  F: ["111", "100", "110", "100", "100"],
+  G: ["011", "100", "101", "101", "011"],
+  H: ["101", "101", "111", "101", "101"],
+  I: ["111", "010", "010", "010", "111"],
+  J: ["001", "001", "001", "101", "010"],
+  K: ["101", "101", "110", "101", "101"],
+  L: ["100", "100", "100", "100", "111"],
+  M: ["101", "111", "111", "101", "101"],
+  N: ["101", "111", "111", "111", "101"],
+  O: ["010", "101", "101", "101", "010"],
+  P: ["110", "101", "110", "100", "100"],
+  Q: ["010", "101", "101", "110", "011"],
+  R: ["110", "101", "110", "101", "101"],
+  S: ["011", "100", "010", "001", "110"],
+  T: ["111", "010", "010", "010", "010"],
+  U: ["101", "101", "101", "101", "111"],
+  V: ["101", "101", "101", "101", "010"],
+  W: ["101", "101", "111", "111", "101"],
+  X: ["101", "101", "010", "101", "101"],
+  Y: ["101", "101", "010", "010", "010"],
+  Z: ["111", "001", "010", "100", "111"],
+  "0": ["111", "101", "101", "101", "111"],
+  "1": ["010", "110", "010", "010", "111"],
+  "2": ["111", "001", "111", "100", "111"],
+  "3": ["111", "001", "111", "001", "111"],
+  "4": ["101", "101", "111", "001", "001"],
+  "5": ["111", "100", "111", "001", "111"],
+  "6": ["111", "100", "111", "101", "111"],
+  "7": ["111", "001", "001", "001", "001"],
+  "8": ["111", "101", "111", "101", "111"],
+  "9": ["111", "101", "111", "001", "111"],
+};
+
+interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** The first letter or digit of a name, uppercased. */
+export function initialOf(name: string): string {
+  const match = /[a-z0-9]/i.exec(name);
+  return (match?.[0] ?? "?").toUpperCase();
+}
+
+/** The glyph for one character, or `null` when the font has none. */
+export function glyphFor(char: string): string[] | null {
+  return GLYPHS[char.toUpperCase()] ?? null;
+}
+
+/** Encode top-down RGB pixels as a 24-bit BMP. */
+export function encodeBmp(width: number, height: number, rgb: Uint8Array): Buffer {
+  const rowSize = Math.ceil((width * 3) / 4) * 4;
+  const pixelSize = rowSize * height;
+  const buffer = Buffer.alloc(54 + pixelSize);
+  buffer.write("BM", 0, "ascii");
+  buffer.writeUInt32LE(buffer.length, 2);
+  buffer.writeUInt32LE(54, 10);
+  buffer.writeUInt32LE(40, 14);
+  buffer.writeInt32LE(width, 18);
+  buffer.writeInt32LE(height, 22);
+  buffer.writeUInt16LE(1, 26);
+  buffer.writeUInt16LE(24, 28);
+  buffer.writeUInt32LE(0, 30);
+  buffer.writeUInt32LE(pixelSize, 34);
+  buffer.writeInt32LE(2835, 38);
+  buffer.writeInt32LE(2835, 42);
+  for (let y = 0; y < height; y += 1) {
+    const srcRow = (height - 1 - y) * width * 3;
+    const dstRow = 54 + y * rowSize;
+    for (let x = 0; x < width; x += 1) {
+      buffer[dstRow + x * 3] = rgb[srcRow + x * 3 + 2]!;
+      buffer[dstRow + x * 3 + 1] = rgb[srcRow + x * 3 + 1]!;
+      buffer[dstRow + x * 3 + 2] = rgb[srcRow + x * 3]!;
+    }
+  }
+
+  return buffer;
+}
+
+/** Generate a placeholder icon from the game's initial; returns its PNG. */
+export async function generatePlaceholderIcon(
+  profile: GameProfile,
+  assetsDir: string,
+): Promise<string | null> {
+  if (isDryRun()) {
+    log("dry-run: generate a placeholder icon");
+    return null;
+  }
+  const size = 1024;
+  const rgb = new Uint8Array(size * size * 3);
+  for (let i = 0; i < size * size; i += 1) {
+    rgb[i * 3] = 0x2f;
+    rgb[i * 3 + 1] = 0x3b;
+    rgb[i * 3 + 2] = 0x52;
+  }
+  const glyph = glyphFor(initialOf(profile.name));
+  if (glyph) {
+    drawGlyph(rgb, size, glyph, { r: 0xff, g: 0xff, b: 0xff });
+  }
+
+  await mkdirp(assetsDir);
+  const bmp = join(assetsDir, "placeholder.bmp");
+  await writeBytes(bmp, encodeBmp(size, size, rgb));
+  const png = join(assetsDir, "placeholder.png");
+  await exec("sips", ["-s", "format", "png", bmp, "--out", png], { allowFailure: true });
+  await remove(bmp);
+  return exists(png) ? png : null;
+}
+
+function drawGlyph(rgb: Uint8Array, size: number, glyph: string[], color: Rgb): void {
+  const scale = Math.floor((size * 0.6) / glyph.length);
+  const glyphWidth = glyph[0]!.length * scale;
+  const glyphHeight = glyph.length * scale;
+  const offsetX = Math.floor((size - glyphWidth) / 2);
+  const offsetY = Math.floor((size - glyphHeight) / 2);
+  for (let gy = 0; gy < glyph.length; gy += 1) {
+    const row = glyph[gy]!;
+    for (let gx = 0; gx < row.length; gx += 1) {
+      if (row[gx] !== "1") {
+        continue;
+      }
+      for (let y = 0; y < scale; y += 1) {
+        for (let x = 0; x < scale; x += 1) {
+          const px = offsetX + gx * scale + x;
+          const py = offsetY + gy * scale + y;
+          const at = (py * size + px) * 3;
+          rgb[at] = color.r;
+          rgb[at + 1] = color.g;
+          rgb[at + 2] = color.b;
+        }
+      }
+    }
+  }
+}
+
 /**
- * Provision the icon for a game: store art first, embedded exe icon second.
+ * Provision the icon for a game: Steam library art, SteamGridDB, the smaller
+ * Steam artwork, the icon embedded in the executable, then a generated
+ * placeholder.
  *
  * Failure is not fatal: a game without an icon still gets a working bundle.
  */
@@ -153,10 +340,31 @@ export async function provisionIcon(
   assetsDir: string,
   options: { exePath?: string; fetchImpl?: typeof fetch } = {},
 ): Promise<IconResult> {
-  const store = await downloadStoreArt(profile, assetsDir, options.fetchImpl);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const config = await loadConfig();
+
+  const store = await downloadStoreArt(profile, assetsDir, fetchImpl);
   if (store) {
     log("icon: using the Steam library artwork");
     const result = await buildIcns(store, assetsDir);
+    if (result) {
+      return result;
+    }
+  }
+
+  const grid = await downloadSteamGridArt(profile, assetsDir, fetchImpl, config.steamGridDbKey);
+  if (grid) {
+    log("icon: using SteamGridDB artwork");
+    const result = await buildIcns(grid, assetsDir);
+    if (result) {
+      return { ...result, source: "steamgriddb" };
+    }
+  }
+
+  const extra = await downloadStoreArtExtra(profile, assetsDir, fetchImpl);
+  if (extra) {
+    log("icon: using additional Steam artwork");
+    const result = await buildIcns(extra, assetsDir);
     if (result) {
       return result;
     }
@@ -170,6 +378,15 @@ export async function provisionIcon(
       if (result) {
         return { ...result, source: "exe" };
       }
+    }
+  }
+
+  const placeholder = await generatePlaceholderIcon(profile, assetsDir);
+  if (placeholder) {
+    log("icon: using a generated placeholder");
+    const result = await buildIcns(placeholder, assetsDir);
+    if (result) {
+      return { ...result, source: "placeholder" };
     }
   }
 

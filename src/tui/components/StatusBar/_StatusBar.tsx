@@ -2,6 +2,8 @@
 //
 // docs: docs/architecture.md
 
+import { theme, toneColor, toneOf } from "../../theme.ts";
+
 export interface StatusBarProps {
   message: string;
   busy: boolean;
@@ -10,12 +12,12 @@ export interface StatusBarProps {
 
 /** Render the status line. */
 export function StatusBar({ message, busy, hints }: StatusBarProps) {
-  const color = busy ? "#e5c07b" : message.startsWith("error:") ? "#e06c75" : "#98c379";
-  const label = busy ? "… working" : message;
+  const tone = toneOf(message, busy);
+  const label = busy ? "working…" : message;
   return (
     <box style={{ flexDirection: "row", justifyContent: "space-between", height: 1 }}>
-      <text fg={color}>{label}</text>
-      <text fg="#5c6370">{hints}</text>
+      <text fg={toneColor(tone)}>{`● ${label}`}</text>
+      <text fg={theme.faint}>{hints}</text>
     </box>
   );
 }

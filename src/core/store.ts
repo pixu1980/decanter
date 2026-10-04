@@ -57,6 +57,90 @@ export function iconCandidates(appid: number): string[] {
   ];
 }
 
+/**
+ * Extra Steam CDN artwork, tried after the library art and SteamGridDB.
+ *
+ * Small logos and capsules survive when the big library art is missing, and
+ * the older `steamcdn-a` host still serves games the newer hosts dropped.
+ */
+export function iconCandidatesExtra(appid: number): string[] {
+  const assets = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps";
+  const legacy = "https://cdn.cloudflare.steamstatic.com/steam/apps";
+  const akamai = "https://steamcdn-a.akamaihd.net/steam/apps";
+  return [
+    `${assets}/${appid}/logo.png`,
+    `${assets}/${appid}/capsule_231x87.jpg`,
+    `${legacy}/${appid}/logo.png`,
+    `${legacy}/${appid}/capsule_616x353.jpg`,
+    `${akamai}/${appid}/header.jpg`,
+    `${akamai}/${appid}/capsule_231x87.jpg`,
+  ];
+}
+
+/** One SteamGridDB artwork entry. */
+interface SteamGridDbEntry {
+  url?: string;
+  mime?: string;
+}
+
+/**
+ * SteamGridDB artwork candidates, square icons first then vertical grids.
+ *
+ * The API needs a bearer token. Entries sips cannot read (`.ico`) are dropped
+ * so the caller never wastes a download on them. Returns `[]` on any failure,
+ * because a missing icon must never stop the rest of the pipeline.
+ */
+export async function steamGridDbCandidates(
+  appid: number,
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string[]> {
+  if (!apiKey) {
+    return [];
+  }
+  const base = "https://www.steamgriddb.com/api/v2";
+  const headers = { Authorization: `Bearer ${apiKey}` };
+  const icons = await steamGridDbLookup(`${base}/icons/steam/${appid}`, headers, fetchImpl);
+  const grids = await steamGridDbLookup(
+    `${base}/grids/steam/${appid}?dimensions=600x900,342x482,660x930&types=static&nsfw=false&humor=false`,
+    headers,
+    fetchImpl,
+  );
+  return [...icons, ...grids];
+}
+
+async function steamGridDbLookup(
+  url: string,
+  headers: Record<string, string>,
+  fetchImpl: typeof fetch,
+): Promise<string[]> {
+  try {
+    const response = await fetchImpl(url, { headers });
+    if (!response.ok) {
+      return [];
+    }
+    const body = (await response.json()) as { success?: boolean; data?: SteamGridDbEntry[] };
+    if (!body.success || !Array.isArray(body.data)) {
+      return [];
+    }
+    return body.data
+      .filter((entry) => usableArt(entry))
+      .map((entry) => entry.url as string);
+  } catch {
+    return [];
+  }
+}
+
+function usableArt(entry: SteamGridDbEntry): boolean {
+  if (typeof entry.url !== "string") {
+    return false;
+  }
+  if (!entry.mime) {
+    return true;
+  }
+  return entry.mime.startsWith("image/png") || entry.mime.startsWith("image/jpeg");
+}
+
 function asStringArray(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : undefined;
 }

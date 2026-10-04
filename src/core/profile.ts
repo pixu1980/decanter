@@ -9,7 +9,7 @@
 import { envPrefix as deriveEnvPrefix, slugify } from "./paths.ts";
 
 /** Which Wine runtime a game needs. */
-export type WineRuntime = "gptk" | "wine-devel" | "wine-staging";
+export type WineRuntime = "gptk" | "gptk-apple" | "wine-devel" | "wine-staging";
 
 /** Unity games store their screen mode in the Wine registry. */
 export interface WindowMode {
@@ -77,8 +77,14 @@ export interface GameProfile {
   paths: GamePaths;
 }
 
+/** A partial profile as accepted by `normalizeProfile`; `window` may be partial. */
+export type ProfileInput = Partial<Omit<GameProfile, "window">> & {
+  name: string;
+  window?: Partial<WindowMode>;
+};
+
 /** Fill a partial profile with sensible defaults. */
-export function normalizeProfile(input: Partial<GameProfile> & { name: string }): GameProfile {
+export function normalizeProfile(input: ProfileInput): GameProfile {
   const slug = input.slug ?? slugify(input.name);
   return {
     name: input.name,
@@ -261,7 +267,10 @@ export function profileFromLegacy(text: string, fallbackSlug: string): GameProfi
     logName: str(values.GAME_LOG_NAME),
     modsSubdir: str(values.GAME_MODS_SUBDIR),
     wineRuntime:
-      runtime === "wine-devel" || runtime === "wine-staging" || runtime === "gptk"
+      runtime === "wine-devel" ||
+      runtime === "wine-staging" ||
+      runtime === "gptk" ||
+      runtime === "gptk-apple"
         ? runtime
         : undefined,
     wineVersion: str(values.GAME_WINE_VERSION),

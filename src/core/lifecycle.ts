@@ -11,6 +11,7 @@ import { createInterface } from "node:readline/promises";
 import { buildApp, bundleRuntimeReady } from "./bundle.ts";
 import { type Config, loadConfig } from "./config.ts";
 import { gameInstalled, importDepot, updateStatus, waitForDepotDownload } from "./depot.ts";
+import { detectExecutable } from "./exe.ts";
 import { exec, isDryRun } from "./exec.ts";
 import { exists, mkdirp, readText, remove } from "./fsx.ts";
 import { type GamePaths, resolveGamePaths, WINDOWS_STEAM_ARG, windowsSteamExe } from "./game.ts";
@@ -18,10 +19,10 @@ import { provisionIcon } from "./icon.ts";
 import { die, heading, log, warn } from "./log.ts";
 import { gameAssetsDir, gameDir } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
-import { getGame } from "./registry.ts";
-import { downloadDepot } from "./steamcmd.ts";
+import { getGame, saveGame } from "./registry.ts";
+import { downloadDepot, ensureSteamcmd } from "./steamcmd.ts";
 import type { WineRuntime } from "./wine.ts";
-import { clearQuarantine, ensureWine, resolveWine, wineboot, wineVersion } from "./wine.ts";
+import { clearQuarantine, ensureWine, resolveWine, runtimeVersion, wineboot } from "./wine.ts";
 
 /** A game plus everything derived from it. */
 export interface GameContext {
@@ -61,6 +62,7 @@ export async function cmdSetup(slug: string): Promise<void> {
   await ensureRosetta();
   await ensureWine(wine);
   await clearQuarantine(wine);
+  await ensureSteamcmd();
   await wineboot(wine, paths.prefix);
 
   const assets = gameAssetsDir(profile.slug);
@@ -98,12 +100,84 @@ export async function cmdImport(slug: string, options: { manifest?: string } = {
     die("the game is running — close it before importing");
   }
 
+  if (await finalizeImport(profile, paths, wine, options.manifest)) {
+    log(`done. play with: steam-mac run ${slug}`);
+  }
+}
+
+/** Import a finished depot and record the executable that actually landed. */
+async function finalizeImport(
+  profile: GameProfile,
+  paths: GamePaths,
+  wine: WineRuntime,
+  manifest?: string,
+): Promise<boolean> {
   const result = await importDepot(profile, paths, {
-    manifest: options.manifest,
+    manifest,
     env: { WINE: wine.distExe, WINE_RUNTIME: wine.name },
   });
   if (result.imported) {
-    log(`done. play with: steam-mac run ${slug}`);
+    await ensureExecutable(profile, paths, wine);
+  }
+  return result.imported;
+}
+
+/**
+ * Make the profile point at an executable that exists.
+ *
+ * `add` gives a fresh game the placeholder `<slug>.exe`; the real name is only
+ * known once the depot is in the prefix. When the configured file is missing,
+ * detect the executable in the game folder, record it and rebuild the bundle.
+ */
+async function ensureExecutable(
+  profile: GameProfile,
+  paths: GamePaths,
+  wine: WineRuntime,
+): Promise<void> {
+  if (exists(join(paths.gameDir, profile.exe))) {
+    return;
+  }
+  const match = await detectExecutable(paths.gameDir, profile.name);
+  if (!match) {
+    warn(`no executable found in ${paths.gameDir} — set 'exe' in game.json`);
+    return;
+  }
+  if (match.exe !== profile.exe) {
+    warn(`configured executable '${profile.exe}' is missing — using '${match.exe}'`);
+    profile.exe = match.exe;
+    await saveGame(profile);
+    await buildApp(profile, paths, wine);
+  }
+}
+
+/**
+ * Provision a freshly added game: setup, then download and import.
+ *
+ * The download needs a depot id and a SteamCMD login; when either is missing
+ * the game stays registered and the message says how to continue. With
+ * `refreshIcon` the icon is re-provisioned at the end, so the executable icon
+ * can replace a placeholder once the files are in the prefix.
+ */
+export async function provisionGame(
+  slug: string,
+  options: { refreshIcon?: boolean } = {},
+): Promise<void> {
+  if (isDryRun()) {
+    log(`dry-run: would provision ${slug}: setup → download → import`);
+    return;
+  }
+  await cmdSetup(slug);
+
+  const { profile } = await loadContext(slug);
+  if (profile.depot === 0) {
+    warn(`no depot id for ${slug} — set it with 'steam-mac edit ${slug}', then run 'steam-mac download ${slug}'`);
+    return;
+  }
+
+  await cmdDownload(slug);
+  await cmdImport(slug);
+  if (options.refreshIcon) {
+    await cmdIcon(slug);
   }
 }
 
@@ -115,7 +189,7 @@ export async function cmdImport(slug: string, options: { manifest?: string } = {
  * back to the guided Steam-console flow and waits for the download to finish.
  */
 export async function cmdDownload(slug: string, options: { manual?: boolean } = {}): Promise<void> {
-  const { profile, paths, config } = await loadContext(slug);
+  const { profile, paths, config, wine } = await loadContext(slug);
   if (profile.depot === 0) {
     die("no Steam depot id configured — set 'depot' in game.json");
   }
@@ -133,7 +207,7 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
       });
       if (result.depotDir) {
         log(`steamcmd: download complete → ${result.depotDir}`);
-        await importDepot(profile, paths, { manifest: result.manifest });
+        await finalizeImport(profile, paths, wine, result.manifest);
         log(`done. play with: steam-mac run ${slug}`);
         return;
       }
@@ -146,13 +220,14 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
     }
   }
 
-  await guidedConsoleDownload(profile, paths, config);
+  await guidedConsoleDownload(profile, paths, config, wine);
 }
 
 async function guidedConsoleDownload(
   profile: GameProfile,
   paths: GamePaths,
   config: Config,
+  wine: WineRuntime,
 ): Promise<void> {
   log("the Steam console opens in a moment");
   log(`type:  download_depot ${profile.appid} ${profile.depot}`);
@@ -174,14 +249,14 @@ async function guidedConsoleDownload(
     die(`timed out after ${timeout}s — rerun 'steam-mac download ${profile.slug}'`);
   }
 
-  await importDepot(profile, paths, {});
+  await finalizeImport(profile, paths, wine);
   log(`done. play with: steam-mac run ${profile.slug}`);
   void config;
 }
 
 /** Check for an update, and optionally download and import it. */
 export async function cmdUpdate(slug: string, options: { check?: boolean } = {}): Promise<void> {
-  const { profile, paths } = await loadContext(slug);
+  const { profile, paths, wine } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
     die("the game is not imported — run: steam-mac setup && steam-mac download");
   }
@@ -196,7 +271,7 @@ export async function cmdUpdate(slug: string, options: { check?: boolean } = {})
   }
 
   if (status.state === "waiting") {
-    await importDepot(profile, paths, { manifest: status.latest ?? undefined });
+    await finalizeImport(profile, paths, wine, status.latest ?? undefined);
     return;
   }
   if (status.state === "up-to-date") {
@@ -412,7 +487,7 @@ export async function collectStatus(slug: string): Promise<StatusReport> {
   const { profile, paths, wine } = await loadContext(slug);
   const installed = await readInstalledManifestSafe(profile.slug);
   const status = await updateStatus(profile, paths);
-  const version = await wineVersion(wine);
+  const version = await runtimeVersion(wine);
 
   return {
     profile,
@@ -512,7 +587,7 @@ export async function collectDoctor(slug: string): Promise<DoctorReport> {
   }
 
   if (exists(wine.distExe)) {
-    add("PASS", wine.label, (await wineVersion(wine)) ?? "unknown");
+    add("PASS", wine.label, (await runtimeVersion(wine)) ?? "unknown");
   } else {
     add("FAIL", wine.label, `run: steam-mac setup ${slug}`);
   }

@@ -3,6 +3,8 @@
 // docs: docs/managing.md
 
 import type { Config } from "../../../core/config.ts";
+import { theme } from "../../theme.ts";
+import { Panel } from "../Panel/index.ts";
 
 export interface SettingsViewProps {
   config: Config;
@@ -18,19 +20,19 @@ export function SettingsView({ config }: SettingsViewProps) {
     ["steamcmd", config.steamcmd.anonymous ? "anonymous" : `account ${config.steamcmd.username ?? "?"}`],
     ["log lines", String(config.logLines)],
   ];
+  const labelWidth = Math.max(14, ...rows.map(([label]) => label.length));
 
   return (
-    <box style={{ flexDirection: "column", gap: 1 }}>
-      <text fg="#ffffff">Settings</text>
-      <box style={{ flexDirection: "column", paddingLeft: 1 }}>
-        {rows.map(([label, value]) => (
-          <box key={label} style={{ flexDirection: "row", gap: 2 }}>
-            <text fg="#7f848e">{label.padEnd(14)}</text>
-            <text fg="#c8ccd4">{value}</text>
+    <Panel title="Settings" flexGrow={1}>
+      {rows.map(([label, value]) => (
+        <box key={label} style={{ flexDirection: "row" }}>
+          <box style={{ width: labelWidth + 2 }}>
+            <text fg={theme.faint}>{label}</text>
           </box>
-        ))}
-      </box>
-      <text fg="#6b7280">a toggle SteamCMD anonymous · edit the file with: steam-mac config key=value</text>
-    </box>
+          <text fg={theme.text}>{value}</text>
+        </box>
+      ))}
+      <text fg={theme.muted}>a toggle SteamCMD anonymous · edit with: steam-mac config key=value</text>
+    </Panel>
   );
 }

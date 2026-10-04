@@ -15,8 +15,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "start": "node --experimental-ffi --import tsx src/cli.ts",
-    "tui": "node --experimental-ffi --import tsx src/cli.ts tui",
+    "setup": "pnpm add --global .",
+    "start": "node --experimental-ffi --import tsx src/cli.ts tui",
     "test": "node --test tests/unit/*.test.ts",
     "test:tui": "node --experimental-ffi --import tsx --test tests/tui/*.test.tsx",
     "typecheck": "tsc --noEmit",
@@ -28,7 +28,7 @@
     "react": "19.3.0"
   },
   "devDependencies": {
-    "@types/node": "26.4.0",
+    "@types/node": "26.6.4",
     "@types/react": "19.3.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2"

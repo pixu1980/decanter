@@ -27,19 +27,44 @@ steam-mac add --appid 57640 --depot 57641
 ```
 
 `add` resolves the app on the Steam store, caches its metadata, fetches the
-icon, and writes the profile. The Steam **depot id** is not exposed by any
-public API: find it on [SteamDB](https://steamdb.info/) (the Depots tab) or with
+icon, writes the profile, then provisions the game: `setup`, `download` and
+`import` run automatically (SteamCMD is downloaded by `setup`). When a step
+cannot continue (no depot id, no login) the game stays registered and the
+command says how to resume.
+
+Running `add` again is safe: a registered game that is **not installed** is
+provisioned again without needing `--force`, while an already **installed** game
+is left alone (pass `--force` to re-register and re-provision it).
+
+The Steam **depot id** is not exposed by any public API: find it on
+[SteamDB](https://steamdb.info/) (the Depots tab) or with
 `app_info_print <appid>` in SteamCMD. For a single-depot game it is often the
 appid or the appid plus one, but always confirm it.
+
+### Known games and executable detection
+
+A game in the built-in catalog (currently Graveyard Keeper 2, appid 4358690) is
+fully provisioned with no flags: the catalog supplies the executable, install
+and save folders, the Unity window-mode registry block and the update checks.
+Pass `--exe`, `--slug` or `--depot` to override any of it; the flags win.
+
+For any other game the profile starts with the placeholder `<slug>.exe`. After
+`import`, if that file is not in the game folder, `steam-mac` detects the real
+executable (a name match against the game, otherwise the largest `.exe`),
+records it in `game.json` and rebuilds the app bundle. You can always set it by
+hand with `steam-mac edit <game>`, then `steam-mac app <game>`.
 
 Edit the profile by hand or with `steam-mac edit <game>` to set `exe`,
 `installSubdir`, `dataSubdir`, window mode and so on.
 
 ## Installing
 
+`add` already ran these steps; run them again to retry or to reinstall:
+
 ```sh
-steam-mac setup <game>       # Rosetta, Wine runtime, prefix, icon, app bundle
+steam-mac setup <game>       # Rosetta, Wine runtime, prefix, SteamCMD, icon, app bundle
 steam-mac download <game>    # SteamCMD, or the guided Steam console
+steam-mac import <game>      # move a finished download into the prefix
 steam-mac run <game>         # or open the .app
 ```
 
@@ -107,12 +132,54 @@ Settings live in `~/.steam-mac/config.json`.
 | `<PREFIX>_PREFIX` | Wine prefix for one game |
 | `<PREFIX>_APP` | App bundle location |
 | `<PREFIX>_WINE_APP` | Wine runtime app |
-| `<PREFIX>_WINE_RUNTIME` | `gptk`, `wine-devel` or `wine-staging` |
+| `<PREFIX>_WINE_RUNTIME` | `gptk`, `gptk-apple`, `wine-devel` or `wine-staging` |
+| `<PREFIX>_GPTK_APPLE_SOURCE` | mounted Apple GPTK DMG directory for `gptk-apple` |
 | `<PREFIX>_STEAM_ROOT` | Steam data folder |
 | `SM_UPDATE_TIMEOUT` | Seconds the guided console flow waits (default 1800) |
 
+`steamGridDbKey` in `config.json` is the SteamGridDB API key used when the
+Steam artwork is missing; change it with `steam-mac config
+steamGridDbKey=<key>`.
+
 `<PREFIX>` is derived from the slug, for example `GK2` for
 `graveyard-keeper-2`.
+
+## GPTK 4.0 from Apple's DMG
+
+> **Not usable yet (2026-10-03).** The overlay builds and reports D3DMetal 4.0,
+> but games abort on start: D3DMetal 4.0's `d3d11.dll` fails to initialise
+> against the Gcenx Wine 7.7 loader (`status c0000142`). D3DMetal 4.0 needs the
+> matching Apple Wine build, which Gcenx has not shipped. **Keep
+> `wineRuntime: "gptk"` (D3DMetal 3.0)** until a compatible loader exists; the
+> steps below then become valid.
+
+Apple ships `Game Porting Toolkit 4.0` only from
+[developer.apple.com](https://developer.apple.com/download/all/) (an Apple ID is
+required); Gcenx's Homebrew cask is still on D3DMetal 3.0. To use the newer
+D3DMetal for one game:
+
+1. Download and mount the DMG (the volume is named
+   *Evaluation environment for Windows games &lt;version&gt;*).
+2. Point the toolkit at it:
+
+   ```sh
+   steam-mac config appleGptkSource="/Volumes/Evaluation environment for Windows games 4.0 beta 2"
+   ```
+
+3. Set the game's runtime to `gptk-apple` in
+   `~/.steam-mac/games/<slug>/game.json` (or run `steam-mac edit <game>`).
+4. Rebuild the game:
+
+   ```sh
+   steam-mac setup <game>
+   steam-mac doctor <game>
+   ```
+
+`setup` clones the Gcenx loader into `~/.steam-mac/wine/gptk-apple` and merges
+the DMG's `redist/lib` (D3DMetal plus the D3D bridge `.so`/`.dll`) over it. The
+clone uses APFS copy-on-write, so it costs only the new D3DMetal. The default
+`gptk` runtime is untouched, and `doctor` shows which D3DMetal a game now uses.
+Once the overlay exists the DMG no longer needs to stay mounted.
 
 ## Exit codes
 

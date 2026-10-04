@@ -1,16 +1,22 @@
 // Create a game profile from the Steam store.
 //
 // `steam-mac add "<name>"` (or `--appid N`) resolves the app, caches its
-// metadata and artwork, and writes `~/.steam-mac/games/<slug>/game.json`.
+// metadata and artwork, writes `~/.steam-mac/games/<slug>/game.json`, then
+// provisions the game: setup, download and import.
 //
 // docs: docs/managing.md
 
+import { loadConfig } from "./config.ts";
+import { gameInstalled } from "./depot.ts";
+import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
 import { normalizeProfile, type GameProfile } from "./profile.ts";
-import { gameExists, saveGame } from "./registry.ts";
+import { knownGame } from "./catalog.ts";
+import { gameExists, getGame, saveGame } from "./registry.ts";
 import { gameAssetsDir, slugify } from "./paths.ts";
 import { die, log } from "./log.ts";
 import { provisionIcon } from "./icon.ts";
+import { provisionGame } from "./lifecycle.ts";
 
 export interface AddOptions {
   name?: string;
@@ -40,22 +46,31 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
   }
 
   const store = await storeApp(appid, options.fetchImpl);
-  const appName = store?.name ?? name;
+  const known = knownGame(appid);
+  const appName = store?.name || name || known?.name || "";
   if (!appName) {
     die(`no Steam app found for id ${appid}`);
   }
-  const slug = options.slug ?? slugify(appName);
+  const slug = options.slug ?? known?.slug ?? slugify(appName);
 
   if (!options.force && (await gameExists(slug))) {
-    die(`'${slug}' is already in the registry — pass --force to overwrite`);
+    const existing = await getGame(slug);
+    const config = await loadConfig();
+    const paths = resolveGamePaths(existing, config);
+    if (await gameInstalled(existing, paths)) {
+      log(`'${slug}' is already installed — nothing to do (pass --force to re-register)`);
+      return existing;
+    }
+    log(`'${slug}' is already registered but not installed — provisioning it again`);
   }
 
   const profile = normalizeProfile({
+    ...known,
     name: appName,
     slug,
     appid,
-    depot: options.depot ?? 0,
-    exe: options.exe,
+    depot: options.depot ?? known?.depot ?? 0,
+    exe: options.exe ?? known?.exe,
     meta: {
       headerImage: store?.headerImage,
       libraryImage: store?.libraryImage,
@@ -76,11 +91,8 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
     log(`icon: ${icon.icns}`);
   }
 
-  if (profile.depot === 0) {
-    log(`next: set the depot id (steam-mac edit ${profile.slug}), then: steam-mac setup ${profile.slug}`);
-  } else {
-    log(`next: steam-mac setup ${profile.slug}`);
-  }
+  const weakIcon = icon.source === "placeholder" || icon.source === "none";
+  await provisionGame(profile.slug, { refreshIcon: weakIcon });
 
   return profile;
 }

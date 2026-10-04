@@ -81,6 +81,13 @@ export WINEPREFIX=${shellQuote(paths.prefix)}
 export WINEESYNC=\${WINEESYNC:-1}
 export WINEMSYNC=\${WINEMSYNC:-1}
 export WINEDEBUG=\${WINEDEBUG:--all}
+# Optional Windows Steam in the prefix (pre-order bonus, cloud saves). Only when
+# it is installed; the game runs without it. Mirrors 'steam-mac run'.
+STEAM="\$WINEPREFIX/drive_c/Program Files (x86)/Steam/steam.exe"
+if [ -f "\$STEAM" ] && ! /usr/bin/pgrep -qf 'steam\\.exe'; then
+  "\$HERE/wine64" 'C:\\Program Files (x86)\\Steam\\steam.exe' -cef-disable-gpu-compositing -silent &
+  sleep 15
+fi
 cd ${shellQuote(paths.gameDir)}
 exec "\$HERE/wine64" ${shellQuote(profile.exe)} "\$@"
 `;

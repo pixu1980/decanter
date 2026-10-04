@@ -22,3 +22,24 @@ test("renders the empty registry", async () => {
     setup.renderer.destroy();
   }
 });
+
+test("? opens the keyboard help and esc closes it", async () => {
+  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  const setup = await testRender(<App />, { width: 80, height: 24 });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await setup.renderOnce();
+    setup.mockInput.pressKey("?");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    await setup.renderOnce();
+    const help = setup.captureCharFrame();
+    assert.match(help, /Keyboard shortcuts/);
+
+    setup.mockInput.pressKey("ESCAPE");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    await setup.renderOnce();
+    assert.doesNotMatch(setup.captureCharFrame(), /Keyboard shortcuts/);
+  } finally {
+    setup.renderer.destroy();
+  }
+});

@@ -3,6 +3,8 @@
 // docs: docs/architecture.md
 
 import type { GameRow } from "../../helpers/index.ts";
+import { symbols, theme } from "../../theme.ts";
+import { Panel } from "../Panel/index.ts";
 
 export interface GameListProps {
   rows: GameRow[];
@@ -11,39 +13,42 @@ export interface GameListProps {
 
 /** Render the list of games. */
 export function GameList({ rows, selected }: GameListProps) {
-  if (rows.length === 0) {
-    return (
-      <box style={{ padding: 1 }}>
-        <text fg="#888888">No games registered yet.{"\n\n"}Press a to add one from the Steam store.</text>
-      </box>
-    );
-  }
-
   return (
-    <box style={{ flexDirection: "column" }}>
-      {rows.map((row, index) => {
-        const active = index === selected;
-        return (
-          <box
-            key={row.profile.slug}
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              paddingLeft: 1,
-              paddingRight: 1,
-              backgroundColor: active ? "#2f3b52" : undefined,
-            }}
-          >
-            <text fg={active ? "#ffffff" : "#c8ccd4"}>
-              {active ? "▶ " : "  "}
-              {row.profile.name}
-            </text>
-            <text fg="#6b7280">
-              {row.imported ? "installed" : "not installed"} · {updateLabel(row.update)} · {row.hasApp ? "app" : "no app"}
-            </text>
-          </box>
-        );
-      })}
+    <Panel title={`Games${rows.length ? ` (${rows.length})` : ""}`} flexGrow={1}>
+      {rows.length === 0 ? <EmptyState /> : rows.map((row, index) => renderRow(row, index === selected))}
+    </Panel>
+  );
+}
+
+function EmptyState() {
+  return (
+    <box style={{ flexDirection: "column", paddingY: 1, gap: 1 }}>
+      <text fg={theme.text}>No games registered yet.</text>
+      <text fg={theme.muted}>Press a to add one from the Steam store.</text>
+    </box>
+  );
+}
+
+function renderRow(row: GameRow, active: boolean) {
+  return (
+    <box
+      key={row.profile.slug}
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        backgroundColor: active ? theme.selection : undefined,
+      }}
+    >
+      <text fg={active ? theme.strong : theme.text}>
+        {active ? symbols.pointer : " "} {row.profile.name}
+      </text>
+      <box style={{ flexDirection: "row", gap: 2 }}>
+        <text fg={row.imported ? theme.success : theme.faint}>
+          {row.imported ? "installed" : "not installed"}
+        </text>
+        <text fg={updateColor(row.update)}>{updateLabel(row.update)}</text>
+        <text fg={row.hasApp ? theme.success : theme.faint}>{row.hasApp ? "app" : "no app"}</text>
+      </box>
     </box>
   );
 }
@@ -60,4 +65,15 @@ function updateLabel(state: GameRow["update"]): string {
   }
 
   return "state unknown";
+}
+
+function updateColor(state: GameRow["update"]): string {
+  if (state === "available") {
+    return theme.warning;
+  }
+  if (state === "up-to-date") {
+    return theme.success;
+  }
+
+  return theme.faint;
 }

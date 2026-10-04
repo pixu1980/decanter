@@ -2,6 +2,9 @@
 //
 // docs: docs/troubleshooting.md
 
+import { theme } from "../../theme.ts";
+import { Panel } from "../Panel/index.ts";
+
 export interface LogsViewProps {
   title: string;
   lines: string[];
@@ -13,10 +16,9 @@ export interface LogsViewProps {
 export function LogsView({ title, lines, pageSize, offset }: LogsViewProps) {
   if (lines.length === 0) {
     return (
-      <box style={{ flexDirection: "column" }}>
-        <text fg="#ffffff">{title}</text>
-        <text fg="#888888">No log yet — start the game once.</text>
-      </box>
+      <Panel title={title} flexGrow={1}>
+        <text fg={theme.muted}>No log yet — start the game once.</text>
+      </Panel>
     );
   }
 
@@ -24,20 +26,13 @@ export function LogsView({ title, lines, pageSize, offset }: LogsViewProps) {
   const window = lines.slice(start, start + pageSize);
 
   return (
-    <box style={{ flexDirection: "column" }}>
-      <box style={{ flexDirection: "row", gap: 2 }}>
-        <text fg="#ffffff">{title}</text>
-        <text fg="#6b7280">
-          {start + 1}-{start + window.length} / {lines.length}
-        </text>
-      </box>
-      <box style={{ flexDirection: "column", paddingLeft: 1 }}>
-        {window.map((line, index) => (
-          <text key={`${start + index}`} fg="#c8ccd4">
-            {line}
-          </text>
-        ))}
-      </box>
-    </box>
+    <Panel title={title} flexGrow={1} bottomTitle={` ${start + 1}-${start + window.length} / ${lines.length} `}>
+      {window.map((line, index) => (
+        <box key={`${start + index}`} style={{ flexDirection: "row" }}>
+          <text fg={theme.faint}>{String(start + index + 1).padStart(5)} </text>
+          <text fg={theme.text}>{line}</text>
+        </box>
+      ))}
+    </Panel>
   );
 }

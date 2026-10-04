@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -62,5 +63,8 @@ test("buildApp writes a self-hosting bundle", async () => {
     const launch = (await readText(join(paths.app, "Contents", "MacOS", "launch"))) ?? "";
     assert.match(launch, /WINEPREFIX=/);
     assert.match(launch, /exec "\$HERE\/wine64" 'test\.exe'/);
+    assert.match(launch, /steam\\\.exe/);
+    assert.match(launch, /Program Files \(x86\)/);
+    execFileSync("/bin/zsh", ["-n", join(paths.app, "Contents", "MacOS", "launch")]);
   });
 });

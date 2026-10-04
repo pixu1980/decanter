@@ -24,8 +24,12 @@ export interface Config {
   applicationsDir: string;
   gptkApp: string;
   gptkCask: string;
-  wineRuntime: "gptk" | "wine-devel" | "wine-staging";
+  /** Directory of the mounted Apple "Evaluation environment for Windows games" DMG. */
+  appleGptkSource: string;
+  wineRuntime: "gptk" | "gptk-apple" | "wine-devel" | "wine-staging";
   logLines: number;
+  /** SteamGridDB API key, used when the Steam artwork is missing. */
+  steamGridDbKey: string;
   steamcmd: SteamCmdAccount;
 }
 
@@ -36,8 +40,10 @@ export function defaultConfig(): Config {
     applicationsDir: defaultApplicationsDir(),
     gptkApp: "/Applications/Game Porting Toolkit.app",
     gptkCask: "gcenx/wine/game-porting-toolkit",
+    appleGptkSource: "",
     wineRuntime: "gptk",
     logLines: 80,
+    steamGridDbKey: "REDACTED",
     steamcmd: { anonymous: true },
   };
 }

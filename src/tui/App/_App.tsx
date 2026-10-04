@@ -2,6 +2,8 @@
 //
 // Screens stay presentational; this file owns state and calls the lifecycle
 // commands through `safeAction`, so console output never breaks the frame.
+// Destructive actions confirm in-app, because the engine's own prompt reads
+// stdin while the renderer owns the terminal.
 //
 // docs: docs/architecture.md
 
@@ -28,10 +30,16 @@ import {
   type DoctorCheck,
   type StatusField,
 } from "../../core/lifecycle.ts";
+import { log } from "../../core/log.ts";
+import { removeGameRecord } from "../../core/registry.ts";
+import { ACTIONS, DESTRUCTIVE } from "../actions.ts";
 import { AddWizard, type AddValues } from "../components/AddWizard/index.ts";
+import { ConfirmDialog } from "../components/ConfirmDialog/index.ts";
 import { DoctorView } from "../components/DoctorView/index.ts";
-import { GameDetail, type ActionItem } from "../components/GameDetail/index.ts";
+import { GameDetail } from "../components/GameDetail/index.ts";
 import { GameList } from "../components/GameList/index.ts";
+import { Header } from "../components/Header/index.ts";
+import { HelpOverlay } from "../components/HelpOverlay/index.ts";
 import { LogsView } from "../components/LogsView/index.ts";
 import { SettingsView } from "../components/SettingsView/index.ts";
 import { StatusBar } from "../components/StatusBar/index.ts";
@@ -44,21 +52,6 @@ type View =
   | { name: "doctor"; slug: string }
   | { name: "logs"; slug: string }
   | { name: "settings" };
-
-const ACTIONS: ActionItem[] = [
-  { key: "run", label: "Run", hint: "open the app bundle" },
-  { key: "setup", label: "Setup", hint: "runtime, prefix, icon, bundle" },
-  { key: "download", label: "Download", hint: "SteamCMD, or the Steam console" },
-  { key: "import", label: "Import", hint: "move the depot into the prefix" },
-  { key: "update", label: "Update", hint: "check and install" },
-  { key: "app", label: "Rebuild app", hint: "bundle with menu and Cmd+Q" },
-  { key: "icon", label: "Fetch icon", hint: "from the Steam CDN" },
-  { key: "doctor", label: "Doctor", hint: "health checks" },
-  { key: "logs", label: "Logs", hint: "tail the game log" },
-  { key: "saves", label: "Open saves", hint: "in Finder" },
-  { key: "backup", label: "Backup saves", hint: "to ~/Documents" },
-  { key: "uninstall", label: "Uninstall", hint: "remove the app bundle" },
-];
 
 /** Render the interface. */
 export function App() {
@@ -76,10 +69,14 @@ export function App() {
   const [logOffset, setLogOffset] = useState(0);
   const [status, setStatus] = useState("ready");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setConfig(await loadConfig());
-    setRows(await refreshGames());
+    const next = await refreshGames();
+    setRows(next);
+    return next;
   }, []);
 
   useEffect(() => {
@@ -97,7 +94,7 @@ export function App() {
       .catch(() => setFields([]));
   }, []);
 
-  const runAction = useCallback(
+  const executeAction = useCallback(
     async (action: string) => {
       if (!current) {
         return;
@@ -140,7 +137,11 @@ export function App() {
           icon: () => cmdIcon(current.slug),
           saves: () => cmdSaves(current.slug, { open: true }),
           backup: () => cmdBackupSaves(current.slug),
-          uninstall: () => cmdUninstall(current.slug, {}),
+          uninstall: async () => {
+            await cmdUninstall(current.slug, { yes: true, purge: true });
+            await removeGameRecord(current.slug);
+            log(`removed ${current.slug} from the registry`);
+          },
         };
         const command = commands[action];
         if (!command) {
@@ -148,10 +149,15 @@ export function App() {
         }
         const result = await safeAction(command);
         setStatus(result.ok ? result.message : `error: ${result.message}`);
-        await reload();
+        const next = await reload();
         if (view.name === "detail") {
-          const report = await collectStatus(current.slug);
-          setFields(report.fields);
+          if (next.some((row) => row.profile.slug === current.slug)) {
+            const report = await collectStatus(current.slug);
+            setFields(report.fields);
+          } else {
+            setListIndex(0);
+            setView({ name: "games" });
+          }
         }
       } finally {
         setBusy(false);
@@ -160,11 +166,45 @@ export function App() {
     [config, current, reload, view.name],
   );
 
+  const runAction = useCallback(
+    (action: string) => {
+      if (DESTRUCTIVE.has(action)) {
+        setPending(action);
+        return;
+      }
+      void executeAction(action);
+    },
+    [executeAction],
+  );
+
   useKeyboard((key) => {
+    const name = key.name;
+
+    if (helpOpen) {
+      if (name === "escape" || name === "?" || name === "q") {
+        setHelpOpen(false);
+      }
+      return;
+    }
+
+    if (pending) {
+      if (name === "y" || name === "return") {
+        setPending(null);
+        void executeAction(pending);
+      } else if (name === "n" || name === "escape") {
+        setPending(null);
+      }
+      return;
+    }
+
     if (busy || view.name === "add") {
       return;
     }
-    const name = key.name;
+
+    if (name === "?") {
+      setHelpOpen(true);
+      return;
+    }
 
     if (view.name === "games") {
       if (name === "q") {
@@ -205,7 +245,7 @@ export function App() {
       if (name === "return") {
         const action = ACTIONS[actionIndex];
         if (action) {
-          void runAction(action.key);
+          runAction(action.key);
         }
       }
       return;
@@ -236,29 +276,32 @@ export function App() {
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1, padding: 1, gap: 1 }}>
-      <box style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <text fg="#61afef">steam-mac</text>
-        <text fg="#5c6370">{rows.length} game(s)</text>
-      </box>
+      <Header breadcrumb={breadcrumbFor(view, current)} right={`${rows.length} game(s) · ? help`} />
 
-      <box style={{ flexDirection: "column", flexGrow: 1 }}>
-        {view.name === "games" ? <GameList rows={rows} selected={listIndex} /> : null}
-        {view.name === "detail" && current ? (
-          <GameDetail row={rows[listIndex]!} fields={fields} actions={ACTIONS} selected={actionIndex} />
-        ) : null}
-        {view.name === "add" ? (
-          <AddWizard
-            busy={busy}
-            onCancel={() => setView({ name: "games" })}
-            onSubmit={(values) => void submitAdd(values, setBusy, setStatus, setView, reload)}
-          />
-        ) : null}
-        {view.name === "doctor" ? <DoctorView title="Doctor" checks={checks} /> : null}
-        {view.name === "logs" ? (
-          <LogsView title="Game log" lines={logs} pageSize={Math.max(5, height - 8)} offset={logOffset} />
-        ) : null}
-        {view.name === "settings" && config ? <SettingsView config={config} /> : null}
-      </box>
+      {pending || helpOpen ? (
+        <box style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
+          {pending ? <ConfirmDialog {...confirmCopy(pending, current?.name ?? "")} /> : <HelpOverlay />}
+        </box>
+      ) : (
+        <box style={{ flexDirection: "column", flexGrow: 1 }}>
+          {view.name === "games" ? <GameList rows={rows} selected={listIndex} /> : null}
+          {view.name === "detail" && current ? (
+            <GameDetail row={rows[listIndex]!} fields={fields} actions={ACTIONS} selected={actionIndex} />
+          ) : null}
+          {view.name === "add" ? (
+            <AddWizard
+              busy={busy}
+              onCancel={() => setView({ name: "games" })}
+              onSubmit={(values) => void submitAdd(values, setBusy, setStatus, setView, reload)}
+            />
+          ) : null}
+          {view.name === "doctor" ? <DoctorView title="Doctor" checks={checks} /> : null}
+          {view.name === "logs" ? (
+            <LogsView title="Game log" lines={logs} pageSize={Math.max(5, height - 8)} offset={logOffset} />
+          ) : null}
+          {view.name === "settings" && config ? <SettingsView config={config} /> : null}
+        </box>
+      )}
 
       <StatusBar message={status} busy={busy} hints={hintsFor(view)} />
     </box>
@@ -270,7 +313,7 @@ async function submitAdd(
   setBusy: (busy: boolean) => void,
   setStatus: (status: string) => void,
   setView: (view: View) => void,
-  reload: () => Promise<void>,
+  reload: () => Promise<unknown>,
 ): Promise<void> {
   if (!values.name && !values.appid) {
     setStatus("error: give a name or an appid");
@@ -279,7 +322,7 @@ async function submitAdd(
   setBusy(true);
   try {
     const result = await safeAction(() =>
-      addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot }),
+      addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe }),
     );
     setStatus(result.ok ? result.message : `error: ${result.message}`);
     if (result.ok) {
@@ -304,12 +347,44 @@ async function toggleAnonymous(
   setStatus(`steamcmd: ${next.steamcmd.anonymous ? "anonymous" : "account"} mode`);
 }
 
+function breadcrumbFor(view: View, current: GameRow["profile"] | null): string {
+  if (view.name === "detail") {
+    return current?.name ?? "Game";
+  }
+  if (view.name === "add") {
+    return "Add a game";
+  }
+  if (view.name === "doctor") {
+    return "Doctor";
+  }
+  if (view.name === "logs") {
+    return "Logs";
+  }
+  if (view.name === "settings") {
+    return "Settings";
+  }
+
+  return "Games";
+}
+
+function confirmCopy(action: string, name: string): { title: string; message: string; detail?: string } {
+  if (action === "uninstall") {
+    return {
+      title: "Uninstall",
+      message: `Remove the app bundle for ${name}?`,
+      detail: "The Wine prefix, saves and mods are deleted, and the game leaves the list.",
+    };
+  }
+
+  return { title: "Confirm", message: `Run ${action} for ${name}?` };
+}
+
 function hintsFor(view: View): string {
   if (view.name === "games") {
-    return "↑↓ move · enter open · a add · s settings · r refresh · q quit";
+    return "↑↓ move · enter open · a add · s settings · r refresh · ? help · q quit";
   }
   if (view.name === "detail") {
-    return "↑↓ move · enter run action · esc back";
+    return "↑↓ move · enter run action · esc back · ? help";
   }
   if (view.name === "logs") {
     return "↑↓ scroll · esc back";
