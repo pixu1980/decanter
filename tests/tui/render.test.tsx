@@ -44,3 +44,20 @@ test("? opens the keyboard help and esc closes it", async () => {
     setup.renderer.destroy();
   }
 });
+
+test("the add wizard shows an Install button", async () => {
+  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  const setup = await testRender(<App />, { width: 90, height: 40 });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await setup.renderOnce();
+    setup.mockInput.pressKey("a");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    await setup.renderOnce();
+    const frame = setup.captureCharFrame();
+    assert.match(frame, /Add a game/);
+    assert.match(frame, /Install/);
+  } finally {
+    setup.renderer.destroy();
+  }
+});

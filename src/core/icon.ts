@@ -124,21 +124,42 @@ export async function buildIcns(source: string, assetsDir: string): Promise<Icon
   }
 
   await mkdirp(assetsDir);
+  const square = await squareSource(source, assetsDir);
   const iconset = join(assetsDir, "icon.iconset");
   await remove(iconset);
   await mkdirp(iconset);
 
   for (const [name, size] of Object.entries(ICONSET_SIZES)) {
-    await exec("sips", ["-z", String(size), String(size), source, "--out", join(iconset, name)]);
+    // `-s format png` is required: sips keeps the source format otherwise, and
+    // iconutil rejects an iconset whose `.png` files are actually JPEG.
+    await exec("sips", ["-z", String(size), String(size), "-s", "format", "png", square, "--out", join(iconset, name)]);
   }
 
   const icns = join(assetsDir, "icon.icns");
   await exec("iconutil", ["-c", "icns", iconset, "-o", icns]);
   const png = join(assetsDir, "icon.png");
-  await exec("sips", ["-z", "1024", "1024", source, "--out", png]);
+  await exec("sips", ["-z", "1024", "1024", "-s", "format", "png", square, "--out", png]);
   await remove(iconset);
+  if (square !== source) {
+    await remove(square);
+  }
 
   return { source: "store", png, icns };
+}
+
+/** Center-crop a non-square source so the icon is not distorted. */
+async function squareSource(source: string, assetsDir: string): Promise<string> {
+  const probe = await exec("sips", ["-g", "pixelWidth", "-g", "pixelHeight", source], { allowFailure: true });
+  const width = Number.parseInt(/pixelWidth:\s*(\d+)/.exec(probe.stdout)?.[1] ?? "0", 10);
+  const height = Number.parseInt(/pixelHeight:\s*(\d+)/.exec(probe.stdout)?.[1] ?? "0", 10);
+  if (!width || !height || width === height) {
+    return source;
+  }
+
+  const side = Math.min(width, height);
+  const target = join(assetsDir, "icon-square.png");
+  await exec("sips", ["-c", String(side), String(side), "-s", "format", "png", source, "--out", target]);
+  return target;
 }
 
 /** Extract the largest icon embedded in a Windows executable. */

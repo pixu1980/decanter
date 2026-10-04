@@ -23,10 +23,10 @@ export interface AddWizardProps {
   busy: boolean;
 }
 
-type Field = "name" | "appid" | "depot" | "exe" | "runtime";
+type Field = "name" | "appid" | "depot" | "exe" | "runtime" | "install";
 
-/** The tab order of the form fields. */
-const ORDER: Field[] = ["name", "appid", "depot", "exe", "runtime"];
+/** The tab order: the form fields, then the Install button. */
+const ORDER: Field[] = ["name", "appid", "depot", "exe", "runtime", "install"];
 
 /** Render the add-game form. */
 export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
@@ -46,19 +46,22 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       runtime: runtime.trim() || undefined,
     });
 
+  const advance = (current: Field) => setField(ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]!);
+
   useKeyboard((key) => {
     if (busy) {
       return;
     }
     if (key.name === "tab") {
-      setField((current) => ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]!);
+      advance(field);
       return;
     }
     if (key.name === "escape") {
       onCancel();
       return;
     }
-    if (key.name === "return") {
+    // Enter confirms only on the Install button; inside a text field it moves on.
+    if ((key.name === "return" || key.name === "space") && field === "install") {
       submit();
     }
   });
@@ -69,34 +72,48 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       <text fg={theme.muted}>Give a name to look up on the Steam store, or an appid directly.</text>
 
       <Field label="Name" focused={field === "name"}>
-        <input placeholder="Graveyard Keeper 2" focused={field === "name"} onInput={setName} onSubmit={() => setField("appid")} />
+        <input placeholder="Graveyard Keeper 2" focused={field === "name"} onInput={setName} onSubmit={() => advance("name")} />
       </Field>
 
       <Field label="Appid" focused={field === "appid"}>
-        <input placeholder="4358690" focused={field === "appid"} onInput={setAppid} onSubmit={() => setField("depot")} />
+        <input placeholder="4358690" focused={field === "appid"} onInput={setAppid} onSubmit={() => advance("appid")} />
       </Field>
 
       <Field label="Depot" focused={field === "depot"}>
-        <input placeholder="4358691" focused={field === "depot"} onInput={setDepot} onSubmit={() => setField("exe")} />
+        <input placeholder="4358691" focused={field === "depot"} onInput={setDepot} onSubmit={() => advance("depot")} />
       </Field>
 
       <Field label="Exe" focused={field === "exe"}>
-        <input placeholder="GraveyardKeeper2.exe" focused={field === "exe"} onInput={setExe} onSubmit={() => setField("runtime")} />
+        <input placeholder="GraveyardKeeper2.exe" focused={field === "exe"} onInput={setExe} onSubmit={() => advance("exe")} />
       </Field>
 
       <Field label="Runtime" focused={field === "runtime"}>
-        <input placeholder="gptk-apple" focused={field === "runtime"} onInput={setRuntime} onSubmit={submit} />
+        <input placeholder="gptk-apple" focused={field === "runtime"} onInput={setRuntime} onSubmit={() => advance("runtime")} />
       </Field>
 
       {exe.trim() === "" ? (
         <text fg={theme.warning}>No exe set — the engine detects it after import.</text>
       ) : null}
 
-      {runtime.trim() === "" ? (
-        <text fg={theme.muted}>Runtime empty — uses the catalog default (or gptk).</text>
-      ) : null}
+      <InstallButton focused={field === "install"} busy={busy} />
 
-      <text fg={theme.muted}>tab next · enter add · esc cancel</text>
+      <text fg={theme.muted}>tab next · enter on Install · esc cancel</text>
+    </box>
+  );
+}
+
+/** The confirmation button: Enter (or space) here starts the install. */
+function InstallButton({ focused, busy }: { focused: boolean; busy: boolean }) {
+  return (
+    <box
+      title=" Action "
+      titleColor={focused ? theme.accent : theme.muted}
+      border
+      borderStyle="rounded"
+      borderColor={focused ? theme.borderActive : theme.border}
+      style={{ width: 52, height: 3, alignItems: "center", justifyContent: "center" }}
+    >
+      <text fg={focused ? theme.strong : theme.text}>{busy ? "[ Installing… ]" : "[ Install ]"}</text>
     </box>
   );
 }
