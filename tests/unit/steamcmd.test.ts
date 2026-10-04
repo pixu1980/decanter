@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { test } from "node:test";
 
-import { loginArgs, parseDepotDownload, steamcmdPath } from "../../src/core/steamcmd.ts";
+import { detectSteamAccount, loginArgs, parseDepotDownload, steamcmdPath } from "../../src/core/steamcmd.ts";
+import { withTempHome } from "./_helpers.ts";
 
 test("loginArgs uses anonymous when configured", () => {
   assert.deepEqual(loginArgs({ anonymous: true }), ["+login", "anonymous"]);
@@ -38,4 +41,16 @@ test("parseDepotDownload returns nothing for unrelated output", () => {
 
 test("steamcmdPath lives under the runtime home", () => {
   assert.match(steamcmdPath(), /steamcmd\/steamcmd\.sh$/);
+});
+
+test("detectSteamAccount reads the native Steam account name", async () => {
+  await withTempHome(async () => {
+    const root = join(process.env.SM_HOME!, "Steam");
+    await mkdir(join(root, "config"), { recursive: true });
+    await writeFile(
+      join(root, "config", "loginusers.vdf"),
+      '"users"\n{\n\t"7656119"\n\t{\n\t\t"AccountName"\t\t"tester"\n\t}\n}\n',
+    );
+    assert.equal(await detectSteamAccount(root), "tester");
+  });
 });

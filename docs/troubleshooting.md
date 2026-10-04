@@ -27,13 +27,18 @@ steam-mac run <game>
 
 ## SteamCMD cannot download the depot
 
-SteamCMD needs the app on the account it logs in with. Anonymous only works for
-free games. For owned games:
+`steam-mac download` uses SteamCMD first and falls back to the Steam console.
+SteamCMD downloads as **anonymous** unless a login is stored, and anonymous
+accounts have no depot license, so owned games need a one-time login:
 
 ```sh
-steam-mac config steamcmd.anonymous=false steamcmd.username=<you>
-steam-mac login
+steam-mac login                 # uses the native Steam account name
+steam-mac login <steam-username>  # or pick one explicitly
 ```
+
+It asks for the password (and any Steam Guard code) on the terminal and stores
+the login, so later `steam-mac download <game>` runs headless. SteamCMD fetches
+the **Windows** depot through `@sSteamCmdForcePlatformType windows`.
 
 If SteamCMD still cannot help, `download` falls back to the Steam console:
 open it with `open steam://open/console`, type

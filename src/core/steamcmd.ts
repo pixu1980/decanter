@@ -8,7 +8,7 @@
 
 import { join } from "node:path";
 import type { SteamCmdAccount } from "./config.ts";
-import { exists, mkdirp, remove } from "./fsx.ts";
+import { exists, mkdirp, readText, remove } from "./fsx.ts";
 import { exec, isDryRun } from "./exec.ts";
 import { log, warn } from "./log.ts";
 import { steamcmdDir } from "./paths.ts";
@@ -52,13 +52,33 @@ export function loginArgs(account: SteamCmdAccount): string[] {
   return ["+login", account.username];
 }
 
+/** Does SteamCMD have a stored (non-anonymous) login? */
+export function steamcmdHasLogin(): boolean {
+  return exists(join(steamcmdDir(), "config", "loginusers.vdf"));
+}
+
+/**
+ * Read the account name the native Steam client last used, so `steam-mac login`
+ * can default to it instead of the anonymous login.
+ */
+export async function detectSteamAccount(steamRoot: string): Promise<string | null> {
+  const text = await readText(join(steamRoot, "config", "loginusers.vdf"));
+  return text?.match(/"AccountName"\s+"([^"]+)"/)?.[1] ?? null;
+}
+
 /** Open an interactive SteamCMD session so it can store a login. */
 export async function steamcmdLogin(account: SteamCmdAccount): Promise<void> {
   const script = await ensureSteamcmd();
+  const who = account.anonymous || !account.username ? "anonymous" : account.username;
   const args = [...loginArgs(account), "+quit"];
+  log(`steamcmd: logging in as ${who} (type the password and any Steam Guard code)`);
   const result = await exec(script, args, { stdio: "inherit", allowFailure: true });
   if (result.status !== 0) {
-    warn("steamcmd login did not complete — run 'steam-mac login' to retry");
+    warn("steamcmd login did not complete — run 'steam-mac login <username>' to retry");
+    return;
+  }
+  if (!account.anonymous && steamcmdHasLogin()) {
+    log("steamcmd: login stored — 'download' will use it");
   }
 }
 

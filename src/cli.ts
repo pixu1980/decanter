@@ -40,7 +40,7 @@ import { migrateRepo } from "./core/migrate.ts";
 import { gameDir } from "./core/paths.ts";
 import type { WineRuntime } from "./core/profile.ts";
 import { listGames, removeGameRecord, resolveGame } from "./core/registry.ts";
-import { steamcmdLogin } from "./core/steamcmd.ts";
+import { detectSteamAccount, steamcmdLogin } from "./core/steamcmd.ts";
 
 const VERSION = "0.1.0";
 
@@ -120,7 +120,16 @@ async function main(argv: string[]): Promise<void> {
 
   if (args.command === "login") {
     const config = await loadConfig();
-    await steamcmdLogin(config.steamcmd);
+    const username =
+      args.positionals[0] ??
+      config.steamcmd.username ??
+      (await detectSteamAccount(config.steamRoot)) ??
+      "";
+    if (!username) {
+      die("usage: steam-mac login <steam-username>");
+    }
+    await updateConfig({ steamcmd: { anonymous: false, username } });
+    await steamcmdLogin({ anonymous: false, username });
     return;
   }
 
@@ -316,7 +325,7 @@ registry:
   remove <game>         uninstall and forget a game (--purge --yes)
   migrate <path>        import a legacy per-game repo (--slug S --force)
   config [k=v ...]      show or change machine-wide settings
-  login                 store a SteamCMD login (for owned games)
+  login [user]          store a SteamCMD login (defaults to the native Steam account)
 
 lifecycle:
   setup <game>          Rosetta, Wine runtime, prefix, icon, app bundle
