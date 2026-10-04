@@ -97,25 +97,25 @@ Feature plan. The main project plan lives in `docs/plans/execution-plan.md`.
       lost (see note) and need a re-download; the prefix and app bundle are rebuilt.
 - [x] Confirm the default `gptk` path is untouched (overlay is a separate tree)
 
-## Verification finding (2026-10-03): the overlay does not boot games
+## Verification (2026-10-03): the working recipe is `external` only
 
-After the game files were re-downloaded and imported, GK2 aborted under
-`gptk-apple`:
+The full redist overlay aborted under `gptk-apple`:
 
 ```
 err:module:LdrInitializeThunk "d3d11.dll" failed to initialize, aborting
-... Initializing dlls for L"C:\\GK2\\GraveyardKeeper2.exe" failed, status c0000142
+... status c0000142
 ```
 
-The same game boots under the default `gptk` (D3DMetal 3.0, `wine-7.7`): Unity
-initialises, creates a D3D11 device (`Renderer: AMD Compatibility Mode`) and
-loads its assemblies. So the overlay's D3DMetal 4.0 bridge DLLs are incompatible
-with the Gcenx Wine 7.7 loader; they need the matching Apple Wine build, which
-Gcenx has not shipped. Overlaying onto a Gcenx `wine-devel` 11.18 build instead
-falls back to wined3d/MoltenVK (no D3DMetal) and the game exits.
+A dyld trace showed `libd3dshared.dylib` loads (`dlopen => 0xbca90`) but
+`D3DMetal.framework` is never reached, and the PEs are fine (signed, no
+quarantine, `ucrtbase._assert` present). So the redist's 4.0 bridge DLLs are
+ABI-incompatible with Apple's frozen Wine 7.7, while the 3.0 bridges work.
 
-Outcome: GK2 stays on `wineRuntime: "gptk"`. The `gptk-apple` code and docs are
-kept but marked non-functional until a compatible loader exists.
+Workaround (branch `feat/bridge-4.0`): overlay only `redist/lib/external` — the
+D3DMetal framework plus `libd3dshared.dylib` — and keep the loader's own 3.0
+bridge DLLs. Verified: GK2 boots and maps
+`gptk-apple/.../external/D3DMetal.framework` 4.0b2 together with the stock 3.0
+`d3d11.dll` (106496 bytes), rendering as `AMD Compatibility Mode`.
 
 ## Data-loss note (2026-10-03 16:57)
 

@@ -146,13 +146,6 @@ steamGridDbKey=<key>`.
 
 ## GPTK 4.0 from Apple's DMG
 
-> **Not usable yet (2026-10-03).** The overlay builds and reports D3DMetal 4.0,
-> but games abort on start: D3DMetal 4.0's `d3d11.dll` fails to initialise
-> against the Gcenx Wine 7.7 loader (`status c0000142`). D3DMetal 4.0 needs the
-> matching Apple Wine build, which Gcenx has not shipped. **Keep
-> `wineRuntime: "gptk"` (D3DMetal 3.0)** until a compatible loader exists; the
-> steps below then become valid.
-
 Apple ships `Game Porting Toolkit 4.0` only from
 [developer.apple.com](https://developer.apple.com/download/all/) (an Apple ID is
 required); Gcenx's Homebrew cask is still on D3DMetal 3.0. To use the newer
@@ -175,11 +168,14 @@ D3DMetal for one game:
    steam-mac doctor <game>
    ```
 
-`setup` clones the Gcenx loader into `~/.steam-mac/wine/gptk-apple` and merges
-the DMG's `redist/lib` (D3DMetal plus the D3D bridge `.so`/`.dll`) over it. The
-clone uses APFS copy-on-write, so it costs only the new D3DMetal. The default
-`gptk` runtime is untouched, and `doctor` shows which D3DMetal a game now uses.
-Once the overlay exists the DMG no longer needs to stay mounted.
+`setup` clones the Gcenx loader into `~/.steam-mac/wine/gptk-apple` and overlays
+the DMG's `redist/lib/external` (D3DMetal framework plus `libd3dshared.dylib`)
+on top of it. The redist's `wine` bridge DLLs are skipped: the 4.0 bridges do not
+initialise on Apple's frozen Wine 7.7, while the 3.0 bridges the loader already
+carries work with the 4.0 framework. The clone uses APFS copy-on-write, so it
+costs only the new D3DMetal. The default `gptk` runtime is untouched, and
+`doctor` shows which D3DMetal a game now uses. Once the overlay exists the DMG
+no longer needs to stay mounted.
 
 ## Exit codes
 

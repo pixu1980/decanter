@@ -98,21 +98,20 @@ GPTK's Wine reports a stale `wine-7.7 (Game Porting Toolkit 1.1)` string, so
 (`d3dMetalVersion` reads `lib/external/D3DMetal.framework`).
 
 The opt-in `gptk-apple` runtime takes the newer D3DMetal from Apple's
-"Evaluation environment for Windows games" DMG (behind an Apple ID) and merges
-its `redist/lib` subset onto a cloned Gcenx loader under
-`~/.steam-mac/wine/gptk-apple`. The DMG ships no macOS Wine loader and no full
-Wine tree, so it is an overlay, not a runtime; Apple's Read Me says to replace
-`lib/external` and `lib/wine` wholesale, which would delete the hundreds of
-builtins the Gcenx loader carries, so `wine.ts` merges the subset instead. The
-clone is an APFS copy-on-write clone, so it costs only the new D3DMetal.
+"Evaluation environment for Windows games" DMG (behind an Apple ID) and overlays
+it onto a cloned Gcenx loader under `~/.steam-mac/wine/gptk-apple`. The DMG
+ships no macOS Wine loader and no full Wine tree, so it is an overlay, not a
+runtime. The clone is an APFS copy-on-write clone, so it costs only the new
+D3DMetal.
 
-**Known blocker (2026-10-03):** the overlay is not usable with the Gcenx
-loader. The reloaded redist is D3DMetal 4.0, but the Gcenx app is Apple's Wine
-7.7, and 4.0's `d3d11.dll` fails to initialise on it — `err:module:LdrInitializeThunk
-"d3d11.dll" failed to initialize ... status c0000142`, so the game aborts before
-any window. D3DMetal 4.0 needs the matching Apple Wine build, which Gcenx has
-not shipped (latest cask is 3.0-3). Keep games on `gptk` until then; the overlay
-remains available for when a compatible loader exists.
+Only the DMG's `redist/lib/external` is overlaid: the D3DMetal framework plus
+`libd3dshared.dylib`. The redist also ships `wine/x86_64-unix` and
+`wine/x86_64-windows` bridge DLLs (d3d10/11/12, dxgi, nvapi64, nvngx), but those
+4.0 bridges do not initialise on Apple's frozen Wine 7.7 (`LdrInitializeThunk
+"d3d11.dll" failed to initialize ... status c0000142`), so the loader keeps its
+own bridge DLLs and `ensureWine` deliberately skips the redist `wine` folder.
+Verified with D3DMetal 4.0b2: Graveyard Keeper 2 boots and renders through the
+4.0 framework (`Renderer: AMD Compatibility Mode`).
 
 ## The app bundle and Cmd+Q
 

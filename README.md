@@ -26,10 +26,10 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
   manual tooling.
 - Provisions the Wine runtime: Game Porting Toolkit by default, a pinned Gcenx
   `wine-devel` / `wine-staging` build when GPTK's Wine 7.7 cannot run the game.
-  An opt-in `gptk-apple` runtime can overlay the newer D3DMetal from Apple's
-  Game Porting Toolkit 4.0 DMG, but it does not boot games yet — D3DMetal 4.0
-  needs a matching Apple Wine build that Gcenx has not shipped (see
-  `docs/troubleshooting.md`).
+  An opt-in `gptk-apple` runtime overlays the newer D3DMetal from Apple's Game
+  Porting Toolkit 4.0 DMG onto the Gcenx loader (only the D3DMetal layer; the
+  redist's 4.0 bridge DLLs are skipped because they do not initialise on Wine
+  7.7).
 - Downloads the Windows depot with **SteamCMD**, falling back to the guided
   Steam-console flow when a login is missing.
 - Imports the depot into a Wine prefix, tracks the depot manifest and reports

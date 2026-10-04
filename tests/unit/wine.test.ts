@@ -134,7 +134,7 @@ test("resolveWine maps gptk-apple to the overlay app and its source", async () =
   });
 });
 
-test("ensureWine merges the Apple redist over a Gcenx loader", async () => {
+test("ensureWine swaps only the D3DMetal layer over a Gcenx loader", async () => {
   await withTempHome(async () => {
     const home = process.env.SM_HOME!;
 
@@ -165,7 +165,8 @@ test("ensureWine merges the Apple redist over a Gcenx loader", async () => {
     assert.equal(await runtimeVersion(runtime), "D3DMetal 4.0b2 · wine-7.7");
     const lib = join(runtime.distDir, "lib");
     assert.equal(await readText(join(lib, "wine", "x86_64-windows", "advapi32.dll")), "base");
-    assert.equal(await readText(join(lib, "wine", "x86_64-windows", "d3d11.dll")), "new");
+    // The redist's bridge DLLs are skipped: they do not initialise on Wine 7.7.
+    assert.equal(await readText(join(lib, "wine", "x86_64-windows", "d3d11.dll")), "old");
     assert.equal(await readText(join(lib, "wine", "x86_64-unix", "ntdll.so")), "base");
     assert.equal(await readText(join(lib, "external", "libd3dshared.dylib")), "new");
 

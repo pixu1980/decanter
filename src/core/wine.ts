@@ -215,11 +215,16 @@ export async function ensureWine(runtime: WineRuntime): Promise<void> {
 }
 
 /**
- * Build the opt-in GPTK overlay: clone a Gcenx loader and merge Apple's DMG
- * `redist/lib` (D3DMetal plus the D3D bridge `.so`/`.dll`) into its `lib`.
+ * Build the opt-in GPTK overlay: clone a Gcenx loader and swap its `external`
+ * D3DMetal layer for the one from Apple's newer redist.
  *
- * Apple's Read Me replaces `lib/external` and `lib/wine` wholesale; that drops
- * the full Wine tree the Gcenx app carries, so this merges the redist subset.
+ * The redist also ships bridge DLLs under `wine/x86_64-unix` and
+ * `wine/x86_64-windows` (d3d10/11/12, dxgi, nvapi64, nvngx), but those
+ * fail to initialise against the frozen Apple Wine 7.7 the Gcenx loader carries
+ * (`LdrInitializeThunk "d3d11.dll" failed to initialize ... status c0000142`)
+ * and the game aborts. Only the `external` layer (D3DMetal framework plus the
+ * shared Direct3D library) is ABI-compatible, so the loader keeps its own
+ * bridge DLLs and the redist `wine` folder is deliberately skipped.
  */
 async function ensureAppleGptk(runtime: WineRuntime): Promise<void> {
   const current = exists(runtime.distExe) ? await d3dMetalVersion(runtime) : null;
@@ -266,8 +271,8 @@ async function ensureAppleGptk(runtime: WineRuntime): Promise<void> {
     await exec("ditto", [baseApp, runtime.app]);
   }
   const lib = join(runtime.distDir, "lib");
+  await remove(join(lib, "external"));
   await exec("ditto", [join(redist, "external"), join(lib, "external")]);
-  await exec("ditto", [join(redist, "wine"), join(lib, "wine")]);
 }
 
 /** Create or update the Wine prefix. */
