@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { test } from "node:test";
 
-import { detectSteamAccount, loginArgs, parseDepotDownload, steamcmdHasLogin, steamcmdPath } from "../../src/core/steamcmd.ts";
+import { detectSteamAccount, loginArgs, parseDepotDownload, parseWindowsDepot, steamcmdHasLogin, steamcmdPath } from "../../src/core/steamcmd.ts";
 import { withTempHome } from "./_helpers.ts";
 
 test("loginArgs uses anonymous when configured", () => {
@@ -59,6 +59,60 @@ test("detectSteamAccount reads the native Steam account name", async () => {
     );
     assert.equal(await detectSteamAccount(root), "tester");
   });
+});
+
+test("parseWindowsDepot picks the Windows content depot", () => {
+  const vdf = `"773580"
+{
+	"appinfo"
+	{
+		"depots"
+		{
+			"baselanguages"		"english"
+			"228986"
+			{
+				"config"
+				{
+					"oslist"		"windows"
+				}
+				"depotfromapp"		"228980"
+				"sharedinstall"		"1"
+			}
+			"773581"
+			{
+				"config"
+				{
+					"oslist"		"windows"
+				}
+				"manifests"
+				{
+					"public"
+					{
+						"gid"		"123"
+					}
+				}
+			}
+			"773582"
+			{
+				"config"
+				{
+					"oslist"		"linux"
+				}
+				"manifests"
+				{
+					"public"
+					{
+						"gid"		"456"
+					}
+				}
+			}
+		}
+	}
+}
+`;
+
+  assert.equal(parseWindowsDepot(vdf), 773581);
+  assert.equal(parseWindowsDepot(""), null);
 });
 
 test("steamcmdHasLogin reads the account from config.vdf", async () => {

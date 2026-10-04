@@ -7,6 +7,7 @@
 // docs: docs/managing.md
 
 import { loadConfig } from "./config.ts";
+import { resolveWindowsDepot } from "./steamcmd.ts";
 import { gameInstalled } from "./depot.ts";
 import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
@@ -66,12 +67,22 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
     log(`'${slug}' is already registered but not installed — provisioning it again`);
   }
 
+  let depot = options.depot ?? known?.depot ?? 0;
+  if (!depot) {
+    // Not in the catalog: ask SteamCMD for the Windows content depot.
+    const resolved = await resolveWindowsDepot(appid, (await loadConfig()).steamcmd);
+    if (resolved) {
+      log(`depot: resolved ${resolved} from SteamCMD`);
+      depot = resolved;
+    }
+  }
+
   const profile = normalizeProfile({
     ...known,
     name: appName,
     slug,
     appid,
-    depot: options.depot ?? known?.depot ?? 0,
+    depot,
     exe: options.exe ?? known?.exe,
     wineRuntime: options.runtime ?? known?.wineRuntime,
     meta: {

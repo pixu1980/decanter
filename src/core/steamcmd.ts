@@ -69,6 +69,112 @@ export async function steamcmdHasLogin(): Promise<boolean> {
   return Boolean(text && /"SteamID"\s+"\d+"/.test(text));
 }
 
+type VdfNode = { [key: string]: string | VdfNode };
+
+/** Parse SteamCMD's VDF output (key/value, nested blocks) into a tree. */
+function parseVdf(text: string): VdfNode {
+  const root: VdfNode = {};
+  const stack: VdfNode[] = [root];
+  let pending: string | null = null;
+
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (line === "{") {
+      if (pending !== null) {
+        const child: VdfNode = {};
+        stack[stack.length - 1]![pending] = child;
+        stack.push(child);
+        pending = null;
+      }
+      continue;
+    }
+    if (line === "}") {
+      stack.pop();
+      continue;
+    }
+    const pair = /^"([^"]*)"\s+"([^"]*)"$/.exec(line);
+    if (pair) {
+      stack[stack.length - 1]![pair[1]!] = pair[2]!;
+      continue;
+    }
+    const key = /^"([^"]*)"$/.exec(line);
+    if (key) {
+      pending = key[1]!;
+    }
+  }
+
+  return root;
+}
+
+/** Depth-first search for a nested block by key. */
+function findBlock(node: VdfNode, key: string): VdfNode | null {
+  const direct = node[key];
+  if (direct && typeof direct === "object") {
+    return direct;
+  }
+  for (const value of Object.values(node)) {
+    if (typeof value === "object") {
+      const found = findBlock(value, key);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Pick the Windows content depot from `app_info_print` output.
+ *
+ * Skips the redistributable depots (`depotfromapp` / `sharedinstall`), DLC
+ * depots and depots without a Windows `oslist`, then prefers one with a
+ * `manifests` block (the actual game content).
+ */
+export function parseWindowsDepot(text: string): number | null {
+  const depots = findBlock(parseVdf(text), "depots");
+  if (!depots) {
+    return null;
+  }
+
+  let fallback: number | null = null;
+  for (const [key, value] of Object.entries(depots)) {
+    if (!/^\d+$/.test(key) || typeof value !== "object") {
+      continue;
+    }
+    const depot = value as VdfNode;
+    if (depot["depotfromapp"] || depot["sharedinstall"] || depot["dlcappid"]) {
+      continue;
+    }
+    const config = depot["config"];
+    const oslist = typeof config === "object" ? String((config as VdfNode)["oslist"] ?? "") : "";
+    if (!oslist.includes("windows")) {
+      continue;
+    }
+    if (depot["manifests"] && typeof depot["manifests"] === "object") {
+      return Number(key);
+    }
+    fallback ??= Number(key);
+  }
+
+  return fallback;
+}
+
+/** Ask SteamCMD for the app's Windows content depot id. */
+export async function resolveWindowsDepot(appid: number, account: SteamCmdAccount): Promise<number | null> {
+  const script = await ensureSteamcmd();
+  await mkdirp(steamcmdHome());
+  const args = [
+    "+@sSteamCmdForcePlatformType",
+    "windows",
+    ...loginArgs(account),
+    "+app_info_print",
+    String(appid),
+    "+quit",
+  ];
+  const result = await exec(script, args, { allowFailure: true, env: steamcmdEnv() });
+  return parseWindowsDepot(`${result.stdout}\n${result.stderr}`);
+}
+
 /**
  * Read the account name the native Steam client last used, so `steam-mac login`
  * can default to it instead of the anonymous login.
