@@ -59,6 +59,17 @@ export function steamcmdDir(): string {
   return join(smHome(), "steamcmd");
 }
 
+/**
+ * Isolated HOME for SteamCMD.
+ *
+ * SteamCMD writes to `$HOME/Library/Application Support/Steam`, which is the
+ * native Steam client's folder. Pointing HOME here keeps SteamCMD's config and
+ * depot downloads away from the client.
+ */
+export function steamcmdHome(): string {
+  return join(steamcmdDir(), "home");
+}
+
 /** CLI/TUI log files. */
 export function logsDir(): string {
   return join(smHome(), "logs");

@@ -11,13 +11,23 @@ import type { SteamCmdAccount } from "./config.ts";
 import { exists, mkdirp, readText, remove } from "./fsx.ts";
 import { exec, isDryRun } from "./exec.ts";
 import { log, warn } from "./log.ts";
-import { steamcmdDir } from "./paths.ts";
+import { steamcmdDir, steamcmdHome } from "./paths.ts";
 
 const STEAMCMD_URL = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_osx.tar.gz";
 
 /** Path of the SteamCMD launcher inside the local install. */
 export function steamcmdPath(): string {
   return join(steamcmdDir(), "steamcmd.sh");
+}
+
+/** SteamCMD's isolated `~/Library/Application Support/Steam` root. */
+function steamcmdSteamRoot(): string {
+  return join(steamcmdHome(), "Library", "Application Support", "Steam");
+}
+
+/** SteamCMD runs with its own HOME so it never touches the native client. */
+function steamcmdEnv(): Record<string, string> {
+  return { HOME: steamcmdHome() };
 }
 
 /** Download and unpack SteamCMD on first use; return the launcher path. */
@@ -54,7 +64,7 @@ export function loginArgs(account: SteamCmdAccount): string[] {
 
 /** Does SteamCMD have a stored (non-anonymous) login? */
 export function steamcmdHasLogin(): boolean {
-  return exists(join(steamcmdDir(), "config", "loginusers.vdf"));
+  return exists(join(steamcmdSteamRoot(), "config", "loginusers.vdf"));
 }
 
 /**
@@ -69,10 +79,11 @@ export async function detectSteamAccount(steamRoot: string): Promise<string | nu
 /** Open an interactive SteamCMD session so it can store a login. */
 export async function steamcmdLogin(account: SteamCmdAccount): Promise<void> {
   const script = await ensureSteamcmd();
+  await mkdirp(steamcmdHome());
   const who = account.anonymous || !account.username ? "anonymous" : account.username;
   const args = [...loginArgs(account), "+quit"];
   log(`steamcmd: logging in as ${who} (type the password and any Steam Guard code)`);
-  const result = await exec(script, args, { stdio: "inherit", allowFailure: true });
+  const result = await exec(script, args, { stdio: "inherit", allowFailure: true, env: steamcmdEnv() });
   if (result.status !== 0) {
     warn("steamcmd login did not complete — run 'steam-mac login <username>' to retry");
     return;
@@ -113,6 +124,7 @@ export async function downloadDepot(options: {
   account: SteamCmdAccount;
 }): Promise<DepotDownloadResult> {
   const script = await ensureSteamcmd();
+  await mkdirp(steamcmdHome());
   const args = [
     "+@sSteamCmdForcePlatformType",
     "windows",
@@ -123,7 +135,7 @@ export async function downloadDepot(options: {
     "+quit",
   ];
 
-  const result = await exec(script, args, { allowFailure: true });
+  const result = await exec(script, args, { allowFailure: true, env: steamcmdEnv() });
   const output = `${result.stdout}\n${result.stderr}`;
 
   const parsed = parseDepotDownload(output);

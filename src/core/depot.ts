@@ -13,7 +13,7 @@ import { exec, runShell } from "./exec.ts";
 import { exists, mkdirp, readText, remove, writeText } from "./fsx.ts";
 import type { GamePaths } from "./game.ts";
 import { die, log, warn } from "./log.ts";
-import { gameManifestPath, steamcmdDir } from "./paths.ts";
+import { gameManifestPath, steamcmdDir, steamcmdHome } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
 
 /** Folders a depot download can appear in, native Steam and SteamCMD alike. */
@@ -23,6 +23,7 @@ export function depotContentDirs(paths: GamePaths, profile: GameProfile): string
     join(paths.steamRoot, relative),
     join(paths.steamRoot, "Steam.AppBundle", "Steam", "Contents", "MacOS", relative),
     join(steamcmdDir(), relative),
+    join(steamcmdHome(), "Library", "Application Support", "Steam", relative),
   ];
 }
 
@@ -32,6 +33,7 @@ export function depotCacheDirs(paths: GamePaths): string[] {
     join(paths.steamRoot, "depotcache"),
     join(paths.steamRoot, "Steam.AppBundle", "Steam", "Contents", "MacOS", "depotcache"),
     join(steamcmdDir(), "steamapps", "depotcache"),
+    join(steamcmdHome(), "Library", "Application Support", "Steam", "depotcache"),
   ];
 }
 
