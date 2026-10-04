@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { test } from "node:test";
 
-import { detectSteamAccount, loginArgs, parseDepotDownload, steamcmdPath } from "../../src/core/steamcmd.ts";
+import { detectSteamAccount, loginArgs, parseDepotDownload, steamcmdHasLogin, steamcmdPath } from "../../src/core/steamcmd.ts";
 import { withTempHome } from "./_helpers.ts";
 
 test("loginArgs uses anonymous when configured", () => {
@@ -58,5 +58,28 @@ test("detectSteamAccount reads the native Steam account name", async () => {
       '"users"\n{\n\t"7656119"\n\t{\n\t\t"AccountName"\t\t"tester"\n\t}\n}\n',
     );
     assert.equal(await detectSteamAccount(root), "tester");
+  });
+});
+
+test("steamcmdHasLogin reads the account from config.vdf", async () => {
+  await withTempHome(async () => {
+    const cfg = join(
+      process.env.SM_HOME!,
+      "steamcmd",
+      "home",
+      "Library",
+      "Application Support",
+      "Steam",
+      "config",
+      "config.vdf",
+    );
+    await mkdir(dirname(cfg), { recursive: true });
+    assert.equal(await steamcmdHasLogin(), false);
+
+    await writeFile(
+      cfg,
+      '"Steam"\n{\n\t"Accounts"\n\t{\n\t\t"me"\n\t\t{\n\t\t\t"SteamID"\t\t"76561198117039314"\n\t\t}\n\t}\n}\n',
+    );
+    assert.equal(await steamcmdHasLogin(), true);
   });
 });

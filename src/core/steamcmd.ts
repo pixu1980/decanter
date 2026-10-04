@@ -63,8 +63,10 @@ export function loginArgs(account: SteamCmdAccount): string[] {
 }
 
 /** Does SteamCMD have a stored (non-anonymous) login? */
-export function steamcmdHasLogin(): boolean {
-  return exists(join(steamcmdSteamRoot(), "config", "loginusers.vdf"));
+export async function steamcmdHasLogin(): Promise<boolean> {
+  // SteamCMD stores accounts in config.vdf (Steam's client uses loginusers.vdf).
+  const text = await readText(join(steamcmdSteamRoot(), "config", "config.vdf"));
+  return Boolean(text && /"SteamID"\s+"\d+"/.test(text));
 }
 
 /**
@@ -88,7 +90,7 @@ export async function steamcmdLogin(account: SteamCmdAccount): Promise<void> {
     warn("steamcmd login did not complete — run 'steam-mac login <username>' to retry");
     return;
   }
-  if (!account.anonymous && steamcmdHasLogin()) {
+  if (!account.anonymous && (await steamcmdHasLogin())) {
     log("steamcmd: login stored — 'download' will use it");
   }
 }
