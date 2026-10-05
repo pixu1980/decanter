@@ -8,7 +8,7 @@ Feature plan. Study: `docs/plans/gog-support.md`. Design chosen by the user:
 
 - `src/core/profile.ts` — `store: "steam" | "gog"`, `gogId?: number`
 - `src/core/config.ts` — `gog` account block (optional)
-- `src/core/paths.ts` — `~/.steam-mac/gog/` (tokens, downloads)
+- `src/core/paths.ts` — `~/.decanter/gog/` (tokens, downloads)
 - `src/core/gog.ts` — new: auth, tokens, owned games, product, installers, builds, manifests, secure link, download
 - `src/core/lifecycle.ts` — `download`/`import` branch on `store`
 - `src/cli.ts`, `src/tui/` — `gog login`, status/doctor
@@ -47,7 +47,7 @@ Feature plan. Study: `docs/plans/gog-support.md`. Design chosen by the user:
 - [ ] `import --installer <path>`: run a user-supplied installer in the prefix
 
 ### Phase 5 — CLI, TUI, docs, ADR
-- [ ] `steam-mac gog login` (browser + code), `add` resolves GOG products by name
+- [ ] `decanter gog login` (browser + code), `add` resolves GOG products by name
 - [ ] status/doctor show the store
 - [ ] ADR + docs
 

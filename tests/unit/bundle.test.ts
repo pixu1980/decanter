@@ -28,7 +28,7 @@ async function fakeWine(home: string): Promise<string> {
 
 test("buildApp writes a self-hosting bundle", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({
       name: "Test Game",
       slug: "test-game",
@@ -44,6 +44,7 @@ test("buildApp writes a self-hosting bundle", async () => {
       steamRoot: join(home, "Steam"),
       gameDir: join(prefix, "drive_c", profile.installSubdir),
       dataDir: "",
+      savesDir: "",
       playerLog: "",
       modsDir: "",
     };
@@ -74,7 +75,7 @@ test("buildApp writes a self-hosting bundle", async () => {
 
 test("buildApp keeps the wow64 loader named `wine` and reaches it from launch", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({
       name: "Test Game",
       slug: "test-game",
@@ -89,6 +90,7 @@ test("buildApp keeps the wow64 loader named `wine` and reaches it from launch", 
       steamRoot: join(home, "Steam"),
       gameDir: join(prefix, "drive_c", profile.installSubdir),
       dataDir: "",
+      savesDir: "",
       playerLog: "",
       modsDir: "",
     };

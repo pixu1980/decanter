@@ -1,4 +1,4 @@
-# steam-mac
+# decanter
 
 Wrap **any Windows-only Steam game** into a real macOS `.app` on Apple Silicon,
 through Wine and Apple's D3DMetal (Game Porting Toolkit). One repo, one runtime
@@ -7,7 +7,7 @@ registry, one CLI, one terminal interface.
 This is the unified successor to the per-game wrapper repos
 (`steam-mac-core`, `broken-sword-directors-cut`, `graveyard-keeper-2`,
 `office-management-101`, `the-cosmic-wheel-sisterhood`). Instead of one git repo
-per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
+per game, it keeps every game in a registry under `~/.decanter/games/<slug>/`.
 
 > Unofficial fan tool. **You must own the game on Steam.** This repo contains no
 > game files.
@@ -55,7 +55,7 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
 
 ```sh
 pnpm install
-pnpm setup                # links the global `steam-mac` command
+pnpm setup                # links the global `decanter` command
 pnpm start                # opens the terminal interface from the checkout
 ```
 
@@ -63,11 +63,11 @@ pnpm start                # opens the terminal interface from the checkout
 
 ```sh
 # open the terminal interface
-steam-mac
+decanter
 
 # or use the CLI: add resolves, sets up, downloads and imports in one step
-steam-mac add "Graveyard Keeper 2" --depot 4358691
-steam-mac run graveyard-keeper-2
+decanter add "Graveyard Keeper 2" --depot 4358691
+decanter run graveyard-keeper-2
 ```
 
 For a game in the built-in catalog (currently Graveyard Keeper 2) `add` needs
@@ -76,7 +76,7 @@ nothing else. For any other game, pass `--exe Name.exe` when you know it, or let
 TUI's add wizard has the same optional **Exe** field.
 
 `download` uses SteamCMD. Anonymous downloads work for free games; for owned
-games run `steam-mac login` once so SteamCMD remembers your account. If SteamCMD
+games run `decanter login` once so SteamCMD remembers your account. If SteamCMD
 cannot help, the command falls back to opening the Steam console and waits for
 `download_depot` to finish.
 
@@ -102,7 +102,7 @@ cannot help, the command falls back to opening the Steam console and waits for
 | `runtime-upgrade <game>` | Try the newest Wine build / D3DMetal overlay |
 | `runtime-rollback <game>` | Return to the previous recorded runtime |
 | `logs` / `saves` / `mods <game>` | Tail the log, open the folders |
-| `backup-saves <game>` | Copy saves to `~/Documents` |
+| `backup-saves <game>` | Copy saves to `~/.decanter/backups` |
 | `steam-setup` / `steam <game>` | Optional Windows Steam inside the prefix |
 | `uninstall <game>` | Remove the app bundle (`--purge` also deletes the prefix) |
 | `tui` | Open the terminal interface |
@@ -127,7 +127,7 @@ redirect URL is the reliable way. The add wizard picks the store with a
 ## Layout
 
 ```
-bin/steam-mac.mjs        launcher (adds --experimental-ffi for the TUI only)
+bin/decanter.mjs        launcher (adds --experimental-ffi for the TUI only)
 src/cli.ts               command line entry point
 src/core/                engine: profiles, registry, Steam, Wine, bundle, lifecycle
 src/tui/                 OpenTUI interface (@opentui/react)
@@ -136,15 +136,22 @@ tests/tui/               render tests for the interface
 docs/                    architecture, managing, troubleshooting, ADRs, plan
 ```
 
-Everything the tool creates at runtime lives under `~/.steam-mac` (override with
-`SM_HOME`):
+Everything the tool creates at runtime lives under `~/.decanter` (override with
+`DECANTER_HOME`):
 
 ```
-~/.steam-mac/
+~/.decanter/
   config.json            machine-wide settings
+  bin/                   runtime helpers (Cmd+Q hotkey)
   games/<slug>/          game.json, manifest, assets/
+  games/<slug>/prefix/   the game's Wine prefix
+  games/<slug>/saves/    the game's saves (a link when they live in the prefix)
   wine/                  pinned Gcenx builds
   steamcmd/              SteamCMD install and depot downloads
+  gog/                   GOG tokens
+  logs/                  per-game loader output
+  temp/                  downloads and scratch space
+  backups/               save backups
 ```
 
 ## Tests

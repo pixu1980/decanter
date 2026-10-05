@@ -9,13 +9,13 @@ import { testRender } from "@opentui/react/test-utils";
 import { App } from "../../src/tui/App/index.ts";
 
 test("renders the empty registry", async () => {
-  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   const setup = await testRender(<App />, { width: 80, height: 20 });
   try {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    assert.match(frame, /steam-mac/);
+    assert.match(frame, /decanter/);
     assert.match(frame, /No games registered yet/);
     assert.match(frame, /add one from the Steam store/);
   } finally {
@@ -24,7 +24,7 @@ test("renders the empty registry", async () => {
 });
 
 test("? opens the keyboard help and esc closes it", async () => {
-  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   const setup = await testRender(<App />, { width: 80, height: 24 });
   try {
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -46,7 +46,7 @@ test("? opens the keyboard help and esc closes it", async () => {
 });
 
 test("the add wizard shows an Install button", async () => {
-  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   const setup = await testRender(<App />, { width: 90, height: 40 });
   try {
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -63,7 +63,7 @@ test("the add wizard shows an Install button", async () => {
 });
 
 test("the add wizard offers a Steam/GOG store select", async () => {
-  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   const setup = await testRender(<App />, { width: 90, height: 40 });
   try {
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -81,8 +81,8 @@ test("the add wizard offers a Steam/GOG store select", async () => {
 });
 
 test("the detail view opens the runtime panel", async () => {
-  const home = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
-  process.env.SM_HOME = home;
+  const home = mkdtempSync(join(tmpdir(), "decanter-tui-"));
+  process.env.DECANTER_HOME = home;
   process.env.TG_WINE_APP = join(home, "no-wine.app");
   mkdirSync(join(home, "games", "test-game"), { recursive: true });
   writeFileSync(
@@ -125,7 +125,7 @@ test("the detail view opens the runtime panel", async () => {
 });
 
 test("settings show the store logins", async () => {
-  process.env.SM_HOME = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   const setup = await testRender(<App />, { width: 90, height: 40 });
   try {
     await new Promise((resolve) => setTimeout(resolve, 150));

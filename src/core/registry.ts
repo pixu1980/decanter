@@ -1,4 +1,4 @@
-// The runtime registry: the games under `~/.steam-mac/games`.
+// The runtime registry: the games under `~/.decanter/games`.
 //
 // docs: docs/architecture.md
 
@@ -44,7 +44,7 @@ export async function readGame(slug: string): Promise<GameProfile | null> {
 export async function getGame(slug: string): Promise<GameProfile> {
   const profile = await readGame(slug);
   if (!profile) {
-    die(`no game '${slug}' in the registry — see: steam-mac list`);
+    die(`no game '${slug}' in the registry — see: decanter list`);
   }
 
   return profile;
@@ -88,5 +88,5 @@ export async function resolveGame(query: string): Promise<GameProfile> {
     die(`'${query}' matches several games: ${byPrefix.map((game) => game.slug).join(", ")}`);
   }
 
-  die(`no game matches '${query}' — see: steam-mac list`);
+  die(`no game matches '${query}' — see: decanter list`);
 }

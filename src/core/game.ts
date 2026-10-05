@@ -8,7 +8,7 @@
 
 import { join } from "node:path";
 import type { Config } from "./config.ts";
-import { expandPath, defaultPrefixDir } from "./paths.ts";
+import { expandPath, defaultPrefixDir, gameSavesDir } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
 
 /** Every path the engine needs for one game. */
@@ -17,7 +17,10 @@ export interface GamePaths {
   app: string;
   steamRoot: string;
   gameDir: string;
+  /** Where the game actually keeps its saves (inside the prefix, or `savesDir`). */
   dataDir: string;
+  /** The game's canonical saves folder under `~/.decanter/games/<slug>/saves`. */
+  savesDir: string;
   playerLog: string;
   modsDir: string;
 }
@@ -41,7 +44,10 @@ export function resolveGamePaths(profile: GameProfile, config: Config): GamePath
   );
 
   const gameDir = join(prefix, "drive_c", profile.installSubdir);
-  const dataDir = profile.dataSubdir ? join(prefix, "drive_c", profile.dataSubdir) : "";
+  const savesDir = expandPath(envOverride(profile, "SAVES") ?? gameSavesDir(profile.slug));
+  // The game writes to its own in-prefix folder when `dataSubdir` is set; the
+  // canonical `saves` folder links to it. Otherwise the two are the same folder.
+  const dataDir = profile.dataSubdir ? join(prefix, "drive_c", profile.dataSubdir) : savesDir;
 
   return {
     prefix,
@@ -49,6 +55,7 @@ export function resolveGamePaths(profile: GameProfile, config: Config): GamePath
     steamRoot,
     gameDir,
     dataDir,
+    savesDir,
     playerLog: dataDir ? join(dataDir, profile.logName) : "",
     modsDir: dataDir ? join(dataDir, profile.modsSubdir) : "",
   };

@@ -181,7 +181,7 @@ export async function resolveWindowsDepot(appid: number, account: SteamCmdAccoun
 }
 
 /**
- * Read the account name the native Steam client last used, so `steam-mac login`
+ * Read the account name the native Steam client last used, so `decanter login`
  * can default to it instead of the anonymous login.
  */
 export async function detectSteamAccount(steamRoot: string): Promise<string | null> {
@@ -198,7 +198,7 @@ export async function steamcmdLogin(account: SteamCmdAccount): Promise<void> {
   log(`steamcmd: logging in as ${who} (type the password and any Steam Guard code)`);
   const result = await exec(script, args, { stdio: "inherit", allowFailure: true, env: steamcmdEnv() });
   if (result.status !== 0) {
-    warn("steamcmd login did not complete — run 'steam-mac login <username>' to retry");
+    warn("steamcmd login did not complete — run 'decanter login <username>' to retry");
     return;
   }
   if (!account.anonymous && (await steamcmdHasLogin())) {

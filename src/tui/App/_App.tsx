@@ -500,7 +500,7 @@ async function submitAdd(
 }
 
 async function steamLogin(setStatus: (status: string) => void): Promise<void> {
-  await exec("osascript", ["-e", 'tell application "Terminal" to do script "steam-mac login"'], {
+  await exec("osascript", ["-e", 'tell application "Terminal" to do script "decanter login"'], {
     allowFailure: true,
   });
   setStatus("SteamCMD: login opened in Terminal — reopen settings when done");

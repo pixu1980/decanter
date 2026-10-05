@@ -16,6 +16,7 @@ function makePaths(older: string, prefix: string, installSubdir: string): GamePa
     steamRoot: join(older, "Steam"),
     gameDir: join(prefix, "drive_c", installSubdir),
     dataDir: "",
+    savesDir: "",
     playerLog: "",
     modsDir: "",
   };
@@ -48,8 +49,8 @@ test("latestManifest picks the newest cached manifest", async () => {
 
 test("findDepotDir ignores empty folders", async () => {
   await withTempHome(async () => {
-    const empty = join(process.env.SM_HOME!, "empty");
-    const full = join(process.env.SM_HOME!, "full");
+    const empty = join(process.env.DECANTER_HOME!, "empty");
+    const full = join(process.env.DECANTER_HOME!, "full");
     await mkdir(empty, { recursive: true });
     await mkdir(full, { recursive: true });
     await writeFile(join(full, "game.exe"), "x");
@@ -61,7 +62,7 @@ test("findDepotDir ignores empty folders", async () => {
 
 test("importDepot moves the download and records the manifest", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({
       name: "Broken Sword",
       slug: "broken-sword",
@@ -89,7 +90,7 @@ test("importDepot moves the download and records the manifest", async () => {
 
 test("updateStatus reports available, waiting and current", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({ name: "CWS", slug: "cws", appid: 1, depot: 2 });
     const paths = makePaths(home, join(home, "prefix"), profile.installSubdir);
     const cache = depotCacheDirs(paths)[0]!;
@@ -114,7 +115,7 @@ test("updateStatus reports available, waiting and current", async () => {
 
 test("clearStaleDepotState drops the patch only when the depot is empty", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({ name: "Test", appid: 1, depot: 2 });
     const paths = makePaths(home, join(home, "prefix"), profile.installSubdir);
     const depotDir = depotContentDirs(paths, profile)[0]!;

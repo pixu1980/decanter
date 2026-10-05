@@ -1,6 +1,6 @@
 # Architecture
 
-`steam-mac` is a single TypeScript program. A thin CLI (`src/cli.ts`) and an
+`decanter` is a single TypeScript program. A thin CLI (`src/cli.ts`) and an
 OpenTUI interface (`src/tui/`) both call the same engine in `src/core/`. The
 engine resolves a game from a runtime registry, downloads its Windows build
 through Steam, and turns the Wine prefix into a native `.app`.
@@ -15,17 +15,35 @@ src/tui/  ──┘                          ├─▶ exe.ts        (executable
                                        ├─▶ wine.ts       (runtime provisioning)
                                        ├─▶ icon.ts       (.icns from art, exe or a placeholder)
                                        ├─▶ bundle.ts     (the .app)
-                                       └─▶ registry.ts   (games under ~/.steam-mac)
+                                       └─▶ registry.ts   (games under ~/.decanter)
 ```
 
 ## Runtime registry
 
-There is no per-game repo. `steam-mac add` and `steam-mac migrate` write a
-profile to `~/.steam-mac/games/<slug>/game.json`, and copy the icon into that
+There is no per-game repo. `decanter add` and `decanter migrate` write a
+profile to `~/.decanter/games/<slug>/game.json`, and copy the icon into that
 folder's `assets/`. The rest of the tool reads only the registry.
 
-`SM_HOME` overrides the root, which is how the tests keep the real machine
+`DECANTER_HOME` overrides the root, which is how the tests keep the real machine
 untouched.
+
+Everything under the root is laid out so a game carries its own data:
+
+```
+~/.decanter/
+  config.json
+  games/<slug>/game.json      the profile
+  games/<slug>/manifest       installed depot manifest id
+  games/<slug>/assets/        icon.png, icon.icns
+  games/<slug>/prefix/        the game's Wine prefix
+  games/<slug>/saves/         the game's saves
+  wine/ steamcmd/ gog/ logs/ temp/ backups/ bin/
+```
+
+`resolveGamePaths` points the prefix at `games/<slug>/prefix` and `savesDir` at
+`games/<slug>/saves`; when the profile sets `dataSubdir` the game keeps saving
+inside the prefix and `saves` is a symlink to that folder, so `decanter saves`
+and `decanter backup-saves` always work on the canonical path.
 
 ## The profile contract (`game.json`)
 
@@ -68,7 +86,7 @@ and the app bundle rebuilt, so opening the `.app` launches the real game.
   to an appid, cache metadata, and build the artwork URL candidates. It also
   queries SteamGridDB with the `steamGridDbKey` API key for art the store
   dropped.
-- `steamcmd.ts` installs SteamCMD into `~/.steam-mac/steamcmd` and runs
+- `steamcmd.ts` installs SteamCMD into `~/.decanter/steamcmd` and runs
   `+@sSteamCmdForcePlatformType windows +download_depot <appid> <depot>`. The
   platform override is what makes a macOS SteamCMD fetch the Windows build.
 - `depot.ts` knows every folder a depot can land in (native Steam, the Steam
@@ -86,7 +104,7 @@ and the app bundle rebuilt, so opening the `.app` launches the real game.
 |---|---|---|
 | `gptk` (default) | the Gcenx Game Porting Toolkit cask | `bin/wine64` |
 | `gptk-apple` | the Gcenx loader with Apple's DMG D3DMetal merged in | `bin/wine64` |
-| `wine-devel` / `wine-staging` | a Gcenx Wine tarball in `~/.steam-mac/wine`, pinned by `wineVersion` | `bin/wine` |
+| `wine-devel` / `wine-staging` | a Gcenx Wine tarball in `~/.decanter/wine`, pinned by `wineVersion` | `bin/wine` |
 
 GPTK carries D3DMetal for Direct3D but bundles Wine 7.7, whose memory manager
 asserts on some 32-bit OpenGL games. The Gcenx builds are current; Homebrew's
@@ -112,7 +130,7 @@ restores the most recent history entry that differs from the current runtime.
 
 The opt-in `gptk-apple` runtime takes the newer D3DMetal from Apple's
 "Evaluation environment for Windows games" DMG (behind an Apple ID) and overlays
-it onto a cloned Gcenx loader under `~/.steam-mac/wine/gptk-apple`. The DMG
+it onto a cloned Gcenx loader under `~/.decanter/wine/gptk-apple`. The DMG
 ships no macOS Wine loader and no full Wine tree, so it is an overlay, not a
 runtime. The clone is an APFS copy-on-write clone, so it costs only the new
 D3DMetal.
@@ -157,7 +175,7 @@ the loader directly, so the bundle needs no Node runtime at play time.
 Missing art is not fatal: a game without an icon still gets a working bundle.
 For a GOG game the Steam CDN and SteamGridDB are skipped entirely (an appid-0
 SteamGridDB lookup used to return an unrelated image), the stale Steam artefacts
-of an earlier run are removed, and `steam-mac icon` rebuilds the bundle so the
+of an earlier run are removed, and `decanter icon` rebuilds the bundle so the
 new icon actually reaches the app.
 
 ## Provisioning
@@ -197,4 +215,4 @@ palette, so screens do not hard-code colours (ADR 005).
 registry, depot discovery and update states, SteamCMD output parsing, the store
 client, and the `.app` bundle (built against a fake Wine runtime). `tests/tui`
 renders the interface in memory. `cli.test.ts` drives the real CLI process
-against a temporary `SM_HOME`.
+against a temporary `DECANTER_HOME`.

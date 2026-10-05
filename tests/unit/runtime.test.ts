@@ -11,7 +11,7 @@ import { withTempHome } from "./_helpers.ts";
 
 test("readLogTail falls back to the loader log the bundle writes", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     await saveGame(
       normalizeProfile({
         name: "Test",
@@ -31,7 +31,7 @@ test("readLogTail falls back to the loader log the bundle writes", async () => {
 
 test("collectRuntime describes the runtime and reports the history", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     process.env.T_WINE_APP = join(home, "no-wine.app");
     await saveGame(
       normalizeProfile({
@@ -62,7 +62,7 @@ test("collectRuntime describes the runtime and reports the history", async () =>
 
 test("cmdRuntimeRollback selects the previous recorded runtime", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     process.env.T_WINE_APP = join(home, "no-wine.app");
     await saveGame(
       normalizeProfile({

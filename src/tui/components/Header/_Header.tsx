@@ -14,7 +14,7 @@ export function Header({ breadcrumb, right }: HeaderProps) {
   return (
     <box style={{ flexDirection: "row", justifyContent: "space-between", height: 1 }}>
       <box style={{ flexDirection: "row" }}>
-        <text fg={theme.accent}>steam-mac</text>
+        <text fg={theme.accent}>decanter</text>
         <text fg={theme.faint}>{` ${symbols.chevron} `}</text>
         <text fg={theme.text}>{breadcrumb}</text>
       </box>

@@ -30,7 +30,7 @@ export const ACTIONS: ActionItem[] = [
   { key: "doctor", label: "Doctor", hint: "health checks", group: "Inspect" },
   { key: "logs", label: "Logs", hint: "tail the game log", group: "Inspect" },
   { key: "saves", label: "Open saves", hint: "in Finder", group: "Inspect" },
-  { key: "backup", label: "Backup saves", hint: "to ~/Documents", group: "Inspect" },
+  { key: "backup", label: "Backup saves", hint: "to ~/.decanter/backups", group: "Inspect" },
   { key: "uninstall", label: "Uninstall", hint: "remove the app bundle", group: "Danger" },
 ];
 

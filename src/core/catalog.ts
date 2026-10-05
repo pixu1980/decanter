@@ -1,6 +1,6 @@
 // Known games: per-game profile data the Steam store cannot provide.
 //
-// `steam-mac add` learns a game's name, appid and artwork from the store, but
+// `decanter add` learns a game's name, appid and artwork from the store, but
 // not which `.exe` to launch, where the game keeps its saves, or which Wine
 // registry key holds the Unity screen mode. The legacy per-game repos carried
 // those values in `game.conf`; this catalog is the unified equivalent for games

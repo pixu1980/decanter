@@ -1,7 +1,7 @@
 // Create a game profile from the Steam store.
 //
-// `steam-mac add "<name>"` (or `--appid N`) resolves the app, caches its
-// metadata and artwork, writes `~/.steam-mac/games/<slug>/game.json`, then
+// `decanter add "<name>"` (or `--appid N`) resolves the app, caches its
+// metadata and artwork, writes `~/.decanter/games/<slug>/game.json`, then
 // provisions the game: setup, download and import.
 //
 // docs: docs/managing.md

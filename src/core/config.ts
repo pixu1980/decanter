@@ -1,4 +1,4 @@
-// Global settings stored in `~/.steam-mac/config.json`.
+// Global settings stored in `~/.decanter/config.json`.
 //
 // Per-game values live in the game's own `game.json`; this file only holds
 // machine-wide defaults (Steam location, Wine runtime, SteamCMD account).
@@ -14,7 +14,7 @@ export interface SteamCmdAccount {
   anonymous: boolean;
   /** Steam account name for owned games. */
   username?: string;
-  /** Steam password. Prefer `steam-mac login`, which SteamCMD remembers. */
+  /** Steam password. Prefer `decanter login`, which SteamCMD remembers. */
   password?: string;
 }
 

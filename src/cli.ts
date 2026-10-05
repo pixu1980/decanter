@@ -1,6 +1,6 @@
-// steam-mac — command line entry point.
+// decanter — command line entry point.
 //
-// `steam-mac` with no command opens the OpenTUI interface when a terminal is
+// `decanter` with no command opens the OpenTUI interface when a terminal is
 // attached, otherwise it prints help. Every game command takes a slug (a
 // prefix or the exact name also works).
 //
@@ -85,7 +85,7 @@ async function main(argv: string[]): Promise<void> {
     setDryRun(true);
   }
   if (args.command === "version" || flagBool(args.flags, "version")) {
-    process.stdout.write(`steam-mac ${VERSION}\n`);
+    process.stdout.write(`decanter ${VERSION}\n`);
     return;
   }
   if (args.command === "help" || flagBool(args.flags, "help")) {
@@ -117,7 +117,7 @@ async function main(argv: string[]): Promise<void> {
   if (args.command === "migrate") {
     const path = args.positionals[0];
     if (!path) {
-      die("usage: steam-mac migrate <repo-path> [--slug S] [--force]");
+      die("usage: decanter migrate <repo-path> [--slug S] [--force]");
     }
     await migrateRepo(path, {
       slug: flagString(args.flags, "slug"),
@@ -134,7 +134,7 @@ async function main(argv: string[]): Promise<void> {
       (await detectSteamAccount(config.steamRoot)) ??
       "";
     if (!username) {
-      die("usage: steam-mac login <steam-username>");
+      die("usage: decanter login <steam-username>");
     }
     await updateConfig({ steamcmd: { anonymous: false, username } });
     await steamcmdLogin({ anonymous: false, username });
@@ -156,13 +156,13 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  die(`unknown command: ${args.command} (see: steam-mac help)`);
+  die(`unknown command: ${args.command} (see: decanter help)`);
 }
 
 async function cmdGame(args: ParsedArgs): Promise<void> {
   const query = args.positionals[0];
   if (!query) {
-    die(`usage: steam-mac ${args.command} <game> — see: steam-mac list`);
+    die(`usage: decanter ${args.command} <game> — see: decanter list`);
   }
   const profile = await resolveGame(query);
   const slug = profile.slug;
@@ -243,7 +243,7 @@ async function cmdAdd(args: ParsedArgs): Promise<void> {
   const name = args.positionals[0];
   const appid = flagNumber(args.flags, "appid");
   if (!name && !appid) {
-    die('usage: steam-mac add "<game name>" [--appid N] [--depot N]');
+    die('usage: decanter add "<game name>" [--appid N] [--depot N]');
   }
   await addGame({
     name,
@@ -281,7 +281,7 @@ async function cmdGog(args: ParsedArgs): Promise<void> {
     log(`  ${url}`);
     await exec("open", [url], { allowFailure: true });
     if (!process.stdin.isTTY) {
-      log("then run: steam-mac gog login <redirect-url-or-code>");
+      log("then run: decanter gog login <redirect-url-or-code>");
       return;
     }
     const answer = await promptLine("redirect URL or code: ");
@@ -298,7 +298,7 @@ async function cmdGog(args: ParsedArgs): Promise<void> {
     return;
   }
   const tokens = await loadGogTokens();
-  log(tokens ? "GOG: logged in" : "GOG: not logged in — run: steam-mac gog login");
+  log(tokens ? "GOG: logged in" : "GOG: not logged in — run: decanter gog login");
 }
 
 async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positionals.length === 0) {
@@ -309,7 +309,7 @@ async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positional
   for (const pair of args.positionals) {
     const [key, value] = pair.split("=", 2) as [string, string | undefined];
     if (!key || value === undefined) {
-      die("usage: steam-mac config key=value ...");
+      die("usage: decanter config key=value ...");
     }
     if (key.startsWith("steamcmd.")) {
       const nested = (patch.steamcmd ?? {}) as Record<string, unknown>;
@@ -326,7 +326,7 @@ async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positional
 async function printList(): Promise<void> {
   const games = await listGames();
   if (games.length === 0) {
-    log('no games yet — add one with: steam-mac add "<game name>"');
+    log('no games yet — add one with: decanter add "<game name>"');
     return;
   }
   const rows: Array<[string, string, string, string, string]> = [];
@@ -378,9 +378,9 @@ async function sizeOf(dir: string): Promise<number> {
 }
 
 function printHelp(): void {
-  process.stdout.write(`steam-mac ${VERSION} — wrap any Windows-only Steam game into a macOS .app
+  process.stdout.write(`decanter ${VERSION} — wrap any Windows-only Steam game into a macOS .app
 
-usage: steam-mac [command] [game] [options]      (no command opens the TUI)
+usage: decanter [command] [game] [options]      (no command opens the TUI)
 
 registry:
   list, ls              list registered games
@@ -410,7 +410,7 @@ lifecycle:
   logs <game>           tail the game log (-n N)
   saves <game>          open the saves folder
   mods <game>           open the mods folder
-  backup-saves <game>   copy saves to ~/Documents
+  backup-saves <game>   copy saves to ~/.decanter/backups
   steam-setup <game>    install Windows Steam inside the prefix
   steam <game>          launch Windows Steam inside the prefix
   uninstall <game>      remove the app bundle (--purge deletes the prefix)
@@ -435,9 +435,9 @@ docs: README.md, docs/architecture.md, docs/managing.md
 
 main(process.argv.slice(2)).catch((error: unknown) => {
   if (error instanceof CliError) {
-    process.stderr.write(`steam-mac: ${error.message}\n`);
+    process.stderr.write(`decanter: ${error.message}\n`);
     process.exit(1);
   }
-  process.stderr.write(`steam-mac: unexpected error: ${(error as Error)?.stack ?? String(error)}\n`);
+  process.stderr.write(`decanter: unexpected error: ${(error as Error)?.stack ?? String(error)}\n`);
   process.exit(1);
 });

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { detectExecutable } from "../../src/core/exe.ts";
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), "steam-mac-exe-"));
+  const dir = mkdtempSync(join(tmpdir(), "decanter-exe-"));
   try {
     await fn(dir);
   } finally {

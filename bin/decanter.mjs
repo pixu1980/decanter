@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// steam-mac launcher.
+// decanter launcher.
 //
 // Runs the TypeScript CLI. The OpenTUI interface needs Node's FFI, so the flag
 // is only added when the TUI is the target; every other command runs with the

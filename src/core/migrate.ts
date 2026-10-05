@@ -2,7 +2,7 @@
 //
 // The old repos (`broken-sword-directors-cut`, `graveyard-keeper-2`,
 // `office-management-101`, `the-cosmic-wheel-sisterhood`) are thin profiles.
-// `steam-mac migrate <path>` reads their `game.conf`, copies the icon and writes
+// `decanter migrate <path>` reads their `game.conf`, copies the icon and writes
 // the equivalent `game.json`.
 //
 // docs: docs/managing.md

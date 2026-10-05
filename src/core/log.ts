@@ -55,7 +55,7 @@ export function die(message: string): never {
 
 /** The prefix for log lines; `SM_TAG` overrides it. */
 export function tag(): string {
-  return process.env.SM_TAG ?? "steam-mac";
+  return process.env.SM_TAG ?? "decanter";
 }
 
 /** Throw when `condition` is false, with a user-facing message. */

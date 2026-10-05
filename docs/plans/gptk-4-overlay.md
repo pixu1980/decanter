@@ -66,7 +66,7 @@ Feature plan. The main project plan lives in `docs/plans/execution-plan.md`.
 
 - [x] Add `gptk-apple` to `WineRuntime` in `profile.ts` and to `Config` in `config.ts`
 - [x] `appleGptkSource: string` (default `""`), documented in `docs/managing.md`
-- [x] `paths.ts`: `appleGptkAppDir()` → `~/.steam-mac/wine/gptk-apple/Game Porting Toolkit.app`
+- [x] `paths.ts`: `appleGptkAppDir()` → `~/.decanter/wine/gptk-apple/Game Porting Toolkit.app`
 - [x] `resolveWine`: `gptk-apple` uses that overlay app; env override
       `<PREFIX>_GPTK_APPLE_SOURCE` for the source DMG directory
 
@@ -84,7 +84,7 @@ Feature plan. The main project plan lives in `docs/plans/execution-plan.md`.
 
 ### Phase 4 — CLI, docs, ADR
 
-- [x] Configured through the existing `steam-mac config appleGptkSource=<dir>` and
+- [x] Configured through the existing `decanter config appleGptkSource=<dir>` and
       per-game `wineRuntime: "gptk-apple"` (no new command needed)
 - [x] `docs/architecture.md`, `docs/managing.md`, `README.md`
 - [x] ADR 013: overlay Apple's D3DMetal onto a Gcenx loader (`pix_tool_process_adr`)
@@ -119,7 +119,7 @@ bridge DLLs. Verified: GK2 boots and maps
 
 ## Data-loss note (2026-10-03 16:57)
 
-`~/.steam-mac/games/graveyard-keeper-2` and `~/Games/graveyard-keeper-2-prefix`
+`~/.decanter/games/graveyard-keeper-2` and `~/Games/graveyard-keeper-2-prefix`
 were both deleted while the user's `pnpm start` TUI was open (launched 16:46).
 A controlled run of `pnpm test` and `pnpm test:tui` against a throwaway record
 confirmed the suites do **not** touch the real home. The registry record was

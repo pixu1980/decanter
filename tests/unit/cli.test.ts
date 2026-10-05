@@ -14,26 +14,26 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 function run(args: string[], home: string) {
   const result = spawnSync(process.execPath, [join(ROOT, "src", "cli.ts"), ...args], {
     cwd: ROOT,
-    env: { ...process.env, SM_HOME: home },
+    env: { ...process.env, DECANTER_HOME: home },
     encoding: "utf8",
   });
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
 function tempHome(): string {
-  return mkdtempSync(join(tmpdir(), "steam-mac-cli-"));
+  return mkdtempSync(join(tmpdir(), "decanter-cli-"));
 }
 
 test("help and version work without a registry", () => {
   const home = tempHome();
   const help = run(["help"], home);
   assert.equal(help.status, 0);
-  assert.match(help.stdout, /usage: steam-mac/);
+  assert.match(help.stdout, /usage: decanter/);
   assert.match(help.stdout, /download <game>/);
 
   const version = run(["version"], home);
   assert.equal(version.status, 0);
-  assert.match(version.stdout, /^steam-mac \d+\.\d+\.\d+/);
+  assert.match(version.stdout, /^decanter \d+\.\d+\.\d+/);
 });
 
 test("list reports an empty registry", () => {
@@ -56,7 +56,7 @@ test("config prints the defaults as JSON", () => {
 
 test("setup --dry-run plans without creating anything", async () => {
   const home = tempHome();
-  process.env.SM_HOME = home;
+  process.env.DECANTER_HOME = home;
   await saveGame(
     normalizeProfile({
       name: "Dry Run Game",
@@ -66,7 +66,7 @@ test("setup --dry-run plans without creating anything", async () => {
       paths: { prefix: join(home, "prefix") },
     }),
   );
-  delete process.env.SM_HOME;
+  delete process.env.DECANTER_HOME;
 
   const result = run(["setup", "dry-run-game", "--dry-run"], home);
   assert.equal(result.status, 0, result.stderr);

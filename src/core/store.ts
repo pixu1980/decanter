@@ -1,6 +1,6 @@
 // Steam store lookups: search, app details and artwork URLs.
 //
-// The public store API needs no key and no login, which is why `steam-mac add`
+// The public store API needs no key and no login, which is why `decanter add`
 // can resolve a name to an appid and fetch the artwork before anything is
 // installed.
 //

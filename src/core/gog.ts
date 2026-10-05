@@ -105,12 +105,12 @@ export async function loadGogTokens(): Promise<GogTokens | null> {
 export async function ensureGogToken(): Promise<string> {
   let tokens = await loadGogTokens();
   if (!tokens) {
-    die("not logged in to GOG — run: steam-mac gog login");
+    die("not logged in to GOG — run: decanter gog login");
   }
   if (Date.now() / 1000 >= tokens.loginTime + tokens.expires_in) {
     const refreshed = await gogRefresh(tokens.refresh_token);
     if (!refreshed) {
-      die("GOG session expired — run: steam-mac gog login");
+      die("GOG session expired — run: decanter gog login");
     }
     tokens = refreshed;
   }
@@ -121,7 +121,7 @@ export async function ensureGogToken(): Promise<string> {
 
 async function gogGet<T>(url: string, token: string): Promise<T> {
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": "steam-mac" },
+    headers: { Authorization: `Bearer ${token}`, "User-Agent": "decanter" },
   });
   if (!response.ok) {
     die(`GOG request failed (${response.status}): ${url}`);
@@ -132,7 +132,7 @@ async function gogGet<T>(url: string, token: string): Promise<T> {
 /** Fetch a GOG URL as bytes, with the bearer token. */
 export async function gogBuffer(url: string, token: string): Promise<Buffer> {
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": "steam-mac" },
+    headers: { Authorization: `Bearer ${token}`, "User-Agent": "decanter" },
   });
   if (!response.ok) {
     die(`GOG download failed (${response.status}): ${url}`);
@@ -421,7 +421,7 @@ export interface GogSearchHit {
 /** Public GOG catalog search (no login needed). */
 export async function gogSearch(term: string, fetchImpl: typeof fetch = fetch): Promise<GogSearchHit[]> {
   const url = `https://www.gog.com/games/ajax/filtered?mediaType=game&language=en&search=${encodeURIComponent(term)}`;
-  const response = await fetchImpl(url, { headers: { "User-Agent": "steam-mac" } });
+  const response = await fetchImpl(url, { headers: { "User-Agent": "decanter" } });
   if (!response.ok) {
     return [];
   }

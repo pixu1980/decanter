@@ -5,7 +5,7 @@
 // Cmd+Q as a Carbon global hotkey while the game runs and then runs
 // `wineserver -k` on its prefix. Carbon hotkeys need no Accessibility
 // permission. The hotkey is global: while the game runs, Cmd+Q ends it.
-// Best effort — without `swiftc` the helper is absent and `steam-mac quit`
+// Best effort — without `swiftc` the helper is absent and `decanter quit`
 // remains the fallback.
 //
 // docs: docs/troubleshooting.md
@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { exec, isDryRun, which } from "./exec.ts";
 import { exists, mkdirp, writeText } from "./fsx.ts";
 import { log, warn } from "./log.ts";
-import { smHome } from "./paths.ts";
+import { binDir } from "./paths.ts";
 
 const SWIFT_SOURCE = String.raw`import Cocoa
 import Carbon.HIToolbox
@@ -56,7 +56,7 @@ app.run()
 
 /** Where the compiled Cmd+Q helper lives. */
 export function quitHotkeyPath(): string {
-  return join(smHome(), "bin", "quit-hotkey");
+  return join(binDir(), "quit-hotkey");
 }
 
 /**
@@ -69,7 +69,7 @@ export async function ensureQuitHotkey(): Promise<string | null> {
     return binary;
   }
   if (!which("swiftc")) {
-    warn("swiftc not found — the Cmd+Q helper stays disabled (use: steam-mac quit)");
+    warn("swiftc not found — the Cmd+Q helper stays disabled (use: decanter quit)");
     return null;
   }
   if (isDryRun()) {
@@ -83,7 +83,7 @@ export async function ensureQuitHotkey(): Promise<string | null> {
   await writeText(source, SWIFT_SOURCE);
   const result = await exec("swiftc", ["-O", "-o", binary, source], { allowFailure: true });
   if (result.status !== 0) {
-    warn("could not compile the Cmd+Q helper — use: steam-mac quit");
+    warn("could not compile the Cmd+Q helper — use: decanter quit");
     return null;
   }
 

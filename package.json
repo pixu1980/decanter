@@ -1,12 +1,12 @@
 {
-  "name": "steam-mac",
+  "name": "decanter",
   "version": "0.1.0",
   "private": true,
   "description": "Wrap any Windows-only Steam game into a native macOS .app (Wine + D3DMetal), with a CLI and an OpenTUI interface.",
   "type": "module",
   "license": "MIT",
   "bin": {
-    "steam-mac": "bin/steam-mac.mjs"
+    "decanter": "bin/decanter.mjs"
   },
   "files": [
     "bin",

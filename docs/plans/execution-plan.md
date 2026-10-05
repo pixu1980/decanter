@@ -1,4 +1,4 @@
-# Execution plan — `steam-mac` unified wrapper
+# Execution plan — `decanter` unified wrapper
 
 Goal: replace the five per-game repos (`steam-mac-core`, `broken-sword-directors-cut`,
 `graveyard-keeper-2`, `office-management-101`, `the-cosmic-wheel-sisterhood`) with a
@@ -9,16 +9,16 @@ guided-console fallback), automatic icon, updates, lifecycle, and an OpenTUI
 
 ## Decisions taken (from the foundation interview)
 
-- **Location**: nested repo `~/Projects/steam-mac/steam-mac`.
+- **Location**: nested repo `~/Projects/decanter/decanter`.
 - **Stack**: full TypeScript rewrite (engine + CLI + TUI), pnpm, exact versions.
 - **Depot download**: SteamCMD when configured, guided Steam-console fallback otherwise.
-- **Game registry**: runtime only, `~/.steam-mac/games/<slug>/game.json`.
+- **Game registry**: runtime only, `~/.decanter/games/<slug>/game.json`.
 - **Icon**: auto from the Steam CDN, fallback to the icon embedded in the exe (icoutils).
 - **TUI**: `@opentui/react`.
 - **Legacy repos**: profiles migrated into the registry, repos archived then removed.
 - **Build order**: all in parallel.
 
-## Runtime layout (`~/.steam-mac`)
+## Runtime layout (`~/.decanter`)
 
 ```
 config.json                 global settings (steam root, steamcmd account, runtime defaults)
@@ -33,8 +33,8 @@ logs/                       CLI/TUI logs
 ## Phases
 
 ### Phase 1 — Foundation
-- [x] `package.json`, `tsconfig.json`, `.npmrc`, `.gitignore`, `LICENSE`, `bin/steam-mac`
-- [x] `src/core/paths.ts` (`~/.steam-mac` layout, `SM_HOME` override)
+- [x] `package.json`, `tsconfig.json`, `.npmrc`, `.gitignore`, `LICENSE`, `bin/decanter`
+- [x] `src/core/paths.ts` (`~/.decanter` layout, `DECANTER_HOME` override)
 - [x] `src/core/log.ts`, `src/core/exec.ts` (dry-run aware process helpers)
 - [x] `src/core/config.ts` (global config load/save)
 
@@ -63,7 +63,7 @@ logs/                       CLI/TUI logs
 ### Phase 6 — CLI
 - [x] `src/core/args.ts` (command + flags parsing)
 - [x] `src/cli.ts` (dispatch, per-game commands, `list`/`add`/`remove`/`migrate`/`tui`)
-- [x] `steam-mac help`, `version`
+- [x] `decanter help`, `version`
 
 ### Phase 7 — TUI (@opentui/react)
 - [x] `src/tui.tsx` (renderer bootstrap, lifecycle)
@@ -74,7 +74,7 @@ logs/                       CLI/TUI logs
 - [x] `README.md`, `docs/architecture.md`, `docs/managing.md`
 - [x] ADRs for structural decisions (pix_tool_process_adr)
 - [x] `tsc --noEmit`, `node --test` (34 unit tests), OpenTUI render test
-- [x] Migrate the four legacy profiles into `~/.steam-mac/games/`
+- [x] Migrate the four legacy profiles into `~/.decanter/games/`
 - [x] Archive the legacy repos (`.archive/legacy-wrapper-repos-*.tar.gz` + git bundles), then remove the four per-game repos; `steam-mac-core` is kept on request
 - [ ] Run the dev server per project convention (not applicable: no server)
 
@@ -83,7 +83,7 @@ logs/                       CLI/TUI logs
 - `pnpm typecheck`: clean.
 - `pnpm test`: 34 tests, 0 failures.
 - `pnpm test:tui`: 1 render test, 0 failures.
-- `steam-mac list`, `status`, `doctor` run against the real machine and the four
+- `decanter list`, `status`, `doctor` run against the real machine and the four
   migrated games; `doctor broken-sword-directors-cut` passes every check.
 
 ## Notes

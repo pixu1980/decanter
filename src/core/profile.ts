@@ -1,8 +1,8 @@
-// The per-game profile (`~/.steam-mac/games/<slug>/game.json`).
+// The per-game profile (`~/.decanter/games/<slug>/game.json`).
 //
 // A profile is everything the engine needs to know about one Steam game. It is
-// created by `steam-mac add`, imported from a legacy `game.conf` by
-// `steam-mac migrate`, or edited by hand.
+// created by `decanter add`, imported from a legacy `game.conf` by
+// `decanter migrate`, or edited by hand.
 //
 // docs: docs/architecture.md
 
@@ -134,7 +134,7 @@ export function normalizeProfile(input: ProfileInput): GameProfile {
     exe: input.exe ?? `${slug}.exe`,
     installSubdir: input.installSubdir ?? slug,
     dataSubdir: input.dataSubdir ?? "",
-    manifestName: input.manifestName ?? ".steam-mac-manifest",
+    manifestName: input.manifestName ?? ".decanter-manifest",
     logName: input.logName ?? "Player.log",
     modsSubdir: input.modsSubdir ?? "Mods",
     wineRuntime: input.wineRuntime ?? "gptk",

@@ -1,6 +1,6 @@
 // Command-line parsing.
 //
-// The CLI is `steam-mac <command> [slug] [--flags]`. Flags may appear anywhere,
+// The CLI is `decanter <command> [slug] [--flags]`. Flags may appear anywhere,
 // which keeps shell completion and muscle memory simple.
 //
 // docs: README.md

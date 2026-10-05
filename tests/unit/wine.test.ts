@@ -29,7 +29,7 @@ const INFO_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "steam-mac-wine-"));
+  const dir = await mkdtemp(join(tmpdir(), "decanter-wine-"));
   try {
     await fn(dir);
   } finally {
@@ -179,7 +179,7 @@ test("normalizeProfile accepts the gptk-apple runtime", () => {
 
 test("resolveWine maps gptk-apple to the overlay app and its source", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({ name: "Test", slug: "test", wineRuntime: "gptk-apple" });
     const config = {
       ...defaultConfig(),
@@ -198,7 +198,7 @@ test("resolveWine maps gptk-apple to the overlay app and its source", async () =
 
 test("ensureWine swaps only the D3DMetal layer over a Gcenx loader", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
 
     const wine = join(home, "base.app", "Contents", "Resources", "wine");
     await writeFileIn(join(wine, "bin", "wine64"), "#!/bin/sh\necho 'wine-7.7 (Game Porting Toolkit 1.1)'\n", 0o755);
@@ -240,7 +240,7 @@ test("ensureWine swaps only the D3DMetal layer over a Gcenx loader", async () =>
 
 test("ensureWine falls back to gptk when the Apple DMG is unavailable", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const base = join(home, "base.app");
     const wine = join(base, "Contents", "Resources", "wine");
     await writeFileIn(join(wine, "bin", "wine64"), "#!/bin/sh\necho 'wine-7.7'\n", 0o755);

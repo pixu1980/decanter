@@ -23,9 +23,9 @@ test("loginArgs includes the password when present", () => {
 });
 
 test("parseDepotDownload reads the path and manifest", () => {
-  const output = '...\nDepot download complete : "/Users/me/.steam-mac/steamcmd/steamapps/content/app_57640/depot_57641" (1234 files, manifest 987654321)\nOK';
+  const output = '...\nDepot download complete : "/Users/me/.decanter/steamcmd/steamapps/content/app_57640/depot_57641" (1234 files, manifest 987654321)\nOK';
   const parsed = parseDepotDownload(output);
-  assert.equal(parsed.depotDir, "/Users/me/.steam-mac/steamcmd/steamapps/content/app_57640/depot_57641");
+  assert.equal(parsed.depotDir, "/Users/me/.decanter/steamcmd/steamapps/content/app_57640/depot_57641");
   assert.equal(parsed.manifest, "987654321");
 });
 
@@ -51,7 +51,7 @@ test("steamcmdPath lives under the runtime home", () => {
 
 test("detectSteamAccount reads the native Steam account name", async () => {
   await withTempHome(async () => {
-    const root = join(process.env.SM_HOME!, "Steam");
+    const root = join(process.env.DECANTER_HOME!, "Steam");
     await mkdir(join(root, "config"), { recursive: true });
     await writeFile(
       join(root, "config", "loginusers.vdf"),
@@ -118,7 +118,7 @@ test("parseWindowsDepot picks the Windows content depot", () => {
 test("steamcmdHasLogin reads the account from config.vdf", async () => {
   await withTempHome(async () => {
     const cfg = join(
-      process.env.SM_HOME!,
+      process.env.DECANTER_HOME!,
       "steamcmd",
       "home",
       "Library",

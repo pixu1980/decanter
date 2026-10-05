@@ -1,6 +1,6 @@
 # GOG.com support — feasibility study
 
-Research only. No code yet. The goal is to understand whether `steam-mac` can do
+Research only. No code yet. The goal is to understand whether `decanter` can do
 for GOG.com games what it already does for Steam: register a game, download the
 Windows build, install it into a Wine prefix, build the `.app`, and keep the
 update/save/mod lifecycle.
@@ -54,7 +54,7 @@ prefix → .app`. Two GOG designs map onto it.
 ### Design A — offline installer (recommended first)
 
 1. Auth with the GOG API and list the owned game's installers.
-2. Download `setup_*.exe` + `.bin` into `~/.steam-mac/gog/<slug>/`.
+2. Download `setup_*.exe` + `.bin` into `~/.decanter/gog/<slug>/`.
 3. Run the installer inside the Wine prefix:
    `wine setup.exe /SILENT /SUPPRESSMSGBOXES /DIR=C:\<installSubdir> /NOICONS`.
 4. Detect the executable, build the `.app` (existing code).
@@ -95,8 +95,8 @@ prefix → .app`. Two GOG designs map onto it.
 - New `src/core/gogdl.ts` or an installer step in `lifecycle.ts`.
 - `add.ts`: resolve a GOG product by name (`gog.com` search) and prefill the
   profile.
-- `paths.ts`: `~/.steam-mac/gog/` for tokens and downloads.
-- CLI: `steam-mac gog login` (browser + code), and `download`/`import` branch on
+- `paths.ts`: `~/.decanter/gog/` for tokens and downloads.
+- CLI: `decanter gog login` (browser + code), and `download`/`import` branch on
   `store`.
 - Catalog: GOG entries keyed by `gogId`.
 
@@ -119,7 +119,7 @@ manifest-based updates matter.
 
 - [ ] `docs/adr`: record the "GOG via offline installers" decision
 - [ ] `src/core/gog.ts`: OAuth (login + refresh), owned games, installers
-- [ ] `steam-mac gog login` and token storage under `~/.steam-mac/gog/`
+- [ ] `decanter gog login` and token storage under `~/.decanter/gog/`
 - [ ] `profile.ts`: `store` + `gogId`; `add` resolves GOG products
 - [ ] `cmdDownload` (GOG): fetch installer parts
 - [ ] `cmdImport` (GOG): run the installer in the prefix, then detect the exe

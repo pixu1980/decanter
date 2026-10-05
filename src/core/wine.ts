@@ -4,7 +4,7 @@
 //   gptk          Apple's Game Porting Toolkit (Gcenx cask). Carries D3DMetal
 //                 for Direct3D, but bundles Wine 7.7.
 //   wine-devel    A current Gcenx Wine build, fetched as a tarball into
-//   wine-staging  ~/.steam-mac/wine. Needed by 32-bit OpenGL games that crash
+//   wine-staging  ~/.decanter/wine. Needed by 32-bit OpenGL games that crash
 //                 on GPTK's Wine 7.7; no Homebrew cask (they conflict with GPTK).
 //
 // docs: docs/adr/ (see the runtime ADR), docs/managing.md

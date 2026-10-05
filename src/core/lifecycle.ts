@@ -6,7 +6,7 @@
 //
 // docs: docs/managing.md
 
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { buildApp, bundleRuntimeReady } from "./bundle.ts";
 import { type Config, loadConfig } from "./config.ts";
@@ -21,7 +21,7 @@ import { lutrisLookup } from "./lutris.ts";
 import { downloadGogBuild, ensureGogToken, gogBuffer, gogDownloadDir, gogPrimaryExecutable, gogProduct, windowsInstallers } from "./gog.ts";
 import { ensureQuitHotkey } from "./hotkey.ts";
 import { die, heading, log, warn } from "./log.ts";
-import { gameAssetsDir, gameDir, logsDir } from "./paths.ts";
+import { backupsDir, gameAssetsDir, gameDir, logsDir } from "./paths.ts";
 import type { GameProfile, RuntimeSnapshot } from "./profile.ts";
 import { getGame, saveGame } from "./registry.ts";
 import { downloadDepot, ensureSteamcmd } from "./steamcmd.ts";
@@ -77,7 +77,12 @@ export async function cmdSetup(slug: string): Promise<void> {
   await ensureWine(wine);
   await clearQuarantine(wine);
   await ensureSteamcmd();
+  const freshPrefix = !exists(join(paths.prefix, "drive_c"));
   await wineboot(wine, paths.prefix);
+  await ensureSavesLink(paths);
+  if (freshPrefix) {
+    await mapPrefixDocuments(paths.prefix, paths.savesDir);
+  }
   await applyWineTricks(profile, paths, wine);
   await ensureQuitHotkey();
 
@@ -90,9 +95,59 @@ export async function cmdSetup(slug: string): Promise<void> {
   await recordRuntimeSnapshot(profile, wine);
 
   heading("next steps:");
-  log(`1. download the Windows build:  steam-mac download ${slug}`);
-  log(`2. import it:                    steam-mac import ${slug}`);
-  log(`3. play:                         steam-mac run ${slug}   (or open '${paths.app}')`);
+  log(`1. download the Windows build:  decanter download ${slug}`);
+  log(`2. import it:                    decanter import ${slug}`);
+  log(`3. play:                         decanter run ${slug}   (or open '${paths.app}')`);
+}
+
+/**
+ * Make `~/.decanter/games/<slug>/saves` exist.
+ *
+ * When the game keeps its saves inside the prefix (`dataSubdir`), the canonical
+ * `saves` folder is a symlink to that in-prefix folder; otherwise it is the
+ * folder itself. Idempotent.
+ */
+async function ensureSavesLink(paths: GamePaths): Promise<void> {
+  if (paths.dataDir === paths.savesDir) {
+    await mkdirp(paths.savesDir);
+    return;
+  }
+  if (exists(paths.savesDir)) {
+    return;
+  }
+  await mkdirp(paths.dataDir);
+  await mkdirp(dirname(paths.savesDir));
+  await exec("ln", ["-sfn", paths.dataDir, paths.savesDir], { allowFailure: true });
+}
+
+/**
+ * Point a fresh prefix's Windows `Documents` at the game's saves folder.
+ *
+ * Wine links `Documents` to the macOS `~/Documents` at prefix creation, which
+ * would scatter game saves outside `~/.decanter`. Only the symlink/empty dir
+ * case is touched (never a real folder with files), and only for a prefix this
+ * call just created.
+ */
+async function mapPrefixDocuments(prefix: string, savesDir: string): Promise<void> {
+  const users = join(prefix, "drive_c", "users");
+  if (!exists(users)) {
+    return;
+  }
+  const { lstat, readdir } = await import("node:fs/promises");
+  const reserved = new Set(["Public", "Default", "Default User", "All Users", "desktop.ini"]);
+  const user = (await readdir(users)).find((entry) => !reserved.has(entry));
+  if (!user) {
+    return;
+  }
+  const documents = join(users, user, "Documents");
+  const stat = await lstat(documents).catch(() => null);
+  const emptyDir = stat?.isDirectory() && (await readdir(documents)).length === 0;
+  if (!stat || (!stat.isSymbolicLink() && !emptyDir)) {
+    return;
+  }
+  await mkdirp(savesDir);
+  await remove(documents);
+  await exec("ln", ["-sfn", savesDir, documents], { allowFailure: true });
 }
 
 async function ensureRosetta(): Promise<void> {
@@ -115,7 +170,7 @@ export async function cmdImport(slug: string, options: { manifest?: string; inst
       die("the game is running — close it before importing");
     }
     await runGogInstaller(profile, paths, wine, options.installer);
-    log(`done. play with: steam-mac run ${slug}`);
+    log(`done. play with: decanter run ${slug}`);
     return;
   }
   if (profile.store === "gog") {
@@ -126,7 +181,7 @@ export async function cmdImport(slug: string, options: { manifest?: string; inst
       die("the game is running — close it before importing");
     }
     await importGog(profile, paths, wine);
-    log(`done. play with: steam-mac run ${slug}`);
+    log(`done. play with: decanter run ${slug}`);
     return;
   }
   if (profile.depot === 0) {
@@ -137,7 +192,7 @@ export async function cmdImport(slug: string, options: { manifest?: string; inst
   }
 
   if (await finalizeImport(profile, paths, wine, options.manifest)) {
-    log(`done. play with: steam-mac run ${slug}`);
+    log(`done. play with: decanter run ${slug}`);
   }
 }
 
@@ -153,7 +208,7 @@ async function downloadGog(profile: GameProfile, paths: GamePaths, wine: WineRun
       token,
       onProgress: (message) => log(`gog: ${message}`),
     });
-    await writeText(join(dest, ".steam-mac-root"), `${root}\n`);
+    await writeText(join(dest, ".decanter-root"), `${root}\n`);
     await importGog(profile, paths, wine);
     return;
   } catch (error) {
@@ -170,7 +225,7 @@ async function downloadGog(profile: GameProfile, paths: GamePaths, wine: WineRun
   }
 
   die(
-    `could not download the GOG build — download the offline installer yourself, then run: steam-mac import ${profile.slug} --installer <setup.exe>`,
+    `could not download the GOG build — download the offline installer yourself, then run: decanter import ${profile.slug} --installer <setup.exe>`,
   );
 }
 
@@ -227,9 +282,9 @@ async function runGogInstaller(
 /** Move a downloaded GOG build into the prefix and detect the executable. */
 async function importGog(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
   const dest = gogDownloadDir(profile.slug);
-  const root = (await readText(join(dest, ".steam-mac-root")))?.trim() ?? "";
+  const root = (await readText(join(dest, ".decanter-root")))?.trim() ?? "";
   if (!root || !exists(root)) {
-    die(`nothing to import: no GOG build in ${dest} — run: steam-mac download ${profile.slug}`);
+    die(`nothing to import: no GOG build in ${dest} — run: decanter download ${profile.slug}`);
   }
   log(`importing GOG build: ${root} → ${paths.gameDir}`);
   await mkdirp(paths.gameDir);
@@ -254,7 +309,7 @@ async function applyWineTricks(profile: GameProfile, paths: GamePaths, wine: Win
   if (tricks.length === 0) {
     return;
   }
-  const marker = join(paths.prefix, ".steam-mac-tricks");
+  const marker = join(paths.prefix, ".decanter-tricks");
   const done = (await readText(marker))?.trim().split("\n").filter(Boolean) ?? [];
   const todo = tricks.filter((trick) => !done.includes(trick));
   if (todo.length === 0) {
@@ -413,7 +468,7 @@ export async function provisionGame(
   const { profile } = await loadContext(slug);
   const missingId = profile.store === "gog" ? profile.gogId === 0 : profile.depot === 0;
   if (missingId) {
-    warn(`no ${profile.store === "gog" ? "GOG product" : "depot"} id for ${slug} — set it with 'steam-mac edit ${slug}', then run 'steam-mac download ${slug}'`);
+    warn(`no ${profile.store === "gog" ? "GOG product" : "depot"} id for ${slug} — set it with 'decanter edit ${slug}', then run 'decanter download ${slug}'`);
     return;
   }
 
@@ -463,7 +518,7 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
       if (result.depotDir) {
         log(`steamcmd: download complete → ${result.depotDir}`);
         await finalizeImport(profile, paths, wine, result.manifest);
-        log(`done. play with: steam-mac run ${slug}`);
+        log(`done. play with: decanter run ${slug}`);
         return;
       }
     } catch (error) {
@@ -471,7 +526,7 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
         throw error;
       }
       warn(`steamcmd could not download the depot: ${(error as Error).message}`);
-      warn("falling back to the Steam console (run 'steam-mac login' for owned games)");
+      warn("falling back to the Steam console (run 'decanter login' for owned games)");
     }
   }
 
@@ -501,11 +556,11 @@ async function guidedConsoleDownload(
     }
   });
   if (!finished) {
-    die(`timed out after ${timeout}s — rerun 'steam-mac download ${profile.slug}'`);
+    die(`timed out after ${timeout}s — rerun 'decanter download ${profile.slug}'`);
   }
 
   await finalizeImport(profile, paths, wine);
-  log(`done. play with: steam-mac run ${profile.slug}`);
+  log(`done. play with: decanter run ${profile.slug}`);
   void config;
 }
 
@@ -513,7 +568,7 @@ async function guidedConsoleDownload(
 export async function cmdUpdate(slug: string, options: { check?: boolean } = {}): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
-    die("the game is not imported — run: steam-mac setup && steam-mac download");
+    die("the game is not imported — run: decanter setup && decanter download");
   }
 
   const status = await updateStatus(profile, paths);
@@ -541,7 +596,7 @@ export async function cmdUpdate(slug: string, options: { check?: boolean } = {})
 function reportUpdateStatus(profile: GameProfile, status: Awaited<ReturnType<typeof updateStatus>>): void {
   switch (status.state) {
     case "waiting":
-      log(`update downloaded and waiting — run: steam-mac import ${profile.slug}`);
+      log(`update downloaded and waiting — run: decanter import ${profile.slug}`);
       break;
     case "available":
       log(`update available: installed ${status.installed ?? "unknown"}, latest ${status.latest}`);
@@ -566,7 +621,7 @@ function reportUpdateStatus(profile: GameProfile, status: Awaited<ReturnType<typ
 export async function cmdRun(slug: string): Promise<void> {
   const { profile, paths, config, wine: resolved } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
-    die("game not imported — run: steam-mac setup && steam-mac download");
+    die("game not imported — run: decanter setup && decanter download");
   }
   if (await isGameRunning(profile)) {
     die("the game is already running");
@@ -578,13 +633,13 @@ export async function cmdRun(slug: string): Promise<void> {
     wine = resolveWine({ ...profile, wineRuntime: "gptk" }, config);
   }
   if (!exists(wine.distExe)) {
-    die(`wine not found at ${wine.distExe} — run: steam-mac setup ${slug}`);
+    die(`wine not found at ${wine.distExe} — run: decanter setup ${slug}`);
   }
 
   await recordRuntimeSnapshot(profile, wine);
 
   if (bundleRuntimeReady(paths.app)) {
-    log(`launching ${profile.name} (app bundle) — stop with: steam-mac quit ${slug}`);
+    log(`launching ${profile.name} (app bundle) — stop with: decanter quit ${slug}`);
     await exec("open", [paths.app], { allowFailure: false });
     return;
   }
@@ -653,7 +708,7 @@ async function setWindowMode(slug: string, want: 0 | 1): Promise<void> {
     return;
   }
   await setGameScreenMode(profile, paths, wine, want);
-  log(`done — start the game with: steam-mac run ${slug}`);
+  log(`done — start the game with: decanter run ${slug}`);
 }
 
 async function gameScreenMode(
@@ -946,7 +1001,7 @@ function describeSnapshot(snapshot: RuntimeSnapshot): string {
 function reportRollbackHint(profile: GameProfile): void {
   const previous = previousRuntime(profile);
   if (previous) {
-    log(`if it does not work, run: steam-mac runtime-rollback ${profile.slug} (→ ${describeSnapshot(previous)})`);
+    log(`if it does not work, run: decanter runtime-rollback ${profile.slug} (→ ${describeSnapshot(previous)})`);
   }
 }
 
@@ -977,7 +1032,7 @@ export async function collectStatus(slug: string): Promise<StatusReport> {
       { label: "appid / depot", value: `${profile.appid} / ${profile.depot}` },
       {
         label: "wine runtime",
-        value: exists(wine.distExe) ? details.summary : `${wine.label} (missing — run: steam-mac setup ${slug})`,
+        value: exists(wine.distExe) ? details.summary : `${wine.label} (missing — run: decanter setup ${slug})`,
       },
       { label: "prefix", value: exists(join(paths.prefix, "drive_c")) ? paths.prefix : `missing (${paths.prefix})` },
       { label: "game", value: (await gameInstalled(profile, paths)) ? humanSize(await dirBytes(paths.gameDir)) : "not imported" },
@@ -985,7 +1040,7 @@ export async function collectStatus(slug: string): Promise<StatusReport> {
       { label: "manifest", value: manifestLine(status.state, installed, status.latest) },
       { label: "window mode", value: await windowModeLine(profile, paths, wine) },
       { label: "app bundle", value: bundleLine(paths.app) },
-      { label: "saves / mods", value: paths.dataDir || "not configured" },
+      { label: "saves / mods", value: paths.savesDir },
     ],
   };
 }
@@ -1074,27 +1129,27 @@ export async function collectDoctor(slug: string): Promise<DoctorReport> {
   if (exists(wine.distExe)) {
     add("PASS", wine.label, (await runtimeVersion(wine)) ?? "unknown");
   } else {
-    add("FAIL", wine.label, `run: steam-mac setup ${slug}`);
+    add("FAIL", wine.label, `run: decanter setup ${slug}`);
   }
 
   if (exists(join(paths.prefix, "drive_c"))) {
     add("PASS", "wine prefix", paths.prefix);
   } else {
-    add("FAIL", "wine prefix", `run: steam-mac setup ${slug}`);
+    add("FAIL", "wine prefix", `run: decanter setup ${slug}`);
   }
 
   if (await gameInstalled(profile, paths)) {
     add("PASS", "game files", await humanSize(await dirBytes(paths.gameDir)));
   } else {
-    add("FAIL", "game files", `run: steam-mac download ${slug}`);
+    add("FAIL", "game files", `run: decanter download ${slug}`);
   }
 
   if (bundleRuntimeReady(paths.app)) {
     add("PASS", "app bundle", paths.app);
   } else if (exists(join(paths.app, "Contents", "MacOS", "launch"))) {
-    add("WARN", "app bundle runtime", `rebuild with: steam-mac app ${slug}`);
+    add("WARN", "app bundle runtime", `rebuild with: decanter app ${slug}`);
   } else {
-    add("WARN", "app bundle", `run: steam-mac app ${slug}`);
+    add("WARN", "app bundle", `run: decanter app ${slug}`);
   }
 
   const freeGb = await freeDiskGb();
@@ -1178,7 +1233,7 @@ export async function cmdIcon(slug: string): Promise<void> {
   }
 }
 
-/** The loader log the app bundle writes (`~/.steam-mac/logs/<slug>.log`). */
+/** The loader log the app bundle writes (`~/.decanter/logs/<slug>.log`). */
 function runtimeLogPath(slug: string): string {
   return join(logsDir(), `${slug}.log`);
 }
@@ -1214,15 +1269,12 @@ export async function cmdLogs(slug: string, lines = 80): Promise<void> {
 /** Open the saves folder. */
 export async function cmdSaves(slug: string, options: { open?: boolean } = {}): Promise<string> {
   const { paths } = await loadContext(slug);
-  if (!paths.dataDir) {
-    die("no saves location configured for this game");
-  }
-  await mkdirp(paths.dataDir);
+  await ensureSavesLink(paths);
   if (options.open !== false && !isDryRun()) {
-    await exec("open", [paths.dataDir], { allowFailure: true });
+    await exec("open", [paths.savesDir], { allowFailure: true });
   }
 
-  return paths.dataDir;
+  return paths.savesDir;
 }
 
 /** Open the mods folder. */
@@ -1239,14 +1291,15 @@ export async function cmdMods(slug: string, options: { open?: boolean } = {}): P
   return paths.modsDir;
 }
 
-/** Copy saves to a timestamped folder in `~/Documents`. */
+/** Copy saves to a timestamped folder under `~/.decanter/backups`. */
 export async function cmdBackupSaves(slug: string): Promise<void> {
   const { profile, paths } = await loadContext(slug);
-  if (!paths.dataDir || !exists(paths.dataDir)) {
-    die(`no saves found at ${paths.dataDir || "<unset>"}`);
+  await ensureSavesLink(paths);
+  if (!exists(paths.dataDir)) {
+    die(`no saves found at ${paths.dataDir}`);
   }
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 15);
-  const dest = join(process.env.HOME ?? "", "Documents", `${profile.backupLabel}-saves-backup-${stamp}`);
+  const dest = join(backupsDir(), `${profile.backupLabel}-saves-backup-${stamp}`);
   log(`copying saves to ${dest}`);
   await mkdirp(dest);
   if (profile.savePatterns.length > 0) {
@@ -1273,14 +1326,14 @@ export async function cmdSteamSetup(slug: string, options: { force?: boolean } =
   await mkdirp(join(paths.prefix, "drive_c"));
   await exec("curl", ["-fL", "-o", installer, "https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe"]);
   await exec(wine.distExe, ["C:\\SteamSetup.exe", "/S"], { env: { WINEPREFIX: paths.prefix } });
-  log("installed — run 'steam-mac steam' once to log in");
+  log("installed — run 'decanter steam' once to log in");
 }
 
 /** Launch Windows Steam inside the prefix. */
 export async function cmdSteam(slug: string): Promise<void> {
   const { paths, wine } = await loadContext(slug);
   if (!exists(windowsSteamExe(paths.prefix))) {
-    die("windows steam is not installed — run: steam-mac steam-setup");
+    die("windows steam is not installed — run: decanter steam-setup");
   }
   await exec(wine.distExe, [WINDOWS_STEAM_ARG, "-cef-disable-gpu-compositing"], {
     cwd: join(paths.prefix, "drive_c"),

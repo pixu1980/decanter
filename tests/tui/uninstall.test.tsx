@@ -24,9 +24,9 @@ interface Fixture {
 }
 
 async function withGame(fn: (fixture: Fixture) => Promise<void>): Promise<void> {
-  const home = mkdtempSync(join(tmpdir(), "steam-mac-tui-"));
-  const previous = process.env.SM_HOME;
-  process.env.SM_HOME = home;
+  const home = mkdtempSync(join(tmpdir(), "decanter-tui-"));
+  const previous = process.env.DECANTER_HOME;
+  process.env.DECANTER_HOME = home;
   try {
     await updateConfig({ applicationsDir: join(home, "Applications") });
     await saveGame(
@@ -38,9 +38,9 @@ async function withGame(fn: (fixture: Fixture) => Promise<void>): Promise<void> 
     await fn({ home, app });
   } finally {
     if (previous === undefined) {
-      delete process.env.SM_HOME;
+      delete process.env.DECANTER_HOME;
     } else {
-      process.env.SM_HOME = previous;
+      process.env.DECANTER_HOME = previous;
     }
     rmSync(home, { recursive: true, force: true });
   }

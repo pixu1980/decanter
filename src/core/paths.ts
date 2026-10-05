@@ -1,22 +1,22 @@
 // Filesystem layout of the runtime registry.
 //
-// Everything lives under `~/.steam-mac` (override with `SM_HOME`). The repo
-// itself holds no game profiles: a game is created at runtime by `steam-mac add`
-// or `steam-mac migrate`.
+// Everything lives under `~/.decanter` (override with `DECANTER_HOME`). The repo
+// itself holds no game profiles: a game is created at runtime by `decanter add`
+// or `decanter migrate`.
 //
 // docs: docs/architecture.md
 
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
-/** Root of the runtime registry. `SM_HOME` makes it testable. */
-export function smHome(): string {
-  return process.env.SM_HOME ?? join(homedir(), ".steam-mac");
+/** Root of the runtime registry. `DECANTER_HOME` makes it testable. */
+export function decanterHome(): string {
+  return process.env.DECANTER_HOME ?? join(homedir(), ".decanter");
 }
 
 /** Directory holding one folder per registered game. */
 export function gamesDir(): string {
-  return join(smHome(), "games");
+  return join(decanterHome(), "games");
 }
 
 /** Folder for a single game. */
@@ -39,9 +39,24 @@ export function gameAssetsDir(slug: string): string {
   return join(gameDir(slug), "assets");
 }
 
+/** The game's Wine prefix, under the game folder so all its data lives together. */
+export function gamePrefixDir(slug: string): string {
+  return join(gameDir(slug), "prefix");
+}
+
+/** The game's saves folder. */
+export function gameSavesDir(slug: string): string {
+  return join(gameDir(slug), "saves");
+}
+
+/** Scratch space for downloads and other temporary files. */
+export function tempDir(): string {
+  return join(decanterHome(), "temp");
+}
+
 /** Pinned Gcenx Wine builds fetched by `setup`. */
 export function wineDir(): string {
-  return join(smHome(), "wine");
+  return join(decanterHome(), "wine");
 }
 
 /** Install folder of one Wine build. */
@@ -56,12 +71,12 @@ export function appleGptkAppDir(): string {
 
 /** Local SteamCMD installation. */
 export function steamcmdDir(): string {
-  return join(smHome(), "steamcmd");
+  return join(decanterHome(), "steamcmd");
 }
 
-/** GOG account tokens and downloads. */
+/** GOG account tokens. */
 export function gogDir(): string {
-  return join(smHome(), "gog");
+  return join(decanterHome(), "gog");
 }
 
 /** Stored GOG OAuth tokens. */
@@ -69,9 +84,9 @@ export function gogAuthPath(): string {
   return join(gogDir(), "auth.json");
 }
 
-/** Where a GOG game's downloaded build/installer lands. */
+/** Where a GOG game's downloaded build/installer lands (temporary). */
 export function gogDownloadsDir(slug: string): string {
-  return join(gogDir(), "downloads", slug);
+  return join(tempDir(), "gog", slug);
 }
 
 /**
@@ -87,12 +102,22 @@ export function steamcmdHome(): string {
 
 /** CLI/TUI log files. */
 export function logsDir(): string {
-  return join(smHome(), "logs");
+  return join(decanterHome(), "logs");
+}
+
+/** Helper binaries compiled at runtime (e.g. the Cmd+Q helper). */
+export function binDir(): string {
+  return join(decanterHome(), "bin");
+}
+
+/** Save backups written by `backup-saves`. */
+export function backupsDir(): string {
+  return join(decanterHome(), "backups");
 }
 
 /** Global settings file. */
 export function configFile(): string {
-  return join(smHome(), "config.json");
+  return join(decanterHome(), "config.json");
 }
 
 /** Native macOS Steam data folder. */
@@ -105,9 +130,9 @@ export function defaultApplicationsDir(): string {
   return join(homedir(), "Applications");
 }
 
-/** Wine prefix for a game. */
+/** Wine prefix for a game: under the game folder, so all its data is in one place. */
 export function defaultPrefixDir(slug: string): string {
-  return join(homedir(), "Games", `${slug}-prefix`);
+  return gamePrefixDir(slug);
 }
 
 /** Expand a leading `~` and make a path absolute. */

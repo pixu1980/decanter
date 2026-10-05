@@ -53,7 +53,7 @@ test("addGame plans setup, download and import for the new game", async () => {
 
 test("addGame re-provisions a registered game that is not installed", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     await saveGame(
       normalizeProfile({
         name: "Test Game",
@@ -74,7 +74,7 @@ test("addGame re-provisions a registered game that is not installed", async () =
 
 test("addGame does nothing when the game is already installed", async () => {
   await withTempHome(async () => {
-    const home = process.env.SM_HOME!;
+    const home = process.env.DECANTER_HOME!;
     const profile = normalizeProfile({
       name: "Test Game",
       slug: "test-game",
