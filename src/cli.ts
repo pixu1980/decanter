@@ -6,12 +6,13 @@
 //
 // docs: README.md, docs/architecture.md
 
+import { createInterface } from "node:readline/promises";
 import { addGame } from "./core/add.ts";
 import { flagBool, flagNumber, flagString, parseArgs, type ParsedArgs } from "./core/args.ts";
 import { loadConfig, updateConfig } from "./core/config.ts";
 import { gameInstalled, updateStatus } from "./core/depot.ts";
 import { exec, setDryRun } from "./core/exec.ts";
-import { exists } from "./core/fsx.ts";
+import { exists, remove } from "./core/fsx.ts";
 import {
   cmdApp,
   cmdBackupSaves,
@@ -24,6 +25,9 @@ import {
   cmdMods,
   cmdQuit,
   cmdRun,
+  cmdRuntime,
+  cmdRuntimeRollback,
+  cmdRuntimeUpgrade,
   cmdSaves,
   cmdSetup,
   cmdStatus,
@@ -37,7 +41,8 @@ import {
 } from "./core/lifecycle.ts";
 import { CliError, die, log } from "./core/log.ts";
 import { migrateRepo } from "./core/migrate.ts";
-import { gameDir } from "./core/paths.ts";
+import { gameDir, gogAuthPath } from "./core/paths.ts";
+import { gogExchangeCode, gogLoginUrl, extractGogCode, loadGogTokens } from "./core/gog.ts";
 import type { WineRuntime } from "./core/profile.ts";
 import { listGames, removeGameRecord, resolveGame } from "./core/registry.ts";
 import { detectSteamAccount, steamcmdLogin } from "./core/steamcmd.ts";
@@ -56,6 +61,9 @@ const SLUG_COMMANDS = new Set([
   "fullscreen",
   "status",
   "doctor",
+  "runtime",
+  "runtime-upgrade",
+  "runtime-rollback",
   "app",
   "icon",
   "logs",
@@ -138,6 +146,11 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (args.command === "gog") {
+    await cmdGog(args);
+    return;
+  }
+
   if (SLUG_COMMANDS.has(args.command)) {
     await cmdGame(args);
     return;
@@ -160,7 +173,7 @@ async function cmdGame(args: ParsedArgs): Promise<void> {
     case "download":
       return cmdDownload(slug, { manual: flagBool(args.flags, "manual") });
     case "import":
-      return cmdImport(slug);
+      return cmdImport(slug, { installer: flagString(args.flags, "installer") });
     case "update":
       return cmdUpdate(slug, { check: flagBool(args.flags, "check") });
     case "run":
@@ -180,6 +193,12 @@ async function cmdGame(args: ParsedArgs): Promise<void> {
       }
       return;
     }
+    case "runtime":
+      return cmdRuntime(slug);
+    case "runtime-upgrade":
+      return cmdRuntimeUpgrade(slug);
+    case "runtime-rollback":
+      return cmdRuntimeRollback(slug);
     case "app":
       return cmdApp(slug);
     case "icon":
@@ -233,12 +252,56 @@ async function cmdAdd(args: ParsedArgs): Promise<void> {
     slug: flagString(args.flags, "slug"),
     exe: flagString(args.flags, "exe"),
     runtime: flagString(args.flags, "runtime") as WineRuntime | undefined,
+    store: flagString(args.flags, "store") as "steam" | "gog" | undefined,
+    gogId: flagNumber(args.flags, "gog-id"),
     force: flagBool(args.flags, "force"),
   });
 }
 
-async function cmdConfig(args: ParsedArgs): Promise<void> {
-  if (args.positionals.length === 0) {
+async function promptLine(prompt: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return (await rl.question(prompt)).trim();
+  } finally {
+    rl.close();
+  }
+}
+
+async function cmdGog(args: ParsedArgs): Promise<void> {
+  const sub = args.positionals[0] ?? "status";
+  if (sub === "login") {
+    const arg = args.positionals.slice(1).join(" ").trim();
+    if (arg) {
+      await gogExchangeCode(extractGogCode(arg));
+      log("GOG: login stored");
+      return;
+    }
+    const url = gogLoginUrl();
+    log("log in to GOG in the browser, then paste the redirect URL (or just the code):");
+    log(`  ${url}`);
+    await exec("open", [url], { allowFailure: true });
+    if (!process.stdin.isTTY) {
+      log("then run: steam-mac gog login <redirect-url-or-code>");
+      return;
+    }
+    const answer = await promptLine("redirect URL or code: ");
+    if (!answer) {
+      die("no code given");
+    }
+    await gogExchangeCode(extractGogCode(answer));
+    log("GOG: login stored");
+    return;
+  }
+  if (sub === "logout") {
+    await remove(gogAuthPath());
+    log("GOG: login removed");
+    return;
+  }
+  const tokens = await loadGogTokens();
+  log(tokens ? "GOG: logged in" : "GOG: not logged in — run: steam-mac gog login");
+}
+
+async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positionals.length === 0) {
     process.stdout.write(`${JSON.stringify(await loadConfig(), null, 2)}\n`);
     return;
   }
@@ -326,6 +389,7 @@ registry:
   migrate <path>        import a legacy per-game repo (--slug S --force)
   config [k=v ...]      show or change machine-wide settings
   login [user]          store a SteamCMD login (defaults to the native Steam account)
+  gog login [code|url]  log in to GOG (opens the browser; paste the redirect URL)
 
 lifecycle:
   setup <game>          Rosetta, Wine runtime, prefix, icon, app bundle
@@ -339,6 +403,9 @@ lifecycle:
   app <game>            (re)build the .app bundle
   icon <game>           fetch (or refresh) the game icon
   status <game>         show the install state
+  runtime <game>        show the Wine/Direct3D runtime in use and its history
+  runtime-upgrade <game>  try the newest Wine build / D3DMetal overlay
+  runtime-rollback <game> return to the previous recorded runtime
   doctor <game>         PASS/WARN/FAIL checks (exit 1 on failure)
   logs <game>           tail the game log (-n N)
   saves <game>          open the saves folder
@@ -359,6 +426,7 @@ options:
   --check               update: report only; exit 3 when an update is available
   --manual              download: skip SteamCMD, use the Steam console
   --purge               remove/uninstall: also delete the Wine prefix
+  --installer <path>    import: run a GOG offline installer in the prefix
   --force               add/migrate/steam-setup: overwrite
 
 docs: README.md, docs/architecture.md, docs/managing.md

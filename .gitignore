@@ -6,3 +6,7 @@ dist/
 # runtime scratch
 .tmp/
 coverage/
+
+# local Apple DMGs (redistributables, not part of the repo)
+docs/dmg/
+*.dmg

@@ -6,24 +6,37 @@
 //
 // docs: docs/managing.md
 
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { buildApp, bundleRuntimeReady } from "./bundle.ts";
 import { type Config, loadConfig } from "./config.ts";
 import { clearStaleDepotState, gameInstalled, importDepot, updateStatus, waitForDepotDownload } from "./depot.ts";
 import { detectExecutable } from "./exe.ts";
-import { exec, isDryRun } from "./exec.ts";
-import { exists, mkdirp, readText, remove } from "./fsx.ts";
+import { exec, isDryRun, which } from "./exec.ts";
+import { exists, mkdirp, readText, remove, writeBytes, writeText } from "./fsx.ts";
 import { type GamePaths, resolveGamePaths, WINDOWS_STEAM_ARG, windowsSteamExe } from "./game.ts";
 import { provisionIcon } from "./icon.ts";
+import { readPe } from "./pe.ts";
+import { lutrisLookup } from "./lutris.ts";
+import { downloadGogBuild, ensureGogToken, gogBuffer, gogDownloadDir, gogPrimaryExecutable, gogProduct, windowsInstallers } from "./gog.ts";
 import { ensureQuitHotkey } from "./hotkey.ts";
 import { die, heading, log, warn } from "./log.ts";
-import { gameAssetsDir, gameDir } from "./paths.ts";
-import type { GameProfile } from "./profile.ts";
+import { gameAssetsDir, gameDir, logsDir } from "./paths.ts";
+import type { GameProfile, RuntimeSnapshot } from "./profile.ts";
 import { getGame, saveGame } from "./registry.ts";
 import { downloadDepot, ensureSteamcmd } from "./steamcmd.ts";
 import type { WineRuntime } from "./wine.ts";
-import { clearQuarantine, ensureWine, resolveWine, runtimeVersion, wineboot } from "./wine.ts";
+import {
+  clearQuarantine,
+  ensureWine,
+  installedWineVersions,
+  latestWineVersion,
+  readD3dMetalVersion,
+  resolveWine,
+  runtimeDetails,
+  runtimeVersion,
+  wineboot,
+} from "./wine.ts";
 
 /** A game plus everything derived from it. */
 export interface GameContext {
@@ -65,6 +78,7 @@ export async function cmdSetup(slug: string): Promise<void> {
   await clearQuarantine(wine);
   await ensureSteamcmd();
   await wineboot(wine, paths.prefix);
+  await applyWineTricks(profile, paths, wine);
   await ensureQuitHotkey();
 
   const assets = gameAssetsDir(profile.slug);
@@ -73,6 +87,7 @@ export async function cmdSetup(slug: string): Promise<void> {
   }
 
   await buildApp(profile, paths, wine);
+  await recordRuntimeSnapshot(profile, wine);
 
   heading("next steps:");
   log(`1. download the Windows build:  steam-mac download ${slug}`);
@@ -93,8 +108,27 @@ async function ensureRosetta(): Promise<void> {
 // --- import / download / update -----------------------------------------------
 
 /** Move a finished depot download into the prefix. */
-export async function cmdImport(slug: string, options: { manifest?: string } = {}): Promise<void> {
+export async function cmdImport(slug: string, options: { manifest?: string; installer?: string } = {}): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
+  if (options.installer) {
+    if (await isGameRunning(profile)) {
+      die("the game is running — close it before importing");
+    }
+    await runGogInstaller(profile, paths, wine, options.installer);
+    log(`done. play with: steam-mac run ${slug}`);
+    return;
+  }
+  if (profile.store === "gog") {
+    if (profile.gogId === 0) {
+      die("no GOG product id configured — set 'gogId' in game.json");
+    }
+    if (await isGameRunning(profile)) {
+      die("the game is running — close it before importing");
+    }
+    await importGog(profile, paths, wine);
+    log(`done. play with: steam-mac run ${slug}`);
+    return;
+  }
   if (profile.depot === 0) {
     die("no Steam depot id configured — set 'depot' in game.json");
   }
@@ -104,6 +138,145 @@ export async function cmdImport(slug: string, options: { manifest?: string } = {
 
   if (await finalizeImport(profile, paths, wine, options.manifest)) {
     log(`done. play with: steam-mac run ${slug}`);
+  }
+}
+
+/** Download the newest GOG build and import it into the prefix. */
+async function downloadGog(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
+  const token = await ensureGogToken();
+  const dest = gogDownloadDir(profile.slug);
+
+  // Design B: the Galaxy content-system build.
+  try {
+    log(`gog: downloading product ${profile.gogId} (content-system build)`);
+    const root = await downloadGogBuild(profile.gogId, dest, {
+      token,
+      onProgress: (message) => log(`gog: ${message}`),
+    });
+    await writeText(join(dest, ".steam-mac-root"), `${root}\n`);
+    await importGog(profile, paths, wine);
+    return;
+  } catch (error) {
+    warn(`GOG content-system download failed: ${(error as Error).message}`);
+  }
+
+  // Design A: the offline installer.
+  try {
+    const installer = await downloadGogInstaller(profile.gogId, profile.slug, dest, token);
+    await runGogInstaller(profile, paths, wine, installer);
+    return;
+  } catch (error) {
+    warn(`GOG offline installer failed: ${(error as Error).message}`);
+  }
+
+  die(
+    `could not download the GOG build — download the offline installer yourself, then run: steam-mac import ${profile.slug} --installer <setup.exe>`,
+  );
+}
+
+/** Fetch a product's newest Windows offline installer (Design A). */
+async function downloadGogInstaller(gogId: number, slug: string, dest: string, token: string): Promise<string> {
+  const product = await gogProduct(gogId, token);
+  const installers = windowsInstallers(product);
+  if (installers.length === 0) {
+    die(`no Windows offline installer for GOG product ${gogId}`);
+  }
+  const installer = installers.find((entry) => entry.language === "en") ?? installers[0]!;
+  const files = installer.files;
+  if (files.length === 0) {
+    die(`the GOG installer for ${gogId} has no files`);
+  }
+
+  // The downlink has no filename header, so build the Inno Setup names: the
+  // first file is the `.exe`, the rest are the `-N.bin` parts next to it.
+  await mkdirp(dest);
+  const exe = join(dest, `setup_${slug}.exe`);
+  log(`gog: downloading ${basename(exe)}`);
+  await writeBytes(exe, await gogBuffer(files[0]!.downlink, token));
+  for (let index = 1; index < files.length; index += 1) {
+    const part = join(dest, `setup_${slug}-${index}.bin`);
+    log(`gog: downloading ${basename(part)}`);
+    await writeBytes(part, await gogBuffer(files[index]!.downlink, token));
+  }
+  return exe;
+}
+
+/** Run a GOG offline installer inside the prefix (Design A / BYOI). */
+async function runGogInstaller(
+  profile: GameProfile,
+  paths: GamePaths,
+  wine: WineRuntime,
+  installer: string,
+): Promise<void> {
+  if (!exists(installer)) {
+    die(`installer not found: ${installer}`);
+  }
+  log(`running the GOG installer in the prefix: ${installer}`);
+  await mkdirp(paths.gameDir);
+  const result = await exec(
+    wine.distExe,
+    ["/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", `/DIR=C:\\${profile.installSubdir}`, "/NOICONS", installer],
+    { cwd: paths.gameDir, env: { WINEPREFIX: paths.prefix }, allowFailure: true },
+  );
+  if (result.status !== 0) {
+    warn(`the installer exited with ${result.status} — check the output above`);
+  }
+  await ensureExecutable(profile, paths, wine);
+}
+
+/** Move a downloaded GOG build into the prefix and detect the executable. */
+async function importGog(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
+  const dest = gogDownloadDir(profile.slug);
+  const root = (await readText(join(dest, ".steam-mac-root")))?.trim() ?? "";
+  if (!root || !exists(root)) {
+    die(`nothing to import: no GOG build in ${dest} — run: steam-mac download ${profile.slug}`);
+  }
+  log(`importing GOG build: ${root} → ${paths.gameDir}`);
+  await mkdirp(paths.gameDir);
+  await exec("rsync", ["-a", `${root}/`, `${paths.gameDir}/`]);
+
+  // Prefer the entry point the build declares over guessing by size.
+  const primary = await gogPrimaryExecutable(paths.gameDir, profile.gogId);
+  if (primary && primary !== profile.exe) {
+    log(`gog: using the declared executable '${primary}'`);
+    profile.exe = primary;
+    await saveGame(profile);
+    await buildApp(profile, paths, wine);
+  } else {
+    await ensureExecutable(profile, paths, wine);
+  }
+  await applyHeuristics(profile, paths);
+}
+
+/** Install the per-game winetricks verbs, once each. */
+async function applyWineTricks(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
+  const tricks = profile.wine.tricks;
+  if (tricks.length === 0) {
+    return;
+  }
+  const marker = join(paths.prefix, ".steam-mac-tricks");
+  const done = (await readText(marker))?.trim().split("\n").filter(Boolean) ?? [];
+  const todo = tricks.filter((trick) => !done.includes(trick));
+  if (todo.length === 0) {
+    log(`wine tricks: already installed (${tricks.join(", ")})`);
+    return;
+  }
+  if (!which("winetricks")) {
+    warn(`winetricks not found — install it to apply: ${todo.join(", ")}`);
+    return;
+  }
+  for (const trick of todo) {
+    log(`wine tricks: installing ${trick} (this downloads a redistributable)`);
+    const result = await exec("winetricks", ["-q", trick], {
+      env: { WINEPREFIX: paths.prefix, WINE: wine.distExe, WINESERVER: wine.distServer },
+      allowFailure: true,
+    });
+    if (result.status !== 0) {
+      warn(`winetricks ${trick} failed`);
+      return;
+    }
+    done.push(trick);
+    await writeText(marker, `${done.join("\n")}\n`);
   }
 }
 
@@ -120,8 +293,75 @@ async function finalizeImport(
   });
   if (result.imported) {
     await ensureExecutable(profile, paths, wine);
+    await applyHeuristics(profile, paths);
   }
   return result.imported;
+}
+
+/**
+ * Infer per-game Wine settings from the imported executable: D3DX imports need
+ * the native redistributable, and a 32-bit game asserts on GPTK's Wine 7.7.
+ */
+async function applyHeuristics(profile: GameProfile, paths: GamePaths): Promise<void> {
+  const info = await readPe(join(paths.gameDir, profile.exe));
+  if (!info) {
+    return;
+  }
+
+  let changed = false;
+  let runtimeChanged = false;
+
+  const tricks = new Set(profile.wine.tricks);
+  if (info.imports.some((dll) => /^d3dx9_\d+\.dll$/.test(dll))) tricks.add("d3dx9");
+  if (info.imports.some((dll) => /^d3dx10_\d+\.dll$/.test(dll))) tricks.add("d3dx10");
+  if (info.imports.some((dll) => /^d3dx11_\d+\.dll$/.test(dll))) tricks.add("d3dx11");
+
+  // Community settings from Lutris, when the game is listed there.
+  const lutris = await lutrisLookup(
+    profile.store,
+    profile.store === "gog" ? profile.gogId : profile.appid,
+    profile.name,
+  );
+  if (lutris) {
+    for (const trick of lutris.tricks) tricks.add(trick);
+    for (const override of lutris.dllOverrides) {
+      if (!profile.wine.dllOverrides.includes(override)) {
+        profile.wine.dllOverrides.push(override);
+        changed = true;
+      }
+    }
+    if (lutris.tricks.length > 0 || lutris.dllOverrides.length > 0) {
+      log(`lutris: winetricks [${lutris.tricks.join(", ")}] overrides [${lutris.dllOverrides.join(", ")}]`);
+    }
+  }
+
+  if (tricks.size !== profile.wine.tricks.length) {
+    log(`heuristics: D3DX imports → winetricks ${[...tricks].join(", ")}`);
+    profile.wine.tricks = [...tricks];
+    changed = true;
+  }
+
+  if (info.machine === "x86" && profile.wineRuntime === "gptk") {
+    const versions = await installedWineVersions("devel");
+    if (versions.length > 0) {
+      warn(`heuristics: 32-bit executable — using wine-devel ${versions[0]} (GPTK's Wine 7.7 asserts on 32-bit games)`);
+      profile.wineRuntime = "wine-devel";
+      profile.wineVersion = versions[0]!;
+      runtimeChanged = true;
+      changed = true;
+    } else {
+      warn("heuristics: 32-bit executable — GPTK's Wine 7.7 may assert; install a Gcenx wine-devel build");
+    }
+  }
+
+  if (!changed) {
+    return;
+  }
+  await saveGame(profile);
+  if (runtimeChanged) {
+    log("heuristics: re-provisioning with the new runtime");
+    await cmdSetup(profile.slug);
+  }
 }
 
 /**
@@ -171,8 +411,9 @@ export async function provisionGame(
   await cmdSetup(slug);
 
   const { profile } = await loadContext(slug);
-  if (profile.depot === 0) {
-    warn(`no depot id for ${slug} — set it with 'steam-mac edit ${slug}', then run 'steam-mac download ${slug}'`);
+  const missingId = profile.store === "gog" ? profile.gogId === 0 : profile.depot === 0;
+  if (missingId) {
+    warn(`no ${profile.store === "gog" ? "GOG product" : "depot"} id for ${slug} — set it with 'steam-mac edit ${slug}', then run 'steam-mac download ${slug}'`);
     return;
   }
 
@@ -192,6 +433,16 @@ export async function provisionGame(
  */
 export async function cmdDownload(slug: string, options: { manual?: boolean } = {}): Promise<void> {
   const { profile, paths, config, wine } = await loadContext(slug);
+  if (profile.store === "gog") {
+    if (profile.gogId === 0) {
+      die("no GOG product id configured — set 'gogId' in game.json");
+    }
+    if (await isGameRunning(profile)) {
+      die("the game is running — close it before downloading");
+    }
+    await downloadGog(profile, paths, wine);
+    return;
+  }
   if (profile.depot === 0) {
     die("no Steam depot id configured — set 'depot' in game.json");
   }
@@ -329,6 +580,8 @@ export async function cmdRun(slug: string): Promise<void> {
   if (!exists(wine.distExe)) {
     die(`wine not found at ${wine.distExe} — run: steam-mac setup ${slug}`);
   }
+
+  await recordRuntimeSnapshot(profile, wine);
 
   if (bundleRuntimeReady(paths.app)) {
     log(`launching ${profile.name} (app bundle) — stop with: steam-mac quit ${slug}`);
@@ -505,6 +758,198 @@ async function regValue(
   return out || null;
 }
 
+// --- runtime ------------------------------------------------------------------
+
+/** The runtime in use plus the history, as shown by `runtime` and the TUI. */
+export interface RuntimeReport {
+  profile: GameProfile;
+  fields: StatusField[];
+  history: RuntimeSnapshot[];
+}
+
+/** Collect the runtime the game uses, the newest available version and the history. */
+export async function collectRuntime(slug: string): Promise<RuntimeReport> {
+  const { profile, wine } = await loadContext(slug);
+  const details = await runtimeDetails(wine, profile);
+  const flavor =
+    wine.name === "wine-devel" || wine.name === "wine-staging" ? wine.name.slice("wine-".length) : "";
+  const latest = flavor ? await latestWineVersion(flavor) : null;
+  const fields: StatusField[] = [
+    { label: "runtime", value: exists(wine.distExe) ? wine.name : `${wine.name} (not installed)` },
+    { label: "description", value: details.summary },
+    { label: "wine", value: details.wineVersion ?? "unknown" },
+    { label: "direct3d", value: details.backend },
+    { label: "pinned version", value: profile.wineVersion || "not pinned" },
+    { label: "latest", value: latest ? (latest === profile.wineVersion ? `${latest} (current)` : latest) : "n/a" },
+  ];
+
+  return { profile, fields, history: profile.runtimeHistory };
+}
+
+/** Print the runtime in use and the recorded history. */
+export async function cmdRuntime(slug: string): Promise<void> {
+  const { profile, fields, history } = await collectRuntime(slug);
+  process.stdout.write(`${profile.name} — runtime\n`);
+  for (const field of fields) {
+    process.stdout.write(`  ${field.label.padEnd(14)} ${field.value}\n`);
+  }
+  if (history.length > 0) {
+    process.stdout.write("\n  history (oldest first)\n");
+    for (const snapshot of history) {
+      process.stdout.write(`    ${snapshot.at}  ${describeSnapshot(snapshot)}\n`);
+    }
+  }
+}
+
+/**
+ * Try to move the game to the newest runtime this machine can offer.
+ *
+ * Gcenx `wine-devel` / `wine-staging` advance to the newest GitHub release.
+ * `gptk-apple` re-overlays the D3DMetal from the mounted Apple DMG; `gptk`
+ * switches to that overlay when the DMG is newer, and otherwise asks Homebrew
+ * for a newer GPTK cask. The app bundle is rebuilt so it hosts the new loader,
+ * and the previous runtime stays in the history for a rollback.
+ */
+export async function cmdRuntimeUpgrade(slug: string): Promise<void> {
+  const { profile, paths, wine } = await loadContext(slug);
+  const before = await runtimeDetails(wine, profile);
+  log(`${profile.name} — runtime: ${before.summary}`);
+
+  if (wine.name === "gptk" || wine.name === "gptk-apple") {
+    const config = await loadConfig();
+    const overlay = config.appleGptkSource
+      ? await readD3dMetalVersion(join(config.appleGptkSource, "redist", "lib"))
+      : null;
+
+    if (wine.name === "gptk-apple") {
+      if (!overlay) {
+        warn("no Apple GPTK DMG configured (appleGptkSource) — nothing newer to overlay");
+        return;
+      }
+      if (overlay === before.d3dMetal) {
+        log(`already on the newest D3DMetal the DMG offers (${overlay})`);
+        return;
+      }
+      log(`D3DMetal ${before.d3dMetal ?? "none"} → ${overlay} (overlay rebuild)`);
+      await ensureWine(wine);
+      await buildApp(profile, paths, wine);
+      reportRollbackHint(profile);
+      return;
+    }
+
+    if (overlay && overlay !== before.d3dMetal) {
+      log(`the Apple DMG offers D3DMetal ${overlay} — switching to the gptk-apple runtime`);
+      profile.wineRuntime = "gptk-apple";
+      await saveGame(profile);
+      const runtime = resolveWine(profile, config);
+      await ensureWine(runtime);
+      await buildApp(profile, paths, runtime);
+      reportRollbackHint(profile);
+      return;
+    }
+
+    if (!which("brew")) {
+      die("homebrew is required: https://brew.sh");
+    }
+    log(`${wine.label}: brew upgrade --cask ${wine.cask}`);
+    await exec("brew", ["upgrade", "--cask", wine.cask], { allowFailure: true });
+    const after = await runtimeDetails(wine, profile);
+    if (after.d3dMetal === before.d3dMetal) {
+      log(`no newer GPTK from Homebrew (D3DMetal ${after.d3dMetal ?? "unknown"})`);
+      return;
+    }
+    log(`D3DMetal ${before.d3dMetal ?? "?"} → ${after.d3dMetal}`);
+    await buildApp(profile, paths, wine);
+    reportRollbackHint(profile);
+    return;
+  }
+
+  const flavor = wine.name.slice("wine-".length);
+  const latest = await latestWineVersion(flavor);
+  if (!latest) {
+    warn("could not resolve the latest Gcenx build (is GitHub reachable?)");
+    return;
+  }
+  if (latest === profile.wineVersion) {
+    log(`already on the latest ${flavor} build (${latest})`);
+    return;
+  }
+  log(`${flavor}: ${profile.wineVersion || "unset"} → ${latest}`);
+  profile.wineVersion = latest;
+  await saveGame(profile);
+  const runtime = resolveWine(profile, await loadConfig());
+  await ensureWine(runtime);
+  await buildApp(profile, paths, runtime);
+  reportRollbackHint(profile);
+}
+
+/**
+ * Return to the last recorded runtime that is not the current one.
+ *
+ * The history is written every time a game is launched, so the entry to roll
+ * back to is the most recent launch that used a different runtime.
+ */
+export async function cmdRuntimeRollback(slug: string): Promise<void> {
+  const { profile, paths } = await loadContext(slug);
+  const target = previousRuntime(profile);
+  if (!target) {
+    die("no previous runtime recorded — launch the game once with the current runtime");
+  }
+
+  log(`${profile.wineRuntime}${profile.wineVersion ? ` ${profile.wineVersion}` : ""} → ${describeSnapshot(target)}`);
+  profile.wineRuntime = target.wineRuntime;
+  profile.wineVersion = target.wineVersion;
+  await saveGame(profile);
+  const runtime = resolveWine(profile, await loadConfig());
+  await ensureWine(runtime);
+  await buildApp(profile, paths, runtime);
+  log("rolled back — run the game to confirm");
+}
+
+/** Append the runtime a launch uses, deduplicating consecutive identical runs. */
+async function recordRuntimeSnapshot(profile: GameProfile, wine: WineRuntime): Promise<void> {
+  const details = await runtimeDetails(wine, profile);
+  const snapshot: RuntimeSnapshot = {
+    wineRuntime: profile.wineRuntime,
+    wineVersion: profile.wineVersion,
+    d3dMetal: details.d3dMetal ?? "",
+    at: new Date().toISOString(),
+  };
+  const last = profile.runtimeHistory.at(-1);
+  if (
+    last &&
+    last.wineRuntime === snapshot.wineRuntime &&
+    last.wineVersion === snapshot.wineVersion &&
+    last.d3dMetal === snapshot.d3dMetal
+  ) {
+    return;
+  }
+  profile.runtimeHistory = [...profile.runtimeHistory, snapshot].slice(-10);
+  await saveGame(profile);
+}
+
+function runtimeKey(snapshot: { wineRuntime: string; wineVersion: string }): string {
+  return `${snapshot.wineRuntime}:${snapshot.wineVersion}`;
+}
+
+/** The most recent history entry that differs from the current runtime. */
+function previousRuntime(profile: GameProfile): RuntimeSnapshot | null {
+  const current = runtimeKey(profile);
+  return [...profile.runtimeHistory].reverse().find((snapshot) => runtimeKey(snapshot) !== current) ?? null;
+}
+
+function describeSnapshot(snapshot: RuntimeSnapshot): string {
+  const detail = snapshot.d3dMetal ? `D3DMetal ${snapshot.d3dMetal}` : snapshot.wineVersion || "unpinned";
+  return `${snapshot.wineRuntime} (${detail})`;
+}
+
+function reportRollbackHint(profile: GameProfile): void {
+  const previous = previousRuntime(profile);
+  if (previous) {
+    log(`if it does not work, run: steam-mac runtime-rollback ${profile.slug} (→ ${describeSnapshot(previous)})`);
+  }
+}
+
 // --- status / doctor ----------------------------------------------------------
 
 /** One line of the `status` report. */
@@ -524,13 +969,16 @@ export async function collectStatus(slug: string): Promise<StatusReport> {
   const { profile, paths, wine } = await loadContext(slug);
   const installed = await readInstalledManifestSafe(profile.slug);
   const status = await updateStatus(profile, paths);
-  const version = await runtimeVersion(wine);
+  const details = await runtimeDetails(wine, profile);
 
   return {
     profile,
     fields: [
       { label: "appid / depot", value: `${profile.appid} / ${profile.depot}` },
-      { label: "wine runtime", value: `${wine.label}${version ? ` (${version})` : " (missing)"}` },
+      {
+        label: "wine runtime",
+        value: exists(wine.distExe) ? details.summary : `${wine.label} (missing — run: steam-mac setup ${slug})`,
+      },
       { label: "prefix", value: exists(join(paths.prefix, "drive_c")) ? paths.prefix : `missing (${paths.prefix})` },
       { label: "game", value: (await gameInstalled(profile, paths)) ? humanSize(await dirBytes(paths.gameDir)) : "not imported" },
       { label: "exe", value: profile.exe },
@@ -712,37 +1160,53 @@ export async function cmdApp(slug: string): Promise<void> {
   await buildApp(profile, paths, wine);
 }
 
-/** Fetch (or refresh) the game's icon. */
+/** Fetch (or refresh) the game's icon, then rebuild the bundle that hosts it. */
 export async function cmdIcon(slug: string): Promise<void> {
-  const { profile, paths } = await loadContext(slug);
+  const { profile, paths, wine } = await loadContext(slug);
   const result = await provisionIcon(profile, gameAssetsDir(slug), {
     exePath: join(paths.gameDir, profile.exe),
   });
-  if (result.icns) {
-    log(`icon written: ${result.icns}`);
-  } else {
+  if (!result.icns) {
     warn("no icon produced");
+    return;
   }
+  log(`icon written: ${result.icns}`);
+  // The bundle copies the icon at build time, so refresh it now: otherwise the
+  // app keeps the previous icon until the next `app` or `setup`.
+  if (exists(join(paths.app, "Contents", "MacOS", "launch")) && exists(wine.distExe)) {
+    await buildApp(profile, paths, wine);
+  }
+}
+
+/** The loader log the app bundle writes (`~/.steam-mac/logs/<slug>.log`). */
+function runtimeLogPath(slug: string): string {
+  return join(logsDir(), `${slug}.log`);
+}
+
+/** The game log, or the loader log the bundle writes, whichever exists. */
+function findLogPath(paths: GamePaths, slug: string): string | null {
+  return [paths.playerLog, runtimeLogPath(slug)].find(
+    (path): path is string => Boolean(path) && exists(path),
+  ) ?? null;
 }
 
 /** Read the tail of the game log; empty when there is none. */
 export async function readLogTail(slug: string, lines = 200): Promise<string[]> {
   const { paths } = await loadContext(slug);
-  if (!paths.playerLog || !exists(paths.playerLog)) {
+  const log = findLogPath(paths, slug);
+  if (!log) {
     return [];
   }
-  const result = await exec("tail", ["-n", String(lines), paths.playerLog], { allowFailure: true });
+  const result = await exec("tail", ["-n", String(lines), log], { allowFailure: true });
   return result.stdout.replace(/\n$/, "").split("\n");
 }
 
 /** Print the tail of the game log. */
 export async function cmdLogs(slug: string, lines = 80): Promise<void> {
   const { paths } = await loadContext(slug);
-  if (!paths.playerLog) {
-    die("no game log configured for this game");
-  }
-  if (!exists(paths.playerLog)) {
-    die(`no game log yet at ${paths.playerLog}`);
+  const log = findLogPath(paths, slug);
+  if (!log) {
+    die(`no log yet — run the game once (looked for ${paths.playerLog || "<unset>"} and ${runtimeLogPath(slug)})`);
   }
   process.stdout.write(`${(await readLogTail(slug, lines)).join("\n")}\n`);
 }

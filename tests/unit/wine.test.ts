@@ -10,7 +10,9 @@ import { normalizeProfile } from "../../src/core/profile.ts";
 import {
   d3dMetalVersion,
   ensureWine,
+  latestWineVersion,
   resolveWine,
+  runtimeDetails,
   runtimeVersion,
   type WineRuntime,
 } from "../../src/core/wine.ts";
@@ -95,7 +97,7 @@ test("runtimeVersion is null without a loader", async () => {
   });
 });
 
-test("runtimeVersion reports D3DMetal and the base Wine version", async () => {
+test("runtimeDetails reports D3DMetal and the base Wine version", async () => {
   await withTempDir(async (dir) => {
     const distDir = join(dir, "wine");
     const exe = join(distDir, "bin", "wine64");
@@ -104,6 +106,66 @@ test("runtimeVersion reports D3DMetal and the base Wine version", async () => {
 
     assert.equal(await runtimeVersion(fakeRuntime(distDir, exe)), "D3DMetal 4.0 · wine-7.7");
   });
+});
+
+test("runtimeDetails summarizes a D3DMetal runtime", async () => {
+  await withTempDir(async (dir) => {
+    const distDir = join(dir, "wine");
+    const exe = join(distDir, "bin", "wine64");
+    await writeFileIn(exe, "#!/bin/sh\necho 'wine-7.7 (Game Porting Toolkit 1.1)'\n", 0o755);
+    await writeD3dMetal(distDir, "4.0b2");
+
+    const runtime: WineRuntime = {
+      ...fakeRuntime(distDir, exe),
+      name: "gptk-apple",
+      label: "Game Porting Toolkit (Apple)",
+    };
+    const profile = normalizeProfile({ name: "Test", slug: "test", wineRuntime: "gptk-apple" });
+    const details = await runtimeDetails(runtime, profile);
+
+    assert.equal(details.wineVersion, "wine-7.7");
+    assert.equal(details.d3dMetal, "4.0b2");
+    assert.equal(details.backend, "D3DMetal 4.0b2");
+    assert.equal(details.summary, "Game Porting Toolkit (Apple) · wine-7.7 · D3DMetal 4.0b2");
+  });
+});
+
+test("runtimeDetails describes the native DX9 trick", async () => {
+  await withTempDir(async (dir) => {
+    const distDir = join(dir, "wine");
+    const exe = join(distDir, "bin", "wine");
+    await writeFileIn(exe, "#!/bin/sh\necho 'wine-11.18'\n", 0o755);
+
+    const runtime: WineRuntime = { ...fakeRuntime(distDir, exe), name: "wine-devel", label: "Wine devel 11.18" };
+    const profile = normalizeProfile({
+      name: "Test",
+      slug: "test",
+      wineRuntime: "wine-devel",
+      wineVersion: "11.18",
+      wine: { tricks: ["d3dx9"], dllOverrides: [], args: [], virtualDesktop: "", env: {} },
+    });
+    const details = await runtimeDetails(runtime, profile);
+
+    assert.equal(details.d3dMetal, null);
+    assert.equal(details.backend, "DX9 (native d3dx9)");
+    assert.equal(details.summary, "Wine devel 11.18 · DX9 (native d3dx9)");
+  });
+});
+
+test("latestWineVersion picks the newest release that ships the flavor asset", async () => {
+  const releases = [
+    { tag_name: "11.18", assets: [{ name: "wine-staging-11.18-osx64.tar.xz" }] },
+    { tag_name: "11.17", assets: [{ name: "wine-devel-11.17-osx64.tar.xz" }] },
+  ];
+  const fakeFetch = (async () => new Response(JSON.stringify(releases), { status: 200 })) as unknown as typeof fetch;
+
+  assert.equal(await latestWineVersion("devel", fakeFetch), "11.17");
+  assert.equal(await latestWineVersion("staging", fakeFetch), "11.18");
+});
+
+test("latestWineVersion returns null when the release list fails", async () => {
+  const fakeFetch = (async () => new Response("nope", { status: 500 })) as unknown as typeof fetch;
+  assert.equal(await latestWineVersion("devel", fakeFetch), null);
 });
 
 test("normalizeProfile accepts the gptk-apple runtime", () => {

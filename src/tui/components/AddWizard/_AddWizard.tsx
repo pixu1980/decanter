@@ -10,6 +10,8 @@ import { theme } from "../../theme.ts";
 /** Values collected by the wizard. */
 export interface AddValues {
   name: string;
+  /** Which store to resolve the game from. */
+  store: "steam" | "gog";
   appid?: number;
   depot?: number;
   exe?: string;
@@ -23,23 +25,30 @@ export interface AddWizardProps {
   busy: boolean;
 }
 
-type Field = "name" | "appid" | "depot" | "exe" | "runtime" | "install";
+type Field = "store" | "name" | "appid" | "depot" | "exe" | "runtime" | "install";
 
 /** The tab order: the form fields, then the Install button. */
-const ORDER: Field[] = ["name", "appid", "depot", "exe", "runtime", "install"];
+const ORDER: Field[] = ["store", "name", "appid", "depot", "exe", "runtime", "install"];
+
+const STORES = [
+  { name: "Steam", description: "download with SteamCMD", value: "steam" },
+  { name: "GOG", description: "download from GOG (log in first)", value: "gog" },
+];
 
 /** Render the add-game form. */
 export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
+  const [store, setStore] = useState<"steam" | "gog">("steam");
   const [name, setName] = useState("");
   const [appid, setAppid] = useState("");
   const [depot, setDepot] = useState("");
   const [exe, setExe] = useState("");
   const [runtime, setRuntime] = useState("");
-  const [field, setField] = useState<Field>("name");
+  const [field, setField] = useState<Field>("store");
 
   const submit = () =>
     onSubmit({
       name: name.trim(),
+      store,
       appid: Number.parseInt(appid, 10) || undefined,
       depot: Number.parseInt(depot, 10) || undefined,
       exe: exe.trim() || undefined,
@@ -69,7 +78,25 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
   return (
     <box style={{ flexDirection: "column", gap: 1 }}>
       <text fg={theme.strong}>Add a game</text>
-      <text fg={theme.muted}>Give a name to look up on the Steam store, or an appid directly.</text>
+      <text fg={theme.muted}>Pick the store, then give a name to look up or an appid directly.</text>
+
+      <box
+        title=" Store "
+        titleColor={field === "store" ? theme.accent : theme.muted}
+        border
+        borderStyle="rounded"
+        borderColor={field === "store" ? theme.borderActive : theme.border}
+        style={{ width: 52, height: 4 }}
+      >
+        <select
+          options={STORES}
+          selectedIndex={store === "steam" ? 0 : 1}
+          focused={field === "store"}
+          showDescription={false}
+          onChange={(_index, option) => setStore((option?.value as "steam" | "gog") ?? "steam")}
+          style={{ height: 2 }}
+        />
+      </box>
 
       <Field label="Name" focused={field === "name"}>
         <input placeholder="Graveyard Keeper 2" focused={field === "name"} onInput={setName} onSubmit={() => advance("name")} />

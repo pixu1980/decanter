@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { addGame } from "../../core/add.ts";
 import { type Config, loadConfig, updateConfig } from "../../core/config.ts";
 import { cancel, exec } from "../../core/exec.ts";
-import { exists } from "../../core/fsx.ts";
+import { exists, remove } from "../../core/fsx.ts";
 import { resolveGamePaths } from "../../core/game.ts";
 import {
   cmdApp,
@@ -21,18 +21,24 @@ import {
   cmdIcon,
   cmdImport,
   cmdQuit,
+  cmdRuntimeRollback,
+  cmdRuntimeUpgrade,
   cmdSaves,
   cmdSetup,
   cmdUninstall,
   cmdUpdate,
   collectDoctor,
+  collectRuntime,
   collectStatus,
   readLogTail,
   type DoctorCheck,
   type StatusField,
 } from "../../core/lifecycle.ts";
 import { log, type LogLevel } from "../../core/log.ts";
-import type { WineRuntime } from "../../core/profile.ts";
+import { gogAuthPath } from "../../core/paths.ts";
+import { extractGogCode, gogExchangeCode, gogLoginUrl, loadGogTokens } from "../../core/gog.ts";
+import { steamcmdHasLogin, steamcmdLogout } from "../../core/steamcmd.ts";
+import type { RuntimeSnapshot, WineRuntime } from "../../core/profile.ts";
 import { removeGameRecord } from "../../core/registry.ts";
 import { ACTIONS, DESTRUCTIVE } from "../actions.ts";
 import { AddWizard, type AddValues } from "../components/AddWizard/index.ts";
@@ -43,7 +49,8 @@ import { GameList } from "../components/GameList/index.ts";
 import { Header } from "../components/Header/index.ts";
 import { HelpOverlay } from "../components/HelpOverlay/index.ts";
 import { LogsView } from "../components/LogsView/index.ts";
-import { SettingsView } from "../components/SettingsView/index.ts";
+import { RuntimeView } from "../components/RuntimeView/index.ts";
+import { SettingsView, settingsRows, type LoginState } from "../components/SettingsView/index.ts";
 import { StatusBar } from "../components/StatusBar/index.ts";
 import { Activity, type ActivityLine } from "../components/Activity/index.ts";
 import { refreshGames, safeAction, type GameRow } from "../helpers/index.ts";
@@ -53,6 +60,7 @@ type View =
   | { name: "detail"; slug: string }
   | { name: "add" }
   | { name: "doctor"; slug: string }
+  | { name: "runtime"; slug: string }
   | { name: "logs"; slug: string }
   | { name: "settings" };
 
@@ -68,6 +76,8 @@ export function App() {
   const [actionIndex, setActionIndex] = useState(0);
   const [fields, setFields] = useState<StatusField[]>([]);
   const [checks, setChecks] = useState<DoctorCheck[]>([]);
+  const [runtimeFields, setRuntimeFields] = useState<StatusField[]>([]);
+  const [runtimeHistory, setRuntimeHistory] = useState<RuntimeSnapshot[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [logOffset, setLogOffset] = useState(0);
   const [status, setStatus] = useState("ready");
@@ -75,6 +85,11 @@ export function App() {
   const [pending, setPending] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityLine[]>([]);
+  const [logins, setLogins] = useState<LoginState>({ steam: false, gog: false });
+  const [gogCode, setGogCode] = useState("");
+  const [gogCodeOpen, setGogCodeOpen] = useState(false);
+  const [settingsIndex, setSettingsIndex] = useState(0);
+  const [editing, setEditing] = useState<{ key: string; value: string } | null>(null);
 
   const reload = useCallback(async () => {
     setConfig(await loadConfig());
@@ -90,6 +105,81 @@ export function App() {
   const appendActivity = useCallback(
     (line: string, level: LogLevel) => setActivity((prev) => [...prev.slice(-199), { line, level }]),
     [],
+  );
+
+  const refreshLogins = useCallback(async () => {
+    const steam = await steamcmdHasLogin();
+    const gog = (await loadGogTokens()) !== null;
+    setLogins({ steam, gog });
+  }, []);
+
+  useEffect(() => {
+    if (view.name === "settings") {
+      void refreshLogins();
+    }
+  }, [view.name, refreshLogins]);
+
+  const submitGogCode = useCallback(async () => {
+    const raw = gogCode.trim();
+    if (!raw) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await gogExchangeCode(extractGogCode(raw));
+      setGogCode("");
+      setGogCodeOpen(false);
+      await refreshLogins();
+      setStatus("GOG: login stored");
+    } catch (error) {
+      setStatus(`error: ${(error as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }, [gogCode, refreshLogins]);
+
+  const settings = config ? settingsRows(config, logins) : [];
+
+  const saveEdit = useCallback(async () => {
+    if (!editing) {
+      return;
+    }
+    const value = editing.key === "logLines" ? Number(editing.value) : editing.value;
+    setConfig(await updateConfig({ [editing.key]: value } as never));
+    setEditing(null);
+  }, [editing]);
+
+  const activateSetting = useCallback(
+    async (row: { key: string; kind: string; value: string; options?: string[] } | undefined) => {
+      if (!row || !config) {
+        return;
+      }
+      if (row.kind === "text" || row.kind === "number") {
+        setEditing({ key: row.key, value: row.value });
+        return;
+      }
+      if (row.kind === "toggle") {
+        await toggleAnonymous(config, setConfig, setStatus);
+        return;
+      }
+      if (row.kind === "select") {
+        const options = row.options ?? [];
+        const next = options[(options.indexOf(row.value) + 1) % options.length] ?? row.value;
+        setConfig(await updateConfig({ wineRuntime: next as never }));
+        setStatus(`${row.key}: ${next}`);
+        return;
+      }
+      if (row.key === "steamcmd.login") {
+        await steamLogin(setStatus);
+      } else if (row.key === "steamcmd.logout") {
+        await steamLogout(setStatus, refreshLogins);
+      } else if (row.key === "gog.login") {
+        await gogStartLogin(setStatus, setGogCodeOpen);
+      } else if (row.key === "gog.logout") {
+        await gogLogout(setStatus, refreshLogins);
+      }
+    },
+    [config, refreshLogins],
   );
 
   const current = rows[listIndex]?.profile ?? null;
@@ -137,6 +227,14 @@ export function App() {
           setStatus("logs loaded");
           return;
         }
+        if (action === "runtime") {
+          const report = await collectRuntime(current.slug);
+          setRuntimeFields(report.fields);
+          setRuntimeHistory(report.history);
+          setView({ name: "runtime", slug: current.slug });
+          setStatus("runtime loaded");
+          return;
+        }
         const commands: Record<string, () => Promise<unknown>> = {
           setup: () => cmdSetup(current.slug),
           quit: () => cmdQuit(current.slug),
@@ -145,6 +243,8 @@ export function App() {
           update: () => cmdUpdate(current.slug),
           app: () => cmdApp(current.slug),
           icon: () => cmdIcon(current.slug),
+          "runtime-upgrade": () => cmdRuntimeUpgrade(current.slug),
+          "runtime-rollback": () => cmdRuntimeRollback(current.slug),
           saves: () => cmdSaves(current.slug, { open: true }),
           backup: () => cmdBackupSaves(current.slug),
           uninstall: async () => {
@@ -215,6 +315,12 @@ export function App() {
       return;
     }
 
+    // q quits from any screen, unless an input owns the key.
+    if (name === "q" && !editing && !gogCodeOpen && view.name !== "add") {
+      renderer.destroy();
+      return;
+    }
+
     if (view.name === "add") {
       return;
     }
@@ -225,10 +331,6 @@ export function App() {
     }
 
     if (view.name === "games") {
-      if (name === "q") {
-        renderer.destroy();
-        return;
-      }
       if (name === "up" || name === "k") {
         setListIndex((index) => Math.max(0, index - 1));
       }
@@ -282,12 +384,37 @@ export function App() {
       return;
     }
 
+    if (view.name === "runtime") {
+      if (name === "escape") {
+        setView({ name: "detail", slug: view.slug });
+      }
+      return;
+    }
+
     if (view.name === "doctor" || view.name === "settings") {
       if (name === "escape") {
-        setView({ name: "games" });
+        if (editing) {
+          setEditing(null);
+        } else if (gogCodeOpen) {
+          setGogCodeOpen(false);
+        } else {
+          setView({ name: "games" });
+        }
+        return;
       }
-      if (view.name === "settings" && name === "a") {
-        void toggleAnonymous(config, setConfig, setStatus);
+      if (view.name === "settings") {
+        if (gogCodeOpen || editing) {
+          return;
+        }
+        if (name === "up" || name === "k") {
+          setSettingsIndex((index) => Math.max(0, index - 1));
+        }
+        if (name === "down" || name === "j") {
+          setSettingsIndex((index) => Math.min(settings.length - 1, index + 1));
+        }
+        if (name === "return") {
+          void activateSetting(settings[settingsIndex]);
+        }
       }
     }
   });
@@ -314,10 +441,25 @@ export function App() {
             />
           ) : null}
           {view.name === "doctor" ? <DoctorView title="Doctor" checks={checks} /> : null}
+          {view.name === "runtime" ? (
+            <RuntimeView title={`Runtime — ${current?.name ?? ""}`} fields={runtimeFields} history={runtimeHistory} />
+          ) : null}
           {view.name === "logs" ? (
             <LogsView title="Game log" lines={logs} pageSize={Math.max(5, height - 8)} offset={logOffset} />
           ) : null}
-          {view.name === "settings" && config ? <SettingsView config={config} /> : null}
+          {view.name === "settings" && config ? (
+            <SettingsView
+              rows={settings}
+              index={settingsIndex}
+              editing={editing}
+              gogCodeOpen={gogCodeOpen}
+              gogCode={gogCode}
+              onGogCode={setGogCode}
+              onGogSubmit={() => void submitGogCode()}
+              onEditValue={(value) => setEditing((current) => (current ? { ...current, value } : current))}
+              onEditSubmit={() => void saveEdit()}
+            />
+          ) : null}
         </box>
       )}
 
@@ -344,7 +486,7 @@ async function submitAdd(
   try {
     const result = await safeAction(
       () =>
-        addGame({ name: values.name || undefined, appid: values.appid, depot: values.depot, exe: values.exe, runtime: values.runtime as WineRuntime | undefined }),
+        addGame({ name: values.name || undefined, store: values.store, appid: values.appid, depot: values.depot, exe: values.exe, runtime: values.runtime as WineRuntime | undefined }),
       appendActivity,
     );
     setStatus(result.ok ? result.message : `error: ${result.message}`);
@@ -355,6 +497,31 @@ async function submitAdd(
   } finally {
     setBusy(false);
   }
+}
+
+async function steamLogin(setStatus: (status: string) => void): Promise<void> {
+  await exec("osascript", ["-e", 'tell application "Terminal" to do script "steam-mac login"'], {
+    allowFailure: true,
+  });
+  setStatus("SteamCMD: login opened in Terminal — reopen settings when done");
+}
+
+async function steamLogout(setStatus: (status: string) => void, refresh: () => Promise<void>): Promise<void> {
+  await steamcmdLogout();
+  await refresh();
+  setStatus("steamcmd: logged out");
+}
+
+async function gogStartLogin(setStatus: (status: string) => void, setOpen: (open: boolean) => void): Promise<void> {
+  await exec("open", [gogLoginUrl()], { allowFailure: true });
+  setOpen(true);
+  setStatus("GOG: log in in the browser, then paste the redirect URL below");
+}
+
+async function gogLogout(setStatus: (status: string) => void, refresh: () => Promise<void>): Promise<void> {
+  await remove(gogAuthPath());
+  await refresh();
+  setStatus("gog: logged out");
 }
 
 async function toggleAnonymous(
@@ -379,6 +546,9 @@ function breadcrumbFor(view: View, current: GameRow["profile"] | null): string {
   }
   if (view.name === "doctor") {
     return "Doctor";
+  }
+  if (view.name === "runtime") {
+    return "Runtime";
   }
   if (view.name === "logs") {
     return "Logs";
@@ -411,6 +581,9 @@ function hintsFor(view: View): string {
   }
   if (view.name === "logs") {
     return "↑↓ scroll · esc back";
+  }
+  if (view.name === "runtime") {
+    return "esc back · q quit";
   }
   if (view.name === "settings") {
     return "a toggle anonymous · esc back";

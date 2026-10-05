@@ -67,4 +67,5 @@ test("normalizeProfile derives slug, env prefix and defaults", () => {
   assert.equal(profile.wineRuntime, "gptk");
   assert.equal(profile.window.enabled, false);
   assert.deepEqual(profile.savePatterns, []);
+  assert.deepEqual(profile.runtimeHistory, []);
 });

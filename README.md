@@ -19,9 +19,10 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
 - Knows Graveyard Keeper 2 out of the box (the built-in catalog fills the
   executable, save folders and window-mode registry key); for any other game it
   detects the executable after `import` and rebuilds the bundle.
-- Fetches the app icon automatically: Steam library art, then SteamGridDB, the
-  smaller Steam artwork, the icon embedded in the `.exe`, and finally a
-  generated placeholder.
+- Fetches the app icon automatically from the store the game came from: the
+  Steam CDN (library art, then SteamGridDB, then the smaller artwork), or the
+  GOG image CDN for GOG games, then the icon embedded in the `.exe`, and
+  finally a generated placeholder.
 - Installs **SteamCMD** itself as part of `setup`, so depot downloads need no
   manual tooling.
 - Provisions the Wine runtime: Game Porting Toolkit by default, a pinned Gcenx
@@ -30,6 +31,9 @@ per game, it keeps every game in a registry under `~/.steam-mac/games/<slug>/`.
   Porting Toolkit 4.0 DMG onto the Gcenx loader (only the D3DMetal layer; the
   redist's 4.0 bridge DLLs are skipped because they do not initialise on Wine
   7.7).
+- Reports the Wine + Direct3D stack a game uses (`Game Porting Toolkit (Apple) ·
+  D3DMetal 4.0b2`, `Wine devel 11.18 · DX9 (native d3dx9)`), tries the newest
+  runtime available, and rolls back to the previous runtime that worked.
 - Downloads the Windows depot with **SteamCMD**, falling back to the guided
   Steam-console flow when a login is missing.
 - Imports the depot into a Wine prefix, tracks the depot manifest and reports
@@ -94,6 +98,9 @@ cannot help, the command falls back to opening the Steam console and waits for
 | `windowed` / `fullscreen <game>` | Switch the Unity screen mode when configured |
 | `app` / `icon <game>` | Rebuild the bundle / refresh the icon |
 | `status` / `doctor <game>` | Install state / PASS-WARN-FAIL health checks |
+| `runtime <game>` | Show the Wine + Direct3D runtime in use and its history |
+| `runtime-upgrade <game>` | Try the newest Wine build / D3DMetal overlay |
+| `runtime-rollback <game>` | Return to the previous recorded runtime |
 | `logs` / `saves` / `mods <game>` | Tail the log, open the folders |
 | `backup-saves <game>` | Copy saves to `~/Documents` |
 | `steam-setup` / `steam <game>` | Optional Windows Steam inside the prefix |
@@ -104,12 +111,18 @@ cannot help, the command falls back to opening the Steam console and waits for
 ### TUI keys
 
 `up` / `down` move, `enter` opens or runs, `a` adds a game, `s` opens settings,
-`r` refreshes, `?` shows the full keyboard reference, `q` quits. In a game view,
-`esc` goes back and `enter` runs the selected action. While an action runs the
-**Activity** panel streams the engine output line by line, and `esc` cancels it.
-Destructive actions (`uninstall`) ask for confirmation in the interface, then
-delete the app bundle and the Wine prefix and forget the game, so it leaves the
-list.
+`r` refreshes, `?` shows the full keyboard reference, `q` quits from any screen.
+In a game view, `esc` goes back and `enter` runs the selected action. While an
+action runs the **Activity** panel streams the engine output line by line, and
+`esc` cancels it. Destructive actions (`uninstall`) ask for confirmation in the
+interface, then delete the app bundle and the Wine prefix and forget the game,
+so it leaves the list. In **settings** every row is editable: `up` / `down`
+move, `enter` edits a path or number, cycles the wine runtime, toggles the
+anonymous account, or runs a login/logout. The SteamCMD login opens a Terminal;
+the GOG login opens the browser, then paste the **redirect URL** (or just the
+`code`) — GOG rejects a localhost redirect (`redirect_uri_mismatch`), so the
+redirect URL is the reliable way. The add wizard picks the store with a
+**Steam / GOG** select.
 
 ## Layout
 

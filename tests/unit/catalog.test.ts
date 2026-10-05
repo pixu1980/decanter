@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { addGame } from "../../src/core/add.ts";
+import { knownGogGame } from "../../src/core/catalog.ts";
 import { setDryRun } from "../../src/core/exec.ts";
 import { withTempHome } from "./_helpers.ts";
 
@@ -41,6 +42,15 @@ test("addGame fills Graveyard Keeper 2 from the catalog", async () => {
       assert.equal(profile.versionPattern, "Starting game, ver\\. [0-9A-Za-z.]+");
     });
   });
+});
+
+test("the GOG catalog carries the Settlers II wine tweaks", () => {
+  const known = knownGogGame(1207659163);
+  assert.equal(known?.wineRuntime, "wine-devel");
+  assert.equal(known?.wineVersion, "11.18");
+  assert.equal(known?.exe, "bin/S2DNG.exe");
+  assert.deepEqual(known?.wine?.tricks, ["d3dx9"]);
+  assert.equal(known?.wine?.virtualDesktop, "1280x720");
 });
 
 test("addGame fills Game Dev Studio from the catalog", async () => {

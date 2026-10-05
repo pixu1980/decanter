@@ -59,6 +59,21 @@ export function steamcmdDir(): string {
   return join(smHome(), "steamcmd");
 }
 
+/** GOG account tokens and downloads. */
+export function gogDir(): string {
+  return join(smHome(), "gog");
+}
+
+/** Stored GOG OAuth tokens. */
+export function gogAuthPath(): string {
+  return join(gogDir(), "auth.json");
+}
+
+/** Where a GOG game's downloaded build/installer lands. */
+export function gogDownloadsDir(slug: string): string {
+  return join(gogDir(), "downloads", slug);
+}
+
 /**
  * Isolated HOME for SteamCMD.
  *

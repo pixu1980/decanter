@@ -32,10 +32,26 @@ export interface GameHooks {
   doctorExtra?: string;
 }
 
+/** Per-game Wine tweaks, applied at setup and launch. */
+export interface WineSettings {
+  /** winetricks verbs to install during setup (e.g. `d3dx9`). */
+  tricks: string[];
+  /** Extra `WINEDLLOVERRIDES` entries (e.g. `d3dx9_43=n`). */
+  dllOverrides: string[];
+  /** Extra arguments for the game executable. */
+  args: string[];
+  /** Run in a Wine virtual desktop of this size (an escapable window). */
+  virtualDesktop: string;
+  /** Extra environment variables for the launch. */
+  env: Record<string, string>;
+}
+
 /** Artwork and store metadata cached when the game is added. */
 export interface GameMeta {
   headerImage?: string;
   libraryImage?: string;
+  /** Full GOG product `images` map, so `icon` can re-fetch the artwork later. */
+  gogImages?: Record<string, string>;
   developers?: string[];
   publishers?: string[];
   releaseDate?: string;
@@ -49,14 +65,31 @@ export interface GamePaths {
   steamRoot?: string;
 }
 
+/** Which store a game comes from. */
+export type Store = "steam" | "gog";
+
+/** A runtime configuration the game was launched with. */
+export interface RuntimeSnapshot {
+  wineRuntime: WineRuntime;
+  /** Pinned Gcenx version for `wine-devel` / `wine-staging` (empty otherwise). */
+  wineVersion: string;
+  /** D3DMetal version observed for `gptk` / `gptk-apple` (empty otherwise). */
+  d3dMetal: string;
+  /** ISO timestamp of the launch that recorded the snapshot. */
+  at: string;
+}
+
 /** Everything the engine needs about one game. */
 export interface GameProfile {
   name: string;
   slug: string;
   bundleId: string;
   envPrefix: string;
+  store: Store;
   appid: number;
   depot: number;
+  /** GOG product id (0 for Steam games). */
+  gogId: number;
   exe: string;
   installSubdir: string;
   dataSubdir: string;
@@ -65,6 +98,8 @@ export interface GameProfile {
   modsSubdir: string;
   wineRuntime: WineRuntime;
   wineVersion: string;
+  /** Runtimes the game has been launched with, oldest first. */
+  runtimeHistory: RuntimeSnapshot[];
   version: string;
   minMacos: number;
   icon: string;
@@ -73,6 +108,7 @@ export interface GameProfile {
   versionPattern: string;
   window: WindowMode;
   hooks: GameHooks;
+  wine: WineSettings;
   meta: GameMeta;
   paths: GamePaths;
 }
@@ -91,8 +127,10 @@ export function normalizeProfile(input: ProfileInput): GameProfile {
     slug,
     bundleId: input.bundleId ?? `local.${slug}`,
     envPrefix: input.envPrefix ?? deriveEnvPrefix(slug),
+    store: input.store ?? "steam",
     appid: input.appid ?? 0,
     depot: input.depot ?? 0,
+    gogId: input.gogId ?? 0,
     exe: input.exe ?? `${slug}.exe`,
     installSubdir: input.installSubdir ?? slug,
     dataSubdir: input.dataSubdir ?? "",
@@ -101,6 +139,7 @@ export function normalizeProfile(input: ProfileInput): GameProfile {
     modsSubdir: input.modsSubdir ?? "Mods",
     wineRuntime: input.wineRuntime ?? "gptk",
     wineVersion: input.wineVersion ?? "",
+    runtimeHistory: input.runtimeHistory ?? [],
     version: input.version ?? "0.1.0",
     minMacos: input.minMacos ?? 14,
     icon: input.icon ?? "assets/icon.icns",
@@ -116,6 +155,13 @@ export function normalizeProfile(input: ProfileInput): GameProfile {
       ...input.window,
     },
     hooks: { ...input.hooks },
+    wine: {
+      tricks: input.wine?.tricks ?? [],
+      dllOverrides: input.wine?.dllOverrides ?? [],
+      args: input.wine?.args ?? [],
+      virtualDesktop: input.wine?.virtualDesktop ?? "",
+      env: input.wine?.env ?? {},
+    },
     meta: { ...input.meta },
     paths: { ...input.paths },
   };

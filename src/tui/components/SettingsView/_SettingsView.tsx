@@ -1,4 +1,4 @@
-// Machine-wide settings.
+// Machine-wide settings: every row is editable or runnable.
 //
 // docs: docs/managing.md
 
@@ -6,33 +6,112 @@ import type { Config } from "../../../core/config.ts";
 import { theme } from "../../theme.ts";
 import { Panel } from "../Panel/index.ts";
 
-export interface SettingsViewProps {
-  config: Config;
+export interface LoginState {
+  steam: boolean;
+  gog: boolean;
 }
 
-/** Render the current settings. */
-export function SettingsView({ config }: SettingsViewProps) {
-  const rows: Array<[string, string]> = [
-    ["steam root", config.steamRoot],
-    ["applications", config.applicationsDir],
-    ["wine runtime", config.wineRuntime],
-    ["game toolkit", config.gptkApp],
-    ["steamcmd", config.steamcmd.anonymous ? "anonymous" : `account ${config.steamcmd.username ?? "?"}`],
-    ["log lines", String(config.logLines)],
+export type SettingKind = "text" | "number" | "select" | "toggle" | "action";
+
+export interface SettingsRow {
+  key: string;
+  label: string;
+  value: string;
+  kind: SettingKind;
+  options?: string[];
+}
+
+/** The editable settings, in display order. */
+export function settingsRows(config: Config, logins: LoginState): SettingsRow[] {
+  const status = (loggedIn: boolean) => (loggedIn ? "logged in" : "not logged in");
+  return [
+    { key: "steamRoot", label: "steam root", value: config.steamRoot, kind: "text" },
+    { key: "applicationsDir", label: "applications", value: config.applicationsDir, kind: "text" },
+    { key: "wineRuntime", label: "wine runtime", value: config.wineRuntime, kind: "select", options: ["gptk", "gptk-apple", "wine-devel", "wine-staging"] },
+    { key: "gptkApp", label: "game toolkit", value: config.gptkApp, kind: "text" },
+    { key: "logLines", label: "log lines", value: String(config.logLines), kind: "number" },
+    { key: "steamcmd.anonymous", label: "steamcmd anon", value: config.steamcmd.anonymous ? "anonymous" : "account", kind: "toggle" },
+    { key: "steamcmd.login", label: "steamcmd login", value: status(logins.steam), kind: "action" },
+    { key: "steamcmd.logout", label: "steamcmd logout", value: logins.steam ? "remove the login" : "—", kind: "action" },
+    { key: "gog.login", label: "gog login", value: status(logins.gog), kind: "action" },
+    { key: "gog.logout", label: "gog logout", value: logins.gog ? "remove the tokens" : "—", kind: "action" },
   ];
-  const labelWidth = Math.max(14, ...rows.map(([label]) => label.length));
+}
+
+export interface SettingsViewProps {
+  rows: SettingsRow[];
+  index: number;
+  editing: { key: string; value: string } | null;
+  gogCodeOpen: boolean;
+  gogCode: string;
+  onGogCode: (value: string) => void;
+  onGogSubmit: () => void;
+  onEditValue: (value: string) => void;
+  onEditSubmit: () => void;
+}
+
+/** Render the settings list with the focused row highlighted. */
+export function SettingsView({
+  rows,
+  index,
+  editing,
+  gogCodeOpen,
+  gogCode,
+  onGogCode,
+  onGogSubmit,
+  onEditValue,
+  onEditSubmit,
+}: SettingsViewProps) {
+  const labelWidth = Math.max(18, ...rows.map((row) => row.label.length));
 
   return (
     <Panel title="Settings" flexGrow={1}>
-      {rows.map(([label, value]) => (
-        <box key={label} style={{ flexDirection: "row" }}>
-          <box style={{ width: labelWidth + 2 }}>
-            <text fg={theme.faint}>{label}</text>
+      {rows.map((row, position) => {
+        const selected = position === index && !editing;
+        const isEditing = editing?.key === row.key;
+        const hint =
+          row.kind === "text" || row.kind === "number"
+            ? "enter edit"
+            : row.kind === "select"
+              ? "enter cycle"
+              : row.kind === "toggle"
+                ? "enter toggle"
+                : "enter run";
+        return (
+          <box key={row.key} style={{ flexDirection: "row" }}>
+            <box style={{ width: labelWidth + 2 }}>
+              <text fg={selected ? theme.accent : theme.faint}>{`${selected ? "› " : "  "}${row.label}`}</text>
+            </box>
+            {isEditing ? (
+              <input value={editing.value} focused placeholder={row.value} onInput={onEditValue} onSubmit={onEditSubmit} />
+            ) : (
+              <text fg={row.kind === "action" && row.value === "not logged in" ? theme.warning : theme.text}>{row.value}</text>
+            )}
+            <text fg={theme.muted}>{`   ${hint}`}</text>
           </box>
-          <text fg={theme.text}>{value}</text>
+        );
+      })}
+
+      {gogCodeOpen ? (
+        <box
+          title=" GOG redirect URL or code "
+          titleColor={theme.accent}
+          border
+          borderStyle="rounded"
+          borderColor={theme.borderActive}
+          style={{ width: 60, height: 3 }}
+        >
+          <input
+            value={gogCode}
+            focused
+            placeholder="paste the redirect URL (or the code)"
+            onInput={onGogCode}
+            onSubmit={onGogSubmit}
+          />
         </box>
-      ))}
-      <text fg={theme.muted}>a toggle SteamCMD anonymous · edit with: steam-mac config key=value</text>
+      ) : null}
+
+      <text fg={theme.muted}>↑↓ move · enter edit/run · esc back · q quit</text>
     </Panel>
   );
 }

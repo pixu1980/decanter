@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,7 +10,7 @@ import type { Config } from "../../src/core/config.ts";
 import type { GamePaths } from "../../src/core/game.ts";
 import { normalizeProfile } from "../../src/core/profile.ts";
 import { readText } from "../../src/core/fsx.ts";
-import { resolveWine } from "../../src/core/wine.ts";
+import { resolveWine, type WineRuntime } from "../../src/core/wine.ts";
 import { withTempHome } from "./_helpers.ts";
 
 async function fakeWine(home: string): Promise<string> {
@@ -63,8 +64,62 @@ test("buildApp writes a self-hosting bundle", async () => {
     const launch = (await readText(join(paths.app, "Contents", "MacOS", "launch"))) ?? "";
     assert.match(launch, /WINEPREFIX=/);
     assert.match(launch, /"\$HERE\/wine64" 'test\.exe' "\$@" &/);
+    assert.match(launch, /exec >>"\$LOG" 2>&1/);
+    assert.match(launch, /logs\/test-game\.log/);
     assert.match(launch, /steam\\\.exe/);
     assert.match(launch, /Program Files \(x86\)/);
+    execFileSync("/bin/zsh", ["-n", join(paths.app, "Contents", "MacOS", "launch")]);
+  });
+});
+
+test("buildApp keeps the wow64 loader named `wine` and reaches it from launch", async () => {
+  await withTempHome(async () => {
+    const home = process.env.SM_HOME!;
+    const profile = normalizeProfile({
+      name: "Test Game",
+      slug: "test-game",
+      exe: "test.exe",
+      wineRuntime: "wine-devel",
+      wineVersion: "11.18",
+    });
+    const prefix = join(home, "prefix");
+    const paths: GamePaths = {
+      prefix,
+      app: join(home, "Applications", "Test Game.app"),
+      steamRoot: join(home, "Steam"),
+      gameDir: join(prefix, "drive_c", profile.installSubdir),
+      dataDir: "",
+      playerLog: "",
+      modsDir: "",
+    };
+    const distDir = join(home, "Wine Devel.app", "Contents", "Resources", "wine");
+    await mkdir(join(distDir, "bin"), { recursive: true });
+    await mkdir(join(distDir, "lib"), { recursive: true });
+    await mkdir(join(distDir, "share"), { recursive: true });
+    await writeFile(join(distDir, "bin", "wine"), "#!/bin/sh\n");
+    await chmod(join(distDir, "bin", "wine"), 0o755);
+    await writeFile(join(distDir, "bin", "wineserver"), "#!/bin/sh\n");
+    await chmod(join(distDir, "bin", "wineserver"), 0o755);
+    const runtime: WineRuntime = {
+      name: "wine-devel",
+      label: "Wine devel 11.18",
+      app: join(home, "Wine Devel.app"),
+      distDir,
+      distExe: join(distDir, "bin", "wine"),
+      distServer: join(distDir, "bin", "wineserver"),
+      preloader: null,
+      cask: "",
+      version: "11.18",
+    };
+
+    await buildApp(profile, paths, runtime);
+
+    assert.equal(bundleRuntimeReady(paths.app), true);
+    assert.ok(existsSync(join(paths.app, "Contents", "MacOS", "wine")));
+    assert.ok(existsSync(join(paths.app, "Contents", "MacOS", "winedbg")));
+    assert.ok(!existsSync(join(paths.app, "Contents", "MacOS", "wine64")));
+    const launch = (await readText(join(paths.app, "Contents", "MacOS", "launch"))) ?? "";
+    assert.match(launch, /"\$HERE\/wine" 'test\.exe' "\$@" &/);
     execFileSync("/bin/zsh", ["-n", join(paths.app, "Contents", "MacOS", "launch")]);
   });
 });

@@ -7,12 +7,13 @@
 // docs: docs/managing.md
 
 import { loadConfig } from "./config.ts";
+import { ensureGogToken, gogLibrarySearch, gogProduct, gogSearch } from "./gog.ts";
 import { resolveWindowsDepot } from "./steamcmd.ts";
 import { gameInstalled } from "./depot.ts";
 import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
 import { normalizeProfile, type GameProfile, type WineRuntime } from "./profile.ts";
-import { knownGame } from "./catalog.ts";
+import { knownGame, knownGogGame } from "./catalog.ts";
 import { gameExists, getGame, saveGame } from "./registry.ts";
 import { gameAssetsDir, slugify } from "./paths.ts";
 import { die, log } from "./log.ts";
@@ -27,12 +28,20 @@ export interface AddOptions {
   exe?: string;
   /** Override the runtime (defaults to the catalog entry, then `gptk`). */
   runtime?: WineRuntime;
+  /** Which store to resolve the game from (default `steam`). */
+  store?: "steam" | "gog";
+  /** GOG product id, when adding from GOG. */
+  gogId?: number;
   force?: boolean;
   fetchImpl?: typeof fetch;
 }
 
 /** Resolve, enrich and store a new game profile. */
 export async function addGame(options: AddOptions): Promise<GameProfile> {
+  if (options.store === "gog") {
+    return addGogGame(options);
+  }
+
   let appid = options.appid ?? 0;
   let name = options.name ?? "";
 
@@ -107,6 +116,66 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
 
   const weakIcon = icon.source === "placeholder" || icon.source === "none";
   await provisionGame(profile.slug, { refreshIcon: weakIcon });
+
+  return profile;
+}
+
+/** Register a GOG game: search the catalog, then store its product id. */
+async function addGogGame(options: AddOptions): Promise<GameProfile> {
+  let gogId = options.gogId ?? 0;
+  let name = options.name ?? "";
+  const token = await ensureGogToken();
+
+  if (!gogId) {
+    if (!name) {
+      die("give a GOG game name or --gog-id");
+    }
+    // The owned library first: delisted games are not in the store search.
+    let hits = await gogLibrarySearch(name, token);
+    if (hits.length === 0) {
+      hits = await gogSearch(name, options.fetchImpl);
+    }
+    if (hits.length === 0) {
+      die(`no GOG product found for '${name}' (try --gog-id)`);
+    }
+    gogId = hits[0]!.id;
+    name = hits[0]!.title;
+  }
+
+  const known = knownGogGame(gogId);
+  const product = await gogProduct(gogId, token);
+  const slug = options.slug ?? known?.slug ?? slugify(product.title);
+
+  if (!options.force && (await gameExists(slug))) {
+    const existing = await getGame(slug);
+    log(`'${slug}' is already registered — provisioning it again`);
+    await provisionGame(slug);
+    return existing;
+  }
+
+  const profile = normalizeProfile({
+    ...known,
+    name: product.title,
+    slug,
+    store: "gog",
+    gogId,
+    exe: options.exe ?? known?.exe,
+    meta: {
+      headerImage: product.images?.["background"],
+      libraryImage: product.images?.["logo2x"] ?? product.images?.["logo"],
+      gogImages: product.images,
+    },
+  });
+
+  await saveGame(profile);
+  log(`added ${profile.name} (GOG ${gogId}, slug ${slug})`);
+
+  const icon = await provisionIcon(profile, gameAssetsDir(slug), {
+    fetchImpl: options.fetchImpl,
+    imageUrl: product.images?.["icon"] ?? product.images?.["logo2x"] ?? product.images?.["background"],
+  });
+  const weakIcon = icon.source === "placeholder" || icon.source === "none";
+  await provisionGame(slug, { refreshIcon: weakIcon });
 
   return profile;
 }

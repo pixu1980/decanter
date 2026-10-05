@@ -69,6 +69,11 @@ export async function steamcmdHasLogin(): Promise<boolean> {
   return Boolean(text && /"SteamID"\s+"\d+"/.test(text));
 }
 
+/** Remove the stored SteamCMD login. */
+export async function steamcmdLogout(): Promise<void> {
+  await remove(join(steamcmdSteamRoot(), "config"));
+}
+
 type VdfNode = { [key: string]: string | VdfNode };
 
 /** Parse SteamCMD's VDF output (key/value, nested blocks) into a tree. */

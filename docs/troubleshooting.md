@@ -25,6 +25,15 @@ steam-mac run <game>
   with `steam-mac edit <game>` (set `"exe": "RealName.exe"`) and rebuild with
   `steam-mac app <game>`. Known games and freshly imported ones set it for you.
 
+## GOG login: `redirect_uri_mismatch`
+
+GOG validates the OAuth `redirect_uri` at the token step and only accepts the
+registered `https://embed.gog.com/on_login_success?origin=client`, so a local
+loopback server cannot capture the code. `steam-mac gog login` opens that URL,
+and after logging in you paste the **redirect URL** (or just the `code`) —
+`extractGogCode` pulls the `code` out of either. The token error body is shown,
+so a bad or reused code says so explicitly.
+
 ## SteamCMD cannot download the depot
 
 `steam-mac download` uses SteamCMD first and falls back to the Steam console.

@@ -97,6 +97,19 @@ GPTK's Wine reports a stale `wine-7.7 (Game Porting Toolkit 1.1)` string, so
 `status`/`doctor` report the D3DMetal framework version instead
 (`d3dMetalVersion` reads `lib/external/D3DMetal.framework`).
 
+`runtimeDetails` turns that into the one-line stack a user reads: the runtime
+label, the reported Wine build and the Direct3D backend (`D3DMetal x`, `DX9
+(native d3dx9)` when the profile carries the `d3dx9` winetricks verb, otherwise
+`WineD3D`). `status`, `doctor` and the TUI runtime panel all read it.
+
+Every launch records a `RuntimeSnapshot` (runtime, pinned Wine version,
+D3DMetal version, timestamp) in the profile's `runtimeHistory`, deduplicated and
+bounded. `runtime-upgrade` advances `wine-devel` / `wine-staging` to the newest
+Gcenx GitHub release, re-overlays the newer D3DMetal for `gptk-apple`, or
+switches `gptk` to that overlay (falling back to `brew upgrade --cask`) and
+rebuilds the app bundle. When the newer runtime misbehaves, `runtime-rollback`
+restores the most recent history entry that differs from the current runtime.
+
 The opt-in `gptk-apple` runtime takes the newer D3DMetal from Apple's
 "Evaluation environment for Windows games" DMG (behind an Apple ID) and overlays
 it onto a cloned Gcenx loader under `~/.steam-mac/wine/gptk-apple`. The DMG
@@ -130,14 +143,22 @@ the loader directly, so the bundle needs no Node runtime at play time.
 `icon.ts` tries the sources in order, stopping at the first that produces an
 `.icns`, and builds `icon.png` plus `icon.icns` with `sips` and `iconutil`:
 
-1. the vertical Steam library art (600x900) and the other store candidates;
-2. SteamGridDB, square icons first then vertical grids;
-3. the smaller Steam artwork (logos and capsules);
-4. the icon embedded in the game executable, with `wrestool` / `icotool`
+1. for a Steam game, the vertical Steam library art (600x900) and the other
+   store candidates;
+2. for a GOG game, the product artwork (`icon`, `logo2x`, `logo`, `background`)
+   from the cached `meta.gogImages` map, made absolute (`//host/…` →
+   `https://host/…`);
+3. SteamGridDB, square icons first then vertical grids (Steam games only);
+4. the smaller Steam artwork (logos and capsules);
+5. the icon embedded in the game executable, with `wrestool` / `icotool`
    (Homebrew `icoutils`);
-5. a placeholder generated from the game's initial with a built-in bitmap font.
+6. a placeholder generated from the game's initial with a built-in bitmap font.
 
 Missing art is not fatal: a game without an icon still gets a working bundle.
+For a GOG game the Steam CDN and SteamGridDB are skipped entirely (an appid-0
+SteamGridDB lookup used to return an unrelated image), the stale Steam artefacts
+of an earlier run are removed, and `steam-mac icon` rebuilds the bundle so the
+new icon actually reaches the app.
 
 ## Provisioning
 

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { downloadSteamGridArt, encodeBmp, glyphFor, initialOf } from "../../src/core/icon.ts";
+import { gogIconCandidates } from "../../src/core/gog.ts";
+import { downloadGogArt, downloadSteamGridArt, encodeBmp, glyphFor, initialOf } from "../../src/core/icon.ts";
 import { normalizeProfile } from "../../src/core/profile.ts";
 
 test("initialOf picks the first letter or digit", () => {
@@ -35,6 +36,70 @@ test("encodeBmp writes a 24-bit BMP with bottom-up BGR pixels", () => {
   assert.equal(bmp.readUInt16LE(28), 24, "bits per pixel");
   assert.equal(bmp.length, 54 + 8 * 2, "rows are padded to a multiple of four bytes");
   assert.deepEqual([...bmp.subarray(62, 65)], [3, 2, 1], "top RGB row becomes the bottom BGR row");
+});
+
+test("gogIconCandidates prefers the square icon and normalizes protocol-relative URLs", () => {
+  const urls = gogIconCandidates({
+    background: "//images-1.gog-statics.com/bg.jpg",
+    logo2x: "//images-3.gog-statics.com/logo.jpg",
+    icon: "https://images-2.gog-statics.com/icon.png",
+  });
+
+  assert.deepEqual(urls, [
+    "https://images-2.gog-statics.com/icon.png",
+    "https://images-3.gog-statics.com/logo.jpg",
+    "https://images-1.gog-statics.com/bg.jpg",
+  ]);
+  assert.deepEqual(gogIconCandidates(undefined), []);
+});
+
+test("downloadGogArt saves the first usable GOG image", async () => {
+  const assets = mkdtempSync(join(tmpdir(), "sm-icon-gog-"));
+  const profile = normalizeProfile({
+    name: "Test",
+    slug: "test",
+    store: "gog",
+    gogId: 7,
+    meta: { gogImages: { icon: "//cdn.gog-statics.com/icon.png" } },
+  });
+  const image = new Uint8Array(2048).fill(3);
+  const seen: string[] = [];
+  const fakeFetch = (async (url: string) => {
+    seen.push(String(url));
+    return new Response(image, { status: 200 });
+  }) as unknown as typeof fetch;
+
+  try {
+    const saved = await downloadGogArt(profile, assets, fakeFetch);
+    assert.equal(saved, join(assets, "gog-art.png"));
+    assert.equal(existsSync(saved!), true);
+    assert.equal(seen[0], "https://cdn.gog-statics.com/icon.png");
+  } finally {
+    rmSync(assets, { recursive: true, force: true });
+  }
+});
+
+test("downloadGogArt removes stale Steam/SteamGridDB art", async () => {
+  const assets = mkdtempSync(join(tmpdir(), "sm-icon-gog-"));
+  const profile = normalizeProfile({
+    name: "Test",
+    slug: "test",
+    store: "gog",
+    gogId: 7,
+    meta: { gogImages: { icon: "https://cdn.gog-statics.com/icon.png" } },
+  });
+  writeFileSync(join(assets, "grid-art.png"), "an unrelated SteamGridDB image");
+  writeFileSync(join(assets, "key-art.jpg"), "stale Steam art");
+  const fakeFetch = (async () => new Response(new Uint8Array(2048).fill(3), { status: 200 })) as unknown as typeof fetch;
+
+  try {
+    await downloadGogArt(profile, assets, fakeFetch);
+    assert.equal(existsSync(join(assets, "grid-art.png")), false);
+    assert.equal(existsSync(join(assets, "key-art.jpg")), false);
+    assert.equal(existsSync(join(assets, "gog-art.png")), true);
+  } finally {
+    rmSync(assets, { recursive: true, force: true });
+  }
 });
 
 test("downloadSteamGridArt saves the first usable image", async () => {

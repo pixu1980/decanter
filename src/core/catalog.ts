@@ -57,3 +57,28 @@ export const KNOWN_GAMES: Record<number, KnownGame> = {
 export function knownGame(appid: number): KnownGame | undefined {
   return KNOWN_GAMES[appid];
 }
+
+/** GOG games with hand-tuned settings, keyed by GOG product id. */
+export const KNOWN_GOG_GAMES: Record<number, KnownGame> = {
+  1207659163: {
+    name: "The Settlers II - 10th Anniversary",
+    slug: "the-settlers-2-10th-anniversary",
+    exe: "bin/S2DNG.exe",
+    // 32-bit Direct3D 9: GPTK's Wine 7.7 asserts, so use a current build and
+    // give the game native d3dx9 (the effect compiler is only a stub in Wine).
+    wineRuntime: "wine-devel",
+    wineVersion: "11.18",
+    wine: {
+      tricks: ["d3dx9"],
+      dllOverrides: [],
+      args: [],
+      virtualDesktop: "1280x720",
+      env: {},
+    },
+  },
+};
+
+/** The catalog entry for a GOG product id, if any. */
+export function knownGogGame(gogId: number): KnownGame | undefined {
+  return KNOWN_GOG_GAMES[gogId];
+}

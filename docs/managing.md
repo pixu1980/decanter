@@ -178,6 +178,78 @@ costs only the new D3DMetal. The default `gptk` runtime is untouched, and
 `doctor` shows which D3DMetal a game now uses. Once the overlay exists the DMG
 no longer needs to stay mounted.
 
+## Runtime upgrades and rollback
+
+`steam-mac runtime <game>` shows which Wine + Direct3D stack a game uses and the
+launches recorded for it:
+
+```
+$ steam-mac runtime graveyard-keeper-2
+Graveyard Keeper 2 — runtime
+  runtime        gptk-apple
+  description    Game Porting Toolkit (Apple) · wine-7.7 · D3DMetal 4.0b2
+  wine           wine-7.7
+  direct3d       D3DMetal 4.0b2
+  pinned version not pinned
+  latest         n/a
+```
+
+The description reads *runtime · Wine build · Direct3D backend*. A game whose
+profile carries the `d3dx9` winetricks verb is reported as `DX9 (native
+d3dx9)`; a runtime without D3DMetal otherwise runs through `WineD3D`. The same
+line appears in `status`, `doctor` and the TUI runtime panel.
+
+`steam-mac runtime-upgrade <game>` tries the newest runtime this machine can
+offer:
+
+- `wine-devel` / `wine-staging` advance to the newest
+  [Gcenx](https://github.com/Gcenx/macOS_Wine_builds) release and download it.
+- `gptk-apple` re-overlays the D3DMetal from the mounted Apple DMG when it is
+  newer.
+- `gptk` switches to the `gptk-apple` overlay when the Apple DMG is newer, and
+  otherwise runs `brew upgrade --cask gcenx/wine/game-porting-toolkit`.
+
+The app bundle is rebuilt after a change. Every launch records the runtime in
+the profile, so `steam-mac runtime-rollback <game>` returns to the most recent
+runtime that is not the current one — the fastest way back from a `gptk` →
+`gptk-apple` switch or a newer `wine-devel` build that misbehaves. In the TUI
+the **Runtime**, **Upgrade runtime** and **Roll back runtime** actions do the
+same.
+
+## Per-game Wine tweaks
+
+Some games need Wine tweaks of their own. A profile carries a `wine` block that
+`setup` and the generated `launch` script apply:
+
+```json
+"wine": {
+  "tricks": ["d3dx9"],
+  "dllOverrides": ["d3dx9_43=n"],
+  "args": [],
+  "virtualDesktop": "1280x720",
+  "env": { "WINEDLLOVERRIDES": "..." }
+}
+```
+
+- `tricks` — winetricks verbs installed once during `setup` (needs the
+  `winetricks` formula; the applied set is recorded in
+  `<prefix>/.steam-mac-tricks`).
+- `dllOverrides` — extra `WINEDLLOVERRIDES` for the launch.
+- `args` — extra arguments for the game executable.
+- `virtualDesktop` — run in a Wine virtual desktop of that size, so a game that
+  grabs the screen stays in a closable window (e.g. The Settlers II needs
+  `d3dx9` and a virtual desktop).
+- `env` — extra environment variables for the launch.
+
+Example, The Settlers II: 10th Anniversary (GOG, 32-bit Direct3D 9):
+`wineRuntime: "wine-devel"`, `wine.tricks: ["d3dx9"]`,
+`wine.virtualDesktop: "1280x720"`.
+
+`import` fills the `wine` block automatically: a PE reader switches a 32-bit
+executable to `wine-devel` and adds the D3DX winetricks, and the Lutris API
+adds the community's winetricks and DLL overrides when the game is listed
+there. The catalog overrides both for hand-tuned games.
+
 ## Exit codes
 
 | Code | Meaning |

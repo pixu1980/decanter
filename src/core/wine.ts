@@ -14,7 +14,7 @@ import type { Config } from "./config.ts";
 import { exec, isDryRun, which } from "./exec.ts";
 import { exists, mkdirp, remove } from "./fsx.ts";
 import { die, log, warn } from "./log.ts";
-import { appleGptkAppDir, wineBuildDir } from "./paths.ts";
+import { appleGptkAppDir, wineBuildDir, wineDir } from "./paths.ts";
 import type { GameProfile, WineRuntime as WineRuntimeName } from "./profile.ts";
 
 /** A resolved Wine runtime on disk. */
@@ -118,6 +118,22 @@ function build(input: {
   };
 }
 
+/** Pinned Wine versions installed for a flavor, newest first. */
+export async function installedWineVersions(flavor: string): Promise<string[]> {
+  const { readdir } = await import("node:fs/promises");
+  let entries: string[];
+  try {
+    entries = await readdir(wineDir());
+  } catch {
+    return [];
+  }
+  const prefix = `wine-${flavor}-`;
+  return entries
+    .filter((entry) => entry.startsWith(prefix))
+    .map((entry) => entry.slice(prefix.length))
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+}
+
 /** Print the runtime's reported Wine version, or `null`. */
 export async function wineVersion(runtime: WineRuntime): Promise<string | null> {
   if (!exists(runtime.distExe)) {
@@ -138,7 +154,7 @@ export async function d3dMetalVersion(runtime: WineRuntime): Promise<string | nu
 }
 
 /** Read the D3DMetal version from any directory holding an `external` folder. */
-async function readD3dMetalVersion(libDir: string): Promise<string | null> {
+export async function readD3dMetalVersion(libDir: string): Promise<string | null> {
   const plist = join(
     libDir,
     "external",
@@ -175,6 +191,84 @@ export async function runtimeVersion(runtime: WineRuntime): Promise<string | nul
   }
 
   return d3d ? `D3DMetal ${d3d}` : wine;
+}
+
+/** A resolved runtime plus the Direct3D stack it uses. */
+export interface RuntimeDetails {
+  name: WineRuntimeName;
+  label: string;
+  /** Reported Wine build (`wine-7.7`), or `null` when the loader is missing. */
+  wineVersion: string | null;
+  /** D3DMetal framework version, or `null` for a pure Wine runtime. */
+  d3dMetal: string | null;
+  /** `D3DMetal 4.0b2`, `DX9 (native d3dx9)` or `WineD3D`. */
+  backend: string;
+  /** One line for `status` and the TUI: `label · [wine] · backend`. */
+  summary: string;
+}
+
+/**
+ * Describe the runtime a game uses: the Wine build plus the Direct3D backend.
+ *
+ * D3DMetal means DirectX 10/11/12 is translated to Metal. Without it Wine's own
+ * Direct3D runs the game, and the `d3dx9` winetricks verb (installed for 32-bit
+ * Direct3D 9 games, whose effect compiler Wine only stubs) is reported as the
+ * native DX9 path.
+ */
+export async function runtimeDetails(runtime: WineRuntime, profile: GameProfile): Promise<RuntimeDetails> {
+  const wine = baseWineVersion(await wineVersion(runtime));
+  const d3d = await d3dMetalVersion(runtime);
+  const nativeDx9 = profile.wine.tricks.some((trick) => /^d3dx9/.test(trick));
+  const backend = d3d ? `D3DMetal ${d3d}` : nativeDx9 ? "DX9 (native d3dx9)" : "WineD3D";
+  // The `wine-devel` label already carries its version; GPTK's label does not,
+  // so append the reported Wine build unless the label already implies it.
+  const short = wine?.replace(/^wine-/, "");
+  const parts = [runtime.label];
+  if (wine && (!short || !runtime.label.includes(short))) {
+    parts.push(wine);
+  }
+  parts.push(backend);
+
+  return {
+    name: runtime.name,
+    label: runtime.label,
+    wineVersion: wine,
+    d3dMetal: d3d,
+    backend,
+    summary: parts.join(" · "),
+  };
+}
+
+const GCENX_RELEASES = "https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases?per_page=30";
+
+/**
+ * The newest Gcenx release that ships the flavor's tarball, or `null`.
+ *
+ * GitHub returns releases newest-first; the asset name is checked so a release
+ * that only publishes the other flavor is skipped.
+ */
+export async function latestWineVersion(
+  flavor: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  try {
+    const response = await fetchImpl(GCENX_RELEASES, { headers: { Accept: "application/vnd.github+json" } });
+    if (!response.ok) {
+      return null;
+    }
+    const releases = (await response.json()) as Array<{
+      tag_name?: string;
+      assets?: Array<{ name?: string }>;
+    }>;
+    const hit = releases.find(
+      (release) =>
+        typeof release.tag_name === "string" &&
+        (release.assets ?? []).some((asset) => asset.name === `wine-${flavor}-${release.tag_name}-osx64.tar.xz`),
+    );
+    return hit?.tag_name ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Install the runtime when it is missing. Idempotent. */
