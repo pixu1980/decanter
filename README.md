@@ -120,6 +120,7 @@ once; the build is then fetched through the store's own content system.
 | `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
 | `remove <game>` | Uninstall and forget a game (`--purge` deletes the prefix) |
 | `migrate <path>` | Import a legacy per-game repo into the registry |
+| `edit <game>` | Open the profile in `$EDITOR` (default `open`) |
 | `config [key=value ...]` | Show or change machine-wide settings |
 | `login <store> [arg]` / `logout <store>` | Log in to / out of `steam`, `gog` or `epic` |
 | `setup <game>` | Runtime, prefix, icon, app bundle |
@@ -127,6 +128,7 @@ once; the build is then fetched through the store's own content system.
 | `import <game>` | Move a finished download into the prefix |
 | `update <game>` | Check for and install an update (`--check` exits 3 if any) |
 | `run <game>` | Launch the game |
+| `quit <game>` | Stop the game's Wine processes (a Cmd+Q substitute) |
 | `windowed` / `fullscreen <game>` | Switch the Unity screen mode when configured |
 | `app` / `icon <game>` | Rebuild the bundle / refresh the icon |
 | `status` / `doctor <game>` | Install state / PASS-WARN-FAIL health checks |
@@ -143,10 +145,20 @@ once; the build is then fetched through the store's own content system.
 `list <store>` needs the store to be readable. GOG and Epic use the account you
 logged in with. `list steam` reads the owned list from the Steam client's own
 caches (the library folders and `appcache/appinfo.vdf`) with no key and no
-network; when a **Steam Web API key** is set
-([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey), free) it
-uses the API instead, and the profile's **Game details** must be **Public** for
-that.
+network; when a **Steam Web API key** is set it uses the API instead
+(`decanter config steamApiKey=<key>`, free from
+[steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey); the
+SteamID is auto-detected or set with `steamId`). The profile's **Game details**
+must be **Public** for the API path.
+
+Other flags: `--refresh` (`list`) fetches from the store instead of the cache,
+`--manual` (`download`) skips SteamCMD for the Steam console, `--installer
+<path>` (`import`) runs a GOG offline installer in the prefix, `--check`
+(`update`) reports only and exits 3, `--no-open` (`saves` / `mods`) prints the
+folder without opening it, `-n N` (`logs`) sets the line count, `--purge`
+(`remove` / `uninstall`) deletes the Wine prefix, `--yes` / `-y` skips
+confirmations, `--force` (`add` / `migrate` / `steam-setup`) overwrites, and
+`--dry-run` prints what would happen without changing anything.
 
 ### TUI keys
 
@@ -154,7 +166,7 @@ that.
 catalog (only real games, one row per game across stores; `enter` installs and
 asks which store when the game is owned on more than one), `s` opens settings,
 `m` migrates a legacy repo in a Terminal, `r` refreshes, `?` shows the full
-keyboard reference, `q` quits from any screen. In a game view, `esc` goes back
+keyboard reference, `q` quits except while editing or adding a game. In a game view, `esc` goes back
 and `enter` runs the selected action; the list mirrors the per-game CLI,
 including the flag variants (`download --manual`, `update --check`) and both
 destructive steps (`uninstall` keeps the data, `remove` purges the prefix and

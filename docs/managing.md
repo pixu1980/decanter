@@ -194,11 +194,15 @@ Settings live in `~/.decanter/config.json`.
 | `<PREFIX>_WINE_RUNTIME` | `gptk`, `gptk-apple`, `wine-devel` or `wine-staging` |
 | `<PREFIX>_GPTK_APPLE_SOURCE` | mounted Apple GPTK DMG directory for `gptk-apple` |
 | `<PREFIX>_STEAM_ROOT` | Steam data folder |
+| `<PREFIX>_SAVES` | Saves folder for one game |
 | `SM_UPDATE_TIMEOUT` | Seconds the guided console flow waits (default 1800) |
 
-`steamGridDbKey` in `config.json` is the SteamGridDB API key used when the
-Steam artwork is missing; change it with `decanter config
-steamGridDbKey=<key>`.
+`steamApiKey` in `config.json` is the Steam Web API key `list steam` uses for
+the owned list (free from
+[steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey));
+`steamId` overrides the auto-detected SteamID64. `steamGridDbKey` is the
+SteamGridDB API key used when the Steam artwork is missing. Change either with
+`decanter config steamApiKey=<key>` / `steamGridDbKey=<key>`.
 
 `<PREFIX>` is derived from the slug, for example `GK2` for
 `graveyard-keeper-2`.
