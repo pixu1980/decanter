@@ -125,3 +125,38 @@ test("buildApp keeps the wow64 loader named `wine` and reaches it from launch", 
     execFileSync("/bin/zsh", ["-n", join(paths.app, "Contents", "MacOS", "launch")]);
   });
 });
+
+test("buildApp sanitizes the bundle name and removes the legacy bundle", async () => {
+  await withTempHome(async () => {
+    const home = process.env.DECANTER_HOME!;
+    const profile = normalizeProfile({
+      name: "The Settlers® 2: 10th Anniversary",
+      slug: "the-settlers-2-10th-anniversary",
+      exe: "S2DNG.exe",
+    });
+    const apps = join(home, "Applications");
+    const paths: GamePaths = {
+      prefix: join(home, "prefix"),
+      app: join(apps, "The Settlers 2 - 10th Anniversary.app"),
+      steamRoot: join(home, "Steam"),
+      gameDir: join(home, "prefix", "drive_c", profile.installSubdir),
+      dataDir: "",
+      savesDir: "",
+      playerLog: "",
+      modsDir: "",
+    };
+    const legacy = join(apps, "The Settlers® 2: 10th Anniversary.app");
+    await mkdir(join(legacy, "Contents", "MacOS"), { recursive: true });
+
+    const gptkApp = await fakeWine(home);
+    const config = { gptkApp, gptkCask: "cask", applicationsDir: apps } as Config;
+    const runtime = resolveWine(profile, config);
+
+    await buildApp(profile, paths, runtime);
+
+    const plist = (await readText(join(paths.app, "Contents", "Info.plist"))) ?? "";
+    assert.match(plist, /<string>The Settlers 2 - 10th Anniversary<\/string>/);
+    assert.equal(existsSync(legacy), false, "the old unsanitized bundle is removed");
+    execFileSync("/bin/zsh", ["-n", join(paths.app, "Contents", "MacOS", "launch")]);
+  });
+});

@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { loadConfig } from "./config.ts";
 import { exec, isDryRun, which } from "./exec.ts";
 import { exists, mkdirp, remove, writeBytes } from "./fsx.ts";
-import { gogIconCandidates } from "./gog.ts";
+import { providerFor } from "./stores.ts";
 import { log, warn } from "./log.ts";
 import type { GameProfile } from "./profile.ts";
 import { iconCandidates, iconCandidatesExtra, steamGridDbCandidates } from "./store.ts";
@@ -69,6 +69,16 @@ export async function downloadStoreArtExtra(
   return downloadFirstImage(iconCandidatesExtra(profile.appid), assetsDir, "extra-art.jpg", fetchImpl);
 }
 
+/** Remove the art files a previous run of another store may have left. */
+async function pruneArt(assetsDir: string, files: string[]): Promise<void> {
+  for (const name of files) {
+    const stale = join(assetsDir, name);
+    if (exists(stale)) {
+      await remove(stale);
+    }
+  }
+}
+
 /** Download the game artwork from the GOG CDN; returns its path or `null`. */
 export async function downloadGogArt(
   profile: GameProfile,
@@ -80,32 +90,25 @@ export async function downloadGogArt(
     return null;
   }
 
-  // GOG games must never use the Steam/SteamGridDB art a previous run may have
-  // downloaded (an appid-0 SteamGridDB lookup returns an unrelated image).
-  for (const name of ["grid-art.png", "key-art.jpg", "extra-art.jpg"]) {
-    const stale = join(assetsDir, name);
-    if (exists(stale)) {
-      await remove(stale);
-    }
-  }
-
-  return downloadFirstImage(gogImages(profile), assetsDir, "gog-art.png", fetchImpl);
+  const art = providerFor("gog").art(profile);
+  await pruneArt(assetsDir, art.prune);
+  return downloadFirstImage(art.urls, assetsDir, art.file, fetchImpl);
 }
 
-/**
- * The GOG artwork URLs of a profile, best first.
- *
- * Fresh profiles carry the whole product `images` map; older ones only kept the
- * logo and the background, which are mapped back onto their GOG keys.
- */
-function gogImages(profile: GameProfile): string[] {
-  const images: Record<string, string> = profile.meta.gogImages ?? {};
-  if (!profile.meta.gogImages) {
-    if (profile.meta.libraryImage) images.logo2x = profile.meta.libraryImage;
-    if (profile.meta.headerImage) images.background = profile.meta.headerImage;
+/** Download the game artwork from Epic's catalog images; returns its path or `null`. */
+export async function downloadEpicArt(
+  profile: GameProfile,
+  assetsDir: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (isDryRun()) {
+    log("dry-run: fetch the Epic artwork");
+    return null;
   }
 
-  return gogIconCandidates(images);
+  const art = providerFor("epic").art(profile);
+  await pruneArt(assetsDir, art.prune);
+  return downloadFirstImage(art.urls, assetsDir, art.file, fetchImpl);
 }
 
 /** Download SteamGridDB artwork, icons first; returns its path or `null`. */
@@ -417,19 +420,18 @@ export async function provisionIcon(
     }
   }
 
-  const store =
-    profile.store === "gog"
-      ? await downloadGogArt(profile, assetsDir, fetchImpl)
-      : await downloadStoreArt(profile, assetsDir, fetchImpl);
+  const storeArt = providerFor(profile.store).art(profile);
+  await pruneArt(assetsDir, storeArt.prune);
+  const store = await downloadFirstImage(storeArt.urls, assetsDir, storeArt.file, fetchImpl);
   if (store) {
-    log(profile.store === "gog" ? "icon: using the GOG artwork" : "icon: using the Steam library artwork");
+    log(`icon: using ${storeArt.log}`);
     const result = await buildIcns(store, assetsDir);
     if (result) {
       return result;
     }
   }
 
-  if (profile.store !== "gog") {
+  if (profile.store === "steam") {
     const grid = await downloadSteamGridArt(profile, assetsDir, fetchImpl, config.steamGridDbKey);
     if (grid) {
       log("icon: using SteamGridDB artwork");

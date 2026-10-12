@@ -3,8 +3,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { test } from "node:test";
 
-import { detectSteamAccount, loginArgs, parseDepotDownload, parseWindowsDepot, steamcmdHasLogin, steamcmdPath } from "../../src/core/steamcmd.ts";
+import { detectSteamAccount, loginArgs, parseDepotDownload, parseWindowsDepot, steamcmdHasLogin, steamcmdPath, steamLibraryCacheAppIds } from "../../src/core/steamcmd.ts";
 import { withTempHome } from "./_helpers.ts";
+
+test("steamLibraryCacheAppIds reads the appid folders", async () => {
+  await withTempHome(async () => {
+    const root = process.env.DECANTER_HOME!;
+    const cache = join(root, "appcache", "librarycache");
+    await mkdir(join(cache, "220"), { recursive: true });
+    await mkdir(join(cache, "400"), { recursive: true });
+    await writeFile(join(cache, "not-an-app"), "");
+    assert.deepEqual(await steamLibraryCacheAppIds(root), [220, 400]);
+  });
+});
 
 test("loginArgs uses anonymous when configured", () => {
   assert.deepEqual(loginArgs({ anonymous: true }), ["+login", "anonymous"]);

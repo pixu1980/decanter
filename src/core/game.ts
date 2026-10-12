@@ -8,7 +8,7 @@
 
 import { join } from "node:path";
 import type { Config } from "./config.ts";
-import { expandPath, defaultPrefixDir, gameSavesDir } from "./paths.ts";
+import { bundleName, expandPath, defaultPrefixDir, gameSavesDir } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
 
 /** Every path the engine needs for one game. */
@@ -25,6 +25,16 @@ export interface GamePaths {
   modsDir: string;
 }
 
+/**
+ * The `.app` display name for a profile.
+ *
+ * The name is sanitized for macOS (see `bundleName`); the slug is the fallback
+ * when the store title carries nothing usable.
+ */
+export function appBundleName(profile: Pick<GameProfile, "name" | "slug">): string {
+  return bundleName(profile.name) || profile.slug;
+}
+
 function envOverride(profile: GameProfile, suffix: string): string | undefined {
   return process.env[`${profile.envPrefix}_${suffix}`];
 }
@@ -37,7 +47,7 @@ export function resolveGamePaths(profile: GameProfile, config: Config): GamePath
   const app = expandPath(
     envOverride(profile, "APP") ??
       profile.paths.app ??
-      join(config.applicationsDir, `${profile.name}.app`),
+      join(config.applicationsDir, `${appBundleName(profile)}.app`),
   );
   const steamRoot = expandPath(
     envOverride(profile, "STEAM_ROOT") ?? profile.paths.steamRoot ?? config.steamRoot,

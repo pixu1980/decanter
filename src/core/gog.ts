@@ -433,6 +433,30 @@ export async function gogSearch(term: string, fetchImpl: typeof fetch = fetch): 
   }));
 }
 
+/** Every product in the account's library, with its title. */
+export async function gogLibrary(token: string): Promise<GogSearchHit[]> {
+  const out: GogSearchHit[] = [];
+  for (let page = 1; page <= 100; page += 1) {
+    const url = `${GOG_EMBED}/account/getFilteredProducts?mediaType=1&sortBy=title&page=${page}`;
+    const data = await gogGet<{
+      products?: Array<{ id: number; title: string; url?: string }>;
+      totalPages?: number;
+    }>(url, token);
+    const products = data.products ?? [];
+    out.push(
+      ...products.map((product) => ({
+        id: product.id,
+        title: product.title,
+        slug: product.url?.split("/").pop() ?? "",
+      })),
+    );
+    if (products.length === 0 || (data.totalPages !== undefined && page >= data.totalPages)) {
+      break;
+    }
+  }
+  return out;
+}
+
 /**
  * Search the user's own GOG library.
  *

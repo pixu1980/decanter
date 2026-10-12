@@ -7,6 +7,7 @@
 // docs: docs/managing.md
 
 import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import type { SteamCmdAccount } from "./config.ts";
 import { exists, mkdirp, readText, remove } from "./fsx.ts";
 import { exec, isDryRun } from "./exec.ts";
@@ -187,6 +188,37 @@ export async function resolveWindowsDepot(appid: number, account: SteamCmdAccoun
 export async function detectSteamAccount(steamRoot: string): Promise<string | null> {
   const text = await readText(join(steamRoot, "config", "loginusers.vdf"));
   return text?.match(/"AccountName"\s+"([^"]+)"/)?.[1] ?? null;
+}
+
+/**
+ * App ids from the Steam client's library cache (`appcache/librarycache`).
+ *
+ * A keyless proxy for the owned library: Steam creates one folder per app in
+ * the library, so this works when the client has loaded the library at least
+ * once.
+ */
+export async function steamLibraryCacheAppIds(steamRoot: string): Promise<number[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(join(steamRoot, "appcache", "librarycache"));
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => /^\d+$/.test(entry))
+    .map((entry) => Number.parseInt(entry, 10))
+    .sort((a, b) => a - b);
+}
+
+/** The SteamID64 of the account Steam last used, or `null`. */
+export async function detectSteamId(steamRoot: string): Promise<string | null> {
+  const text = await readText(join(steamRoot, "config", "loginusers.vdf"));
+  if (!text) {
+    return null;
+  }
+  const users = [...text.matchAll(/"(\d{17})"\s*\{([^}]*)\}/g)];
+  const recent = users.find((match) => /"MostRecent"\s*"1"/.test(match[2]!)) ?? users[0];
+  return recent?.[1] ?? null;
 }
 
 /** Open an interactive SteamCMD session so it can store a login. */

@@ -10,10 +10,10 @@
 //
 // docs: docs/architecture.md
 
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { exec, isDryRun } from "./exec.ts";
-import { exists, mkdirp, writeText } from "./fsx.ts";
-import type { GamePaths } from "./game.ts";
+import { exists, mkdirp, remove, writeText } from "./fsx.ts";
+import { appBundleName, type GamePaths } from "./game.ts";
 import { die, log } from "./log.ts";
 import { gameDir, logsDir } from "./paths.ts";
 import type { GameProfile } from "./profile.ts";
@@ -46,6 +46,14 @@ export async function buildApp(
     log(`dry-run: link lib and share to the ${wine.label} runtime`);
     log(`dry-run: write Contents/MacOS/launch and Contents/Info.plist`);
     return;
+  }
+
+  // Remove the bundle left behind by an older, unsanitized name: macOS shows a
+  // `:` in a filename as `/` in the Finder, which is why the name is sanitized.
+  const legacy = join(dirname(paths.app), `${profile.name}.app`);
+  if (basename(paths.app) === `${appBundleName(profile)}.app` && legacy !== paths.app && exists(legacy)) {
+    log(`removing legacy app bundle: ${legacy}`);
+    await remove(legacy);
   }
 
   const macos = join(paths.app, "Contents", "MacOS");
@@ -138,7 +146,7 @@ async function writeInfoPlist(profile: GameProfile, paths: GamePaths): Promise<v
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>${xml(profile.name)}</string>
+  <key>CFBundleName</key><string>${xml(appBundleName(profile))}</string>
   <key>CFBundleIdentifier</key><string>${xml(profile.bundleId)}</string>
   <key>CFBundleExecutable</key><string>launch</string>
   <key>CFBundleIconFile</key><string>icon</string>

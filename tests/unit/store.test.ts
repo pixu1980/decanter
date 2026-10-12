@@ -8,6 +8,7 @@ import {
   searchApp,
   searchUrl,
   steamGridDbCandidates,
+  steamOwnedGames,
   storeApp,
 } from "../../src/core/store.ts";
 
@@ -85,4 +86,21 @@ test("storeApp maps the app details payload", async () => {
 test("storeApp returns null when the store has no entry", async () => {
   const fakeFetch = (async () => new Response(JSON.stringify({}), { status: 200 })) as unknown as typeof fetch;
   assert.equal(await storeApp(1, fakeFetch), null);
+});
+
+test("steamOwnedGames maps and sorts the Web API response", async () => {
+  const fakeFetch = (async () =>
+    new Response(JSON.stringify({ response: { games: [{ appid: 2, name: "Beta" }, { appid: 1, name: "Alpha" }] } }), {
+      status: 200,
+    })) as unknown as typeof fetch;
+
+  assert.deepEqual(await steamOwnedGames("key", "7656119", fakeFetch), [
+    { appid: 1, name: "Alpha" },
+    { appid: 2, name: "Beta" },
+  ]);
+});
+
+test("steamOwnedGames rejects a failed Web API call", async () => {
+  const fakeFetch = (async () => new Response("nope", { status: 403 })) as unknown as typeof fetch;
+  await assert.rejects(steamOwnedGames("key", "7656119", fakeFetch), /Steam Web API failed/);
 });

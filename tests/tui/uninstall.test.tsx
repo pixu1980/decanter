@@ -51,12 +51,12 @@ async function settle(setup: Awaited<ReturnType<typeof testRender>>, ms = 120): 
   await setup.renderOnce();
 }
 
-async function openUninstall(setup: Awaited<ReturnType<typeof testRender>>): Promise<void> {
+async function openAction(setup: Awaited<ReturnType<typeof testRender>>, key: string): Promise<void> {
   await setup.waitForFrame((frame) => frame.includes("Test Game"));
   setup.mockInput.pressKey("RETURN");
   await settle(setup);
-  const uninstallIndex = ACTIONS.findIndex((action) => action.key === "uninstall");
-  for (let i = 0; i < uninstallIndex; i += 1) {
+  const index = ACTIONS.findIndex((action) => action.key === key);
+  for (let i = 0; i < index; i += 1) {
     setup.mockInput.pressKey("ARROW_DOWN");
   }
   await settle(setup);
@@ -68,7 +68,7 @@ test("uninstall asks in-app and removes the bundle on confirm", async () => {
   await withGame(async ({ app }) => {
     const setup = await testRender(<App />, { width: 110, height: 40 });
     try {
-      await openUninstall(setup);
+      await openAction(setup, "uninstall");
       const prompt = setup.captureCharFrame();
       assert.match(prompt, /Remove the app bundle/);
 
@@ -85,7 +85,7 @@ test("uninstall keeps the bundle on cancel", async () => {
   await withGame(async ({ app }) => {
     const setup = await testRender(<App />, { width: 110, height: 40 });
     try {
-      await openUninstall(setup);
+      await openAction(setup, "uninstall");
       setup.mockInput.pressKey("ESCAPE");
       await settle(setup);
       assert.doesNotMatch(setup.captureCharFrame(), /Remove the app bundle/);
@@ -96,11 +96,11 @@ test("uninstall keeps the bundle on cancel", async () => {
   });
 });
 
-test("uninstall forgets the game so it leaves the list", async () => {
+test("remove purges the data and forgets the game", async () => {
   await withGame(async ({ home }) => {
     const setup = await testRender(<App />, { width: 110, height: 40 });
     try {
-      await openUninstall(setup);
+      await openAction(setup, "remove");
       setup.mockInput.pressKey("y");
       await settle(setup, 300);
       assert.equal(

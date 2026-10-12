@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { addGame } from "../../src/core/add.ts";
 import { knownGogGame } from "../../src/core/catalog.ts";
 import { setDryRun } from "../../src/core/exec.ts";
+import { rosettaWow64Fix } from "../../src/core/wow64.ts";
 import { withTempHome } from "./_helpers.ts";
 
 function fakeStore(name: string): typeof fetch {
@@ -47,7 +48,9 @@ test("addGame fills Graveyard Keeper 2 from the catalog", async () => {
 test("the GOG catalog carries the Settlers II wine tweaks", () => {
   const known = knownGogGame(1207659163);
   assert.equal(known?.wineRuntime, "wine-devel");
+  // 11.18 is the version with a prebuilt Rosetta wow64cpu fix (see wow64.ts).
   assert.equal(known?.wineVersion, "11.18");
+  assert.ok(rosettaWow64Fix(known?.wineVersion ?? ""), "the pinned version has a wow64 fix");
   assert.equal(known?.exe, "bin/S2DNG.exe");
   assert.deepEqual(known?.wine?.tricks, ["d3dx9"]);
   assert.equal(known?.wine?.virtualDesktop, "1280x720");

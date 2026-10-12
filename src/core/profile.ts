@@ -52,6 +52,8 @@ export interface GameMeta {
   libraryImage?: string;
   /** Full GOG product `images` map, so `icon` can re-fetch the artwork later. */
   gogImages?: Record<string, string>;
+  /** Epic catalog `keyImages`, cached so `icon` can re-fetch the artwork later. */
+  epicImages?: Array<{ type?: string; url?: string }>;
   developers?: string[];
   publishers?: string[];
   releaseDate?: string;
@@ -66,7 +68,7 @@ export interface GamePaths {
 }
 
 /** Which store a game comes from. */
-export type Store = "steam" | "gog";
+export type Store = "steam" | "gog" | "epic";
 
 /** A runtime configuration the game was launched with. */
 export interface RuntimeSnapshot {
@@ -90,6 +92,14 @@ export interface GameProfile {
   depot: number;
   /** GOG product id (0 for Steam games). */
   gogId: number;
+  /** Epic app name (the entitlement's `entitlementName`), empty otherwise. */
+  epicAppName: string;
+  /** Epic sandbox namespace. */
+  epicNamespace: string;
+  /** Epic catalog item id. */
+  epicCatalogItemId: string;
+  /** Build version recorded at the last Epic import, for update checks. */
+  epicBuildVersion: string;
   exe: string;
   installSubdir: string;
   dataSubdir: string;
@@ -131,6 +141,10 @@ export function normalizeProfile(input: ProfileInput): GameProfile {
     appid: input.appid ?? 0,
     depot: input.depot ?? 0,
     gogId: input.gogId ?? 0,
+    epicAppName: input.epicAppName ?? "",
+    epicNamespace: input.epicNamespace ?? "",
+    epicCatalogItemId: input.epicCatalogItemId ?? "",
+    epicBuildVersion: input.epicBuildVersion ?? "",
     exe: input.exe ?? `${slug}.exe`,
     installSubdir: input.installSubdir ?? slug,
     dataSubdir: input.dataSubdir ?? "",

@@ -19,10 +19,13 @@ import { provisionIcon } from "./icon.ts";
 import { readPe } from "./pe.ts";
 import { lutrisLookup } from "./lutris.ts";
 import { downloadGogBuild, ensureGogToken, gogBuffer, gogDownloadDir, gogPrimaryExecutable, gogProduct, windowsInstallers } from "./gog.ts";
+import { downloadEpicBuild, ensureEpicToken, epicBuild, epicDownloadDir } from "./epic.ts";
+import { providerFor } from "./stores.ts";
 import { ensureQuitHotkey } from "./hotkey.ts";
+import { installRosettaWow64Fix } from "./wow64.ts";
 import { die, heading, log, warn } from "./log.ts";
 import { backupsDir, gameAssetsDir, gameDir, logsDir } from "./paths.ts";
-import type { GameProfile, RuntimeSnapshot } from "./profile.ts";
+import type { GameProfile, RuntimeSnapshot, Store } from "./profile.ts";
 import { getGame, saveGame } from "./registry.ts";
 import { downloadDepot, ensureSteamcmd } from "./steamcmd.ts";
 import type { WineRuntime } from "./wine.ts";
@@ -79,6 +82,9 @@ export async function cmdSetup(slug: string): Promise<void> {
   await ensureSteamcmd();
   const freshPrefix = !exists(join(paths.prefix, "drive_c"));
   await wineboot(wine, paths.prefix);
+  // Patch wow64cpu.dll in the runtime and the prefix: without the far-return
+  // build Rosetta 2 mis-switches 32↔64 bit and 32-bit games crash.
+  await installRosettaWow64Fix(wine, paths.prefix);
   await ensureSavesLink(paths);
   if (freshPrefix) {
     await mapPrefixDocuments(paths.prefix, paths.savesDir);
@@ -163,7 +169,34 @@ async function ensureRosetta(): Promise<void> {
 // --- import / download / update -----------------------------------------------
 
 /** Move a finished depot download into the prefix. */
-export async function cmdImport(slug: string, options: { manifest?: string; installer?: string } = {}): Promise<void> {
+/** Options accepted by `cmdImport`. */
+interface ImportOptions {
+  manifest?: string;
+  installer?: string;
+}
+
+/** Options accepted by `cmdDownload`. */
+interface DownloadOptions {
+  manual?: boolean;
+}
+
+/** Per-store import step, selected by `profile.store`. */
+const IMPORTERS: Record<Store, (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: ImportOptions) => Promise<void>> = {
+  steam: async (profile, paths, wine, options) => {
+    await finalizeImport(profile, paths, wine, options.manifest);
+  },
+  gog: (profile, paths, wine) => importGog(profile, paths, wine),
+  epic: (profile, paths, wine) => importEpic(profile, paths, wine),
+};
+
+/** Per-store download step, selected by `profile.store`. */
+const DOWNLOADERS: Record<Store, (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: DownloadOptions) => Promise<void>> = {
+  steam: downloadSteam,
+  gog: (profile, paths, wine) => downloadGog(profile, paths, wine),
+  epic: (profile, paths, wine) => downloadEpic(profile, paths, wine),
+};
+
+export async function cmdImport(slug: string, options: ImportOptions = {}): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
   if (options.installer) {
     if (await isGameRunning(profile)) {
@@ -173,27 +206,15 @@ export async function cmdImport(slug: string, options: { manifest?: string; inst
     log(`done. play with: decanter run ${slug}`);
     return;
   }
-  if (profile.store === "gog") {
-    if (profile.gogId === 0) {
-      die("no GOG product id configured — set 'gogId' in game.json");
-    }
-    if (await isGameRunning(profile)) {
-      die("the game is running — close it before importing");
-    }
-    await importGog(profile, paths, wine);
-    log(`done. play with: decanter run ${slug}`);
-    return;
-  }
-  if (profile.depot === 0) {
-    die("no Steam depot id configured — set 'depot' in game.json");
+  const provider = providerFor(profile.store);
+  if (!provider.configured(profile)) {
+    die(`no ${provider.idLabel} configured — set it in game.json`);
   }
   if (await isGameRunning(profile)) {
     die("the game is running — close it before importing");
   }
-
-  if (await finalizeImport(profile, paths, wine, options.manifest)) {
-    log(`done. play with: decanter run ${slug}`);
-  }
+  await IMPORTERS[profile.store](profile, paths, wine, options);
+  log(`done. play with: decanter run ${slug}`);
 }
 
 /** Download the newest GOG build and import it into the prefix. */
@@ -303,6 +324,43 @@ async function importGog(profile: GameProfile, paths: GamePaths, wine: WineRunti
   await applyHeuristics(profile, paths);
 }
 
+/** Download the newest Epic build and import it into the prefix. */
+async function downloadEpic(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
+  const tokens = await ensureEpicToken();
+  if (!profile.epicNamespace || !profile.epicCatalogItemId) {
+    die("Epic namespace/catalog item missing — re-add the game or edit game.json");
+  }
+  const build = await epicBuild(
+    profile.epicNamespace,
+    profile.epicCatalogItemId,
+    profile.epicAppName,
+    tokens.access_token,
+  );
+  if (build?.buildVersion && build.buildVersion !== profile.epicBuildVersion) {
+    profile.epicBuildVersion = build.buildVersion;
+    await saveGame(profile);
+  }
+  log(`epic: downloading ${profile.epicAppName}${build?.buildVersion ? ` (build ${build.buildVersion})` : ""}`);
+  await downloadEpicBuild(profile.slug, profile.epicNamespace, profile.epicCatalogItemId, profile.epicAppName, {
+    token: tokens.access_token,
+    onProgress: (message) => log(`epic: ${message}`),
+  });
+  await importEpic(profile, paths, wine);
+}
+
+/** Move an Epic build into the prefix and detect its executable. */
+async function importEpic(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
+  const dest = epicDownloadDir(profile.slug);
+  if (!exists(dest)) {
+    die(`nothing to import: no Epic build in ${dest} — run: decanter download ${profile.slug}`);
+  }
+  log(`importing Epic build: ${dest} → ${paths.gameDir}`);
+  await mkdirp(paths.gameDir);
+  await exec("rsync", ["-a", "--remove-source-files", `${dest}/`, `${paths.gameDir}/`]);
+  await ensureExecutable(profile, paths, wine);
+  await applyHeuristics(profile, paths);
+}
+
 /** Install the per-game winetricks verbs, once each. */
 async function applyWineTricks(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
   const tricks = profile.wine.tricks;
@@ -374,7 +432,7 @@ async function applyHeuristics(profile: GameProfile, paths: GamePaths): Promise<
   // Community settings from Lutris, when the game is listed there.
   const lutris = await lutrisLookup(
     profile.store,
-    profile.store === "gog" ? profile.gogId : profile.appid,
+    providerFor(profile.store).catalogId(profile),
     profile.name,
   );
   if (lutris) {
@@ -466,9 +524,9 @@ export async function provisionGame(
   await cmdSetup(slug);
 
   const { profile } = await loadContext(slug);
-  const missingId = profile.store === "gog" ? profile.gogId === 0 : profile.depot === 0;
-  if (missingId) {
-    warn(`no ${profile.store === "gog" ? "GOG product" : "depot"} id for ${slug} — set it with 'decanter edit ${slug}', then run 'decanter download ${slug}'`);
+  const provider = providerFor(profile.store);
+  if (!provider.configured(profile)) {
+    warn(`no ${provider.idLabel} for ${slug} — set it with 'decanter edit ${slug}', then run 'decanter download ${slug}'`);
     return;
   }
 
@@ -486,25 +544,29 @@ export async function provisionGame(
  * it cannot help, no login, game not owned by the account, the command falls
  * back to the guided Steam-console flow and waits for the download to finish.
  */
-export async function cmdDownload(slug: string, options: { manual?: boolean } = {}): Promise<void> {
-  const { profile, paths, config, wine } = await loadContext(slug);
-  if (profile.store === "gog") {
-    if (profile.gogId === 0) {
-      die("no GOG product id configured — set 'gogId' in game.json");
-    }
-    if (await isGameRunning(profile)) {
-      die("the game is running — close it before downloading");
-    }
-    await downloadGog(profile, paths, wine);
-    return;
-  }
-  if (profile.depot === 0) {
-    die("no Steam depot id configured — set 'depot' in game.json");
+export async function cmdDownload(slug: string, options: DownloadOptions = {}): Promise<void> {
+  const { profile, paths, wine } = await loadContext(slug);
+  const provider = providerFor(profile.store);
+  if (!provider.configured(profile)) {
+    die(`no ${provider.idLabel} configured — set it in game.json`);
   }
   if (await isGameRunning(profile)) {
     die("the game is running — close it before downloading");
   }
+  await DOWNLOADERS[profile.store](profile, paths, wine, options);
+}
 
+/** The Steam download: SteamCMD, then the guided Steam-console fallback. */
+async function downloadSteam(
+  profile: GameProfile,
+  paths: GamePaths,
+  wine: WineRuntime,
+  options: DownloadOptions,
+): Promise<void> {
+  const config = await loadConfig();
+  if (config.steamcmd.anonymous) {
+    warn("steamcmd is in anonymous mode — anonymous downloads work for free games only; run 'decanter login' for owned games");
+  }
   await clearStaleDepotState(profile, paths);
 
   if (!options.manual) {
@@ -518,7 +580,7 @@ export async function cmdDownload(slug: string, options: { manual?: boolean } = 
       if (result.depotDir) {
         log(`steamcmd: download complete → ${result.depotDir}`);
         await finalizeImport(profile, paths, wine, result.manifest);
-        log(`done. play with: decanter run ${slug}`);
+        log(`done. play with: decanter run ${profile.slug}`);
         return;
       }
     } catch (error) {
@@ -564,11 +626,43 @@ async function guidedConsoleDownload(
   void config;
 }
 
+/** Epic update: compare the recorded build version with the newest build. */
+async function updateEpic(profile: GameProfile, options: { check?: boolean }): Promise<void> {
+  const tokens = await ensureEpicToken();
+  const build = await epicBuild(
+    profile.epicNamespace,
+    profile.epicCatalogItemId,
+    profile.epicAppName,
+    tokens.access_token,
+  );
+  const latest = build?.buildVersion ?? "";
+  const installed = profile.epicBuildVersion;
+  if (!latest) {
+    warn("could not resolve the Epic build version");
+    return;
+  }
+  if (latest === installed) {
+    log(`up to date (build ${installed || "unknown"})`);
+    return;
+  }
+  log(`update available: ${installed || "unknown"} → ${latest}`);
+  if (options.check) {
+    process.exitCode = 3;
+    return;
+  }
+  await cmdDownload(profile.slug);
+}
+
 /** Check for an update, and optionally download and import it. */
 export async function cmdUpdate(slug: string, options: { check?: boolean } = {}): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
   if (!(await gameInstalled(profile, paths))) {
     die("the game is not imported — run: decanter setup && decanter download");
+  }
+
+  if (profile.store === "epic") {
+    await updateEpic(profile, options);
+    return;
   }
 
   const status = await updateStatus(profile, paths);
@@ -638,9 +732,31 @@ export async function cmdRun(slug: string): Promise<void> {
 
   await recordRuntimeSnapshot(profile, wine);
 
+  // The store supplies its own launch arguments (Epic auth); the rest return none.
+  let storeArgs: string[] = [];
+  try {
+    storeArgs = await providerFor(profile.store).launchArgs(profile);
+  } catch (error) {
+    warn(`could not get the store's launch arguments — launching offline: ${(error as Error).message}`);
+  }
+
   if (bundleRuntimeReady(paths.app)) {
     log(`launching ${profile.name} (app bundle) — stop with: decanter quit ${slug}`);
-    await exec("open", [paths.app], { allowFailure: false });
+    const args = [paths.app, ...(storeArgs.length > 0 ? ["--args", ...storeArgs] : [])];
+    let opened = await exec("open", args, { allowFailure: true });
+    if (opened.status !== 0) {
+      // macOS reports -1712 when LaunchServices thinks the bundle is already
+      // open. A previous run can leave the virtual-desktop explorer alive, so
+      // the bundle's `launch` script waits forever and blocks the next open.
+      // Stop the prefix's Wine processes, which releases the script, and retry.
+      warn(`open failed (${openError(opened)}) — clearing leftover Wine processes`);
+      await exec(wine.distServer, ["-k"], { env: { WINEPREFIX: paths.prefix }, allowFailure: true });
+      await sleep(3000);
+      opened = await exec("open", args, { allowFailure: true });
+    }
+    if (opened.status !== 0) {
+      die(`could not open ${paths.app}: ${openError(opened)} — run: decanter quit ${slug}`);
+    }
     return;
   }
 
@@ -658,7 +774,7 @@ export async function cmdRun(slug: string): Promise<void> {
   }
 
   log(`launching ${profile.name}`);
-  await exec(wine.distExe, [profile.exe], {
+  await exec(wine.distExe, [profile.exe, ...storeArgs], {
     cwd: paths.gameDir,
     env: { WINEPREFIX: paths.prefix },
     stdio: "inherit",
@@ -668,7 +784,9 @@ export async function cmdRun(slug: string): Promise<void> {
 /** Terminate every Wine process the game is using (a Cmd+Q substitute). */
 export async function cmdQuit(slug: string): Promise<void> {
   const { profile, paths, wine } = await loadContext(slug);
-  if (!(await isGameRunning(profile))) {
+  // The app bundle can outlive the game exe: a leftover virtual-desktop
+  // explorer keeps the `launch` script waiting. Both count as running.
+  if (!(await isGameRunning(profile)) && !(await appBundleOpen(paths.app))) {
     log(`${profile.name} is not running`);
     return;
   }
@@ -1381,17 +1499,68 @@ export async function cmdUninstall(
 /** Is the game's process currently running under Wine? */
 export async function isGameRunning(profile: GameProfile): Promise<boolean> {
   const pattern = profile.exe.replace(/\./g, "\\.");
-  return isWineProcessRunning(pattern);
+  return isWineProcessRunning(pattern, basename(profile.exe));
 }
 
-async function isWineProcessRunning(pattern: string): Promise<boolean> {
+/**
+ * Does a process name belong to a Wine process?
+ *
+ * Wine names a Windows process after its `.exe`, so the loader reports `wine`
+ * while a running game reports the exe (`bin/S2DNG.exe`).
+ */
+export function isWineProcessName(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed.includes("wine") || /\.exe$/i.test(trimmed);
+}
+
+/** Does a process name belong to the given Windows executable? */
+export function isExeProcessName(name: string, exe: string): boolean {
+  return processBase(name) === processBase(exe);
+}
+
+/** The file name of a process name, normalizing Windows separators. */
+function processBase(name: string): string {
+  return basename(name.trim().replaceAll("\\", "/")).toLowerCase();
+}
+
+/**
+ * Is the game's `.app` bundle still open?
+ *
+ * The bundle's `launch` script waits on the Wine loader, so a leftover
+ * virtual-desktop explorer keeps it alive and macOS treats the app as open; a
+ * later `open` then fails with -1712.
+ */
+export async function appBundleOpen(app: string): Promise<boolean> {
+  if (!exists(app)) {
+    return false;
+  }
+  const result = await exec("pgrep", ["-f", appLaunchPattern(app)], { allowFailure: true });
+  return result.status === 0 && result.stdout.split("\n").some(Boolean);
+}
+
+/** A `pgrep -f` pattern that matches the bundle path literally. */
+export function appLaunchPattern(app: string): string {
+  return app.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** The `open` failure text, which macOS prints on stderr. */
+function openError(result: { status: number; stderr: string }): string {
+  return result.stderr.trim() || `exit ${result.status}`;
+}
+
+/**
+ * Is a Wine process matching `pattern` running? With `expected`, only a process
+ * whose name is that exe counts, so the virtual-desktop `explorer` is ignored.
+ */
+async function isWineProcessRunning(pattern: string, expected?: string): Promise<boolean> {
   const pids = await exec("pgrep", ["-f", pattern], { allowFailure: true });
   if (pids.status !== 0) {
     return false;
   }
   for (const pid of pids.stdout.split("\n").filter(Boolean)) {
     const comm = await exec("ps", ["-p", pid, "-o", "comm="], { allowFailure: true });
-    if (comm.stdout.includes("wine")) {
+    const name = comm.stdout.trim();
+    if (expected ? isExeProcessName(name, expected) : isWineProcessName(name)) {
       return true;
     }
   }

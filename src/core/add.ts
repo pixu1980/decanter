@@ -8,12 +8,13 @@
 
 import { loadConfig } from "./config.ts";
 import { ensureGogToken, gogLibrarySearch, gogProduct, gogSearch } from "./gog.ts";
+import { ensureEpicToken, epicCatalogItem, epicOwnedGames, findOwnedGame } from "./epic.ts";
 import { resolveWindowsDepot } from "./steamcmd.ts";
 import { gameInstalled } from "./depot.ts";
 import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
-import { normalizeProfile, type GameProfile, type WineRuntime } from "./profile.ts";
-import { knownGame, knownGogGame } from "./catalog.ts";
+import { normalizeProfile, type GameProfile, type Store, type WineRuntime } from "./profile.ts";
+import { knownGame, knownGogGame, knownEpicGame } from "./catalog.ts";
 import { gameExists, getGame, saveGame } from "./registry.ts";
 import { gameAssetsDir, slugify } from "./paths.ts";
 import { die, log } from "./log.ts";
@@ -29,19 +30,29 @@ export interface AddOptions {
   /** Override the runtime (defaults to the catalog entry, then `gptk`). */
   runtime?: WineRuntime;
   /** Which store to resolve the game from (default `steam`). */
-  store?: "steam" | "gog";
+  store?: "steam" | "gog" | "epic";
   /** GOG product id, when adding from GOG. */
   gogId?: number;
+  /** Epic app name (the entitlement name), when adding from Epic. */
+  epicAppName?: string;
   force?: boolean;
   fetchImpl?: typeof fetch;
 }
 
 /** Resolve, enrich and store a new game profile. */
 export async function addGame(options: AddOptions): Promise<GameProfile> {
-  if (options.store === "gog") {
-    return addGogGame(options);
-  }
+  return ADDERS[options.store ?? "steam"](options);
+}
 
+/** One adder per store, selected by `options.store`. */
+const ADDERS: Record<Store, (options: AddOptions) => Promise<GameProfile>> = {
+  steam: addSteamGame,
+  gog: addGogGame,
+  epic: addEpicGame,
+};
+
+/** Resolve a Steam game and store its profile. */
+async function addSteamGame(options: AddOptions): Promise<GameProfile> {
   let appid = options.appid ?? 0;
   let name = options.name ?? "";
 
@@ -120,7 +131,61 @@ export async function addGame(options: AddOptions): Promise<GameProfile> {
   return profile;
 }
 
-/** Register a GOG game: search the catalog, then store its product id. */
+/** Register a game from Epic: match an owned entitlement and store its ids. */
+async function addEpicGame(options: AddOptions): Promise<GameProfile> {
+  const tokens = await ensureEpicToken();
+  const query = options.epicAppName ?? options.name ?? "";
+  if (!query) {
+    die("give an Epic game name or --epic-app");
+  }
+
+  const library = await epicOwnedGames(tokens);
+  if (library.length === 0) {
+    die("this Epic account owns no games");
+  }
+  const owned = findOwnedGame(library, query);
+  if (!owned) {
+    die(`no owned Epic game matches '${query}' — run 'decanter list epic' to see your titles`);
+  }
+
+  const item = await epicCatalogItem(owned.namespace, owned.catalogItemId, tokens.access_token);
+  const name = item?.title ?? owned.title;
+  const known = knownEpicGame(owned.appName);
+  const slug = options.slug ?? known?.slug ?? slugify(name);
+
+  if (!options.force && (await gameExists(slug))) {
+    const existing = await getGame(slug);
+    log(`'${slug}' is already registered — provisioning it again`);
+    await provisionGame(slug);
+    return existing;
+  }
+
+  const images = item?.keyImages ?? [];
+  const profile = normalizeProfile({
+    ...known,
+    name,
+    slug,
+    store: "epic",
+    epicAppName: owned.appName,
+    epicNamespace: owned.namespace,
+    epicCatalogItemId: owned.catalogItemId,
+    exe: options.exe ?? known?.exe,
+    meta: {
+      headerImage: images.find((image) => image.type === "OfferImageWide")?.url,
+      libraryImage: images.find((image) => image.type === "OfferImageTall")?.url,
+      epicImages: images,
+    },
+  });
+
+  await saveGame(profile);
+  log(`added ${profile.name} (Epic ${owned.appName}, slug ${slug})`);
+
+  const icon = await provisionIcon(profile, gameAssetsDir(slug), { fetchImpl: options.fetchImpl });
+  const weakIcon = icon.source === "placeholder" || icon.source === "none";
+  await provisionGame(slug, { refreshIcon: weakIcon });
+
+  return profile;
+}
 async function addGogGame(options: AddOptions): Promise<GameProfile> {
   let gogId = options.gogId ?? 0;
   let name = options.name ?? "";

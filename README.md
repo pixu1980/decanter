@@ -20,9 +20,9 @@ per game, it keeps every game in a registry under `~/.decanter/games/<slug>/`.
   executable, save folders and window-mode registry key); for any other game it
   detects the executable after `import` and rebuilds the bundle.
 - Fetches the app icon automatically from the store the game came from: the
-  Steam CDN (library art, then SteamGridDB, then the smaller artwork), or the
-  GOG image CDN for GOG games, then the icon embedded in the `.exe`, and
-  finally a generated placeholder.
+  Steam CDN (library art, then SteamGridDB, then the smaller artwork), the
+  GOG image CDN for GOG games, or the Epic catalog images, then the icon
+  embedded in the `.exe`, and finally a generated placeholder.
 - Installs **SteamCMD** itself as part of `setup`, so depot downloads need no
   manual tooling.
 - Provisions the Wine runtime: Game Porting Toolkit by default, a pinned Gcenx
@@ -76,7 +76,7 @@ nothing else. For any other game, pass `--exe Name.exe` when you know it, or let
 TUI's add wizard has the same optional **Exe** field.
 
 `download` uses SteamCMD. Anonymous downloads work for free games; for owned
-games run `decanter login` once so SteamCMD remembers your account. If SteamCMD
+games run `decanter login steam` once so SteamCMD remembers your account. If SteamCMD
 cannot help, the command falls back to opening the Steam console and waits for
 `download_depot` to finish.
 
@@ -84,12 +84,11 @@ cannot help, the command falls back to opening the Steam console and waits for
 
 | Command | What it does |
 |---|---|
-| `list` | List registered games with size, update and app state |
-| `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
+| `list [store]` | List registered games, or a store's owned games (`steam`, `gog`, `epic`) || `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
 | `remove <game>` | Uninstall and forget a game (`--purge` deletes the prefix) |
 | `migrate <path>` | Import a legacy per-game repo into the registry |
 | `config [key=value ...]` | Show or change machine-wide settings |
-| `login` | Store a SteamCMD login for owned games |
+| `login <store> [arg]` / `logout <store>` | Log in to / out of `steam`, `gog` or `epic` |
 | `setup <game>` | Runtime, prefix, icon, app bundle |
 | `download <game>` | Fetch the Windows depot (`--manual` for the Steam console) |
 | `import <game>` | Move a finished depot download into the prefix |
@@ -105,24 +104,36 @@ cannot help, the command falls back to opening the Steam console and waits for
 | `backup-saves <game>` | Copy saves to `~/.decanter/backups` |
 | `steam-setup` / `steam <game>` | Optional Windows Steam inside the prefix |
 | `uninstall <game>` | Remove the app bundle (`--purge` also deletes the prefix) |
-| `tui` | Open the terminal interface |
+| (no command) | Open the terminal interface |
 | `version` / `help` | Version / this list |
+
+`list <store>` needs the store to be readable. GOG and Epic use the account you
+logged in with. `list steam` reads the owned list from the Steam client's own
+caches (the library folders and `appcache/appinfo.vdf`) with no key and no
+network; when a **Steam Web API key** is set
+([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey), free) it
+uses the API instead, and the profile's **Game details** must be **Public** for
+that.
 
 ### TUI keys
 
-`up` / `down` move, `enter` opens or runs, `a` adds a game, `s` opens settings,
-`r` refreshes, `?` shows the full keyboard reference, `q` quits from any screen.
-In a game view, `esc` goes back and `enter` runs the selected action. While an
-action runs the **Activity** panel streams the engine output line by line, and
-`esc` cancels it. Destructive actions (`uninstall`) ask for confirmation in the
-interface, then delete the app bundle and the Wine prefix and forget the game,
-so it leaves the list. In **settings** every row is editable: `up` / `down`
-move, `enter` edits a path or number, cycles the wine runtime, toggles the
+`up` / `down` move, `enter` opens or runs, `a` adds a game, `c` opens the
+catalog (only real games, one row per game across stores; `enter` installs and
+asks which store when the game is owned on more than one), `s` opens settings,
+`m` migrates a legacy repo in a Terminal, `r` refreshes, `?` shows the full
+keyboard reference, `q` quits from any screen. In a game view, `esc` goes back
+and `enter` runs the selected action; the list mirrors the per-game CLI,
+including the flag variants (`download --manual`, `update --check`) and both
+destructive steps (`uninstall` keeps the data, `remove` purges the prefix and
+forgets the game). While an action runs the **Activity** panel streams the engine
+output line by line, and `esc` cancels it. Destructive actions ask for
+confirmation in the interface. In **settings** every row is editable: `up` /
+`down` move, `enter` edits a path or number, cycles the wine runtime, toggles the
 anonymous account, or runs a login/logout. The SteamCMD login opens a Terminal;
-the GOG login opens the browser, then paste the **redirect URL** (or just the
-`code`) — GOG rejects a localhost redirect (`redirect_uri_mismatch`), so the
-redirect URL is the reliable way. The add wizard picks the store with a
-**Steam / GOG** select.
+the GOG and Epic logins open the browser and ask for the code in-app (paste the
+GOG **redirect URL**, or the `code`; GOG rejects a localhost redirect, so the
+redirect URL is the reliable way). The add wizard picks the store with a
+**Steam / GOG / Epic** select and shows the store-specific fields.
 
 ## Layout
 
@@ -149,6 +160,7 @@ Everything the tool creates at runtime lives under `~/.decanter` (override with
   wine/                  pinned Gcenx builds
   steamcmd/              SteamCMD install and depot downloads
   gog/                   GOG tokens
+  epic/                  Epic tokens
   logs/                  per-game loader output
   temp/                  downloads and scratch space
   backups/               save backups

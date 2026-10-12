@@ -18,6 +18,17 @@ src/tui/  ──┘                          ├─▶ exe.ts        (executable
                                        └─▶ registry.ts   (games under ~/.decanter)
 ```
 
+## Stores
+
+`profile.store` is `steam`, `gog` or `epic`. `src/core/stores.ts` is the single
+place that describes them: each `StoreProvider` reports the id used for lookups,
+whether the profile is configured enough to download, the id's human name, the
+launch arguments a title needs and its icon artwork. The download protocol
+genuinely differs (SteamCMD depots, the Galaxy content system, Epic's BuildPatch
+manifest), so the download, import and add steps are small per-store dispatch
+tables in `lifecycle.ts` and `add.ts` rather than one interface every store must
+satisfy; adding a store is a new provider plus one entry per table.
+
 ## Runtime registry
 
 There is no per-game repo. `decanter add` and `decanter migrate` write a
@@ -95,6 +106,22 @@ and the app bundle rebuilt, so opening the `.app` launches the real game.
   tell whether the install is stale.
 - The guided fallback opens `steam://open/console`, tells the user to run
   `download_depot`, and watches the depot folder until it stops growing.
+
+## Epic integration
+
+`epic.ts` mirrors the GOG client: OAuth with the public launcher client (browser
+plus a pasted authorization code, tokens under the decanter home), entitlements
+and the catalog for lookup and artwork, and a build resolved through the
+launcher host. Content is a binary BuildPatch manifest — the parser is a
+faithful port of legendary's format (`0x44BEC00C` magic, an optionally zlib
+body, then the metadata, chunk data list and file manifest list) — and the
+chunks are fetched from the build CDN bases, inflated and verified by SHA-1.
+`add --store epic`, `download`, `import` and `icon` branch on the store. `run`
+fetches an exchange code and passes the launcher arguments legendary computes
+(`-AUTH_TYPE=exchangecode`, `-epicapp`, `-epicusername`, `-epicsandboxid`, …)
+through `open --args`, so authenticated titles start; the EOS overlay for
+multiplayer is still the next step. See
+[docs/plans/epic-support.md](plans/epic-support.md).
 
 ## Wine runtimes
 

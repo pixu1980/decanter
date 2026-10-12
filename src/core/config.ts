@@ -20,7 +20,12 @@ export interface SteamCmdAccount {
 
 /** Machine-wide defaults. */
 export interface Config {
+  /** Native macOS Steam data folder. */
   steamRoot: string;
+  /** Steam Web API key, used by `list steam` to read the owned games. */
+  steamApiKey: string;
+  /** SteamID64 override for the Web API (auto-detected from Steam when empty). */
+  steamId: string;
   applicationsDir: string;
   gptkApp: string;
   gptkCask: string;
@@ -37,6 +42,8 @@ export interface Config {
 export function defaultConfig(): Config {
   return {
     steamRoot: defaultSteamRoot(),
+    steamApiKey: "",
+    steamId: "",
     applicationsDir: defaultApplicationsDir(),
     gptkApp: "/Applications/Game Porting Toolkit.app",
     gptkCask: "gcenx/wine/game-porting-toolkit",

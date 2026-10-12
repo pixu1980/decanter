@@ -6,6 +6,7 @@ import { defaultConfig } from "../../src/core/config.ts";
 import { resolveGamePaths } from "../../src/core/game.ts";
 import {
   backupsDir,
+  bundleName,
   decanterHome,
   envPrefix,
   gameDir,
@@ -28,6 +29,20 @@ test("envPrefix derives the legacy environment prefix", () => {
   assert.equal(envPrefix("graveyard-keeper-2"), "GK2");
   assert.equal(envPrefix("broken-sword-directors-cut"), "BSDC");
   assert.equal(envPrefix("the-cosmic-wheel-sisterhood"), "TCWS");
+});
+
+test("bundleName strips symbols and path separators for the .app name", () => {
+  assert.equal(
+    bundleName("The Settlers® 2: 10th Anniversary"),
+    "The Settlers 2 - 10th Anniversary",
+  );
+  assert.equal(
+    bundleName("The Settlers II - 10th Anniversary"),
+    "The Settlers II - 10th Anniversary",
+    "an already-clean name is left alone",
+  );
+  assert.equal(bundleName("Foo/Bar™ ©"), "Foo - Bar");
+  assert.equal(bundleName("  Lots   of  spaces  "), "Lots of spaces");
 });
 
 test("isSlug accepts only canonical slugs", () => {
@@ -72,6 +87,12 @@ test("resolveGamePaths keeps the prefix and saves inside the game folder", () =>
     );
     assert.equal(inPrefix.dataDir, join(inPrefix.prefix, "drive_c", "users/x/Saves"));
     assert.equal(inPrefix.savesDir, "/tmp/decanter-home/games/in-prefix/saves");
+
+    const fancy = resolveGamePaths(
+      normalizeProfile({ name: "The Settlers® 2: 10th Anniversary", slug: "the-settlers-2-10th-anniversary" }),
+      config,
+    );
+    assert.equal(fancy.app, join(config.applicationsDir, "The Settlers 2 - 10th Anniversary.app"));
   } finally {
     if (previous === undefined) {
       delete process.env.DECANTER_HOME;

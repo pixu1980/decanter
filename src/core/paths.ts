@@ -54,6 +54,11 @@ export function tempDir(): string {
   return join(decanterHome(), "temp");
 }
 
+/** Cached per-store library list (`~/.decanter/<store>/library.json`). */
+export function libraryCachePath(store: "steam" | "gog" | "epic"): string {
+  return join(decanterHome(), store, "library.json");
+}
+
 /** Pinned Gcenx Wine builds fetched by `setup`. */
 export function wineDir(): string {
   return join(decanterHome(), "wine");
@@ -82,6 +87,21 @@ export function gogDir(): string {
 /** Stored GOG OAuth tokens. */
 export function gogAuthPath(): string {
   return join(gogDir(), "auth.json");
+}
+
+/** Epic Games account tokens. */
+export function epicDir(): string {
+  return join(decanterHome(), "epic");
+}
+
+/** Stored Epic Games OAuth tokens. */
+export function epicAuthPath(): string {
+  return join(epicDir(), "auth.json");
+}
+
+/** Where an Epic game's downloaded build lands (temporary). */
+export function epicDownloadsDir(slug: string): string {
+  return join(tempDir(), "epic", slug);
 }
 
 /** Where a GOG game's downloaded build/installer lands (temporary). */
@@ -160,6 +180,23 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/**
+ * A game name safe as a `.app` bundle name and as the macOS app-menu label.
+ *
+ * macOS shows a `:` in a filename as `/` in the Finder and rejects `/` in a
+ * bundle name, so the path separators become ` - `. Symbol characters (® ™ ©,
+ * emoji) and control characters are dropped: `The Settlers® 2: 10th Anniversary`
+ * becomes `The Settlers 2 - 10th Anniversary`.
+ */
+export function bundleName(value: string): string {
+  return value
+    .replace(/[:/\\]+/g, " - ")
+    .replace(/\p{So}/gu, "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** `graveyard-keeper-2` → `GK2` (environment prefix for legacy profiles). */

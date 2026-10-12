@@ -60,8 +60,8 @@ export function parseLutrisInstallers(installers: LutrisInstaller[]): LutrisConf
 
 /** Look up a game's community Wine settings, or `null`. */
 export async function lutrisLookup(
-  store: "steam" | "gog",
-  id: number,
+  store: "steam" | "gog" | "epic",
+  id: number | string,
   name: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<LutrisConfig | null> {
@@ -114,8 +114,8 @@ export function lutrisQueries(name: string): string[] {
 /** Search the Lutris catalog (a few pages) for the game carrying `id`. */
 async function findLutrisGame(
   query: string,
-  store: "steam" | "gog",
-  id: number,
+  store: "steam" | "gog" | "epic",
+  id: number | string,
   fetchImpl: typeof fetch,
 ): Promise<LutrisGame | null> {
   for (let page = 1; page <= 3; page += 1) {

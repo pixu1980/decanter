@@ -3,6 +3,7 @@
 // docs: docs/architecture.md
 
 import { theme } from "../../theme.ts";
+import { VERSION } from "../../../core/version.ts";
 
 interface Shortcut {
   keys: string;
@@ -28,22 +29,17 @@ const SECTIONS: Section[] = [
       { keys: "↑ ↓ / k j", label: "move" },
       { keys: "enter", label: "open" },
       { keys: "a", label: "add a game" },
+      { keys: "c", label: "open the catalog" },
       { keys: "s", label: "settings" },
+      { keys: "m", label: "migrate a legacy repo (Terminal)" },
       { keys: "r", label: "refresh" },
     ],
   },
   {
-    title: "Game detail",
+    title: "Game detail and logs",
     shortcuts: [
-      { keys: "↑ ↓ / k j", label: "move between actions" },
+      { keys: "↑ ↓ / k j", label: "move, or scroll the log" },
       { keys: "enter", label: "run the selected action" },
-      { keys: "esc", label: "back" },
-    ],
-  },
-  {
-    title: "Logs and info",
-    shortcuts: [
-      { keys: "↑ ↓", label: "scroll the log" },
       { keys: "esc", label: "back" },
     ],
   },
@@ -77,8 +73,7 @@ export function HelpOverlay() {
           ))}
         </box>
       ))}
-      <text fg={theme.muted}>The Activity panel streams the engine log as it runs.</text>
-      <text fg={theme.muted}>esc or ? to close</text>
+      <text fg={theme.muted}>{`Activity streams the log · esc/? close · decanter ${VERSION}`}</text>
     </box>
   );
 }

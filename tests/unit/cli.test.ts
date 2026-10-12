@@ -24,6 +24,24 @@ function tempHome(): string {
   return mkdtempSync(join(tmpdir(), "decanter-cli-"));
 }
 
+test("list with an unknown store fails with a hint", () => {
+  const result = run(["list", "definitely-not-a-store"], tempHome());
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unknown store/);
+});
+
+test("the launcher runs from any working directory", () => {
+  const home = tempHome();
+  const cwd = mkdtempSync(join(tmpdir(), "decanter-cwd-"));
+  const result = spawnSync(process.execPath, [join(ROOT, "bin", "decanter.mjs"), "version"], {
+    cwd,
+    env: { ...process.env, DECANTER_HOME: home },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^decanter \d+\.\d+\.\d+/);
+});
+
 test("help and version work without a registry", () => {
   const home = tempHome();
   const help = run(["help"], home);

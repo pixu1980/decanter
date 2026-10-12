@@ -6,6 +6,8 @@
 //
 // docs: docs/architecture.md
 
+import { die } from "./log.ts";
+
 /** The subset of a store app this project uses. */
 export interface StoreApp {
   appid: number;
@@ -205,4 +207,35 @@ export async function storeApp(
     releaseDate: data.release_date?.date,
     isFree: data.is_free,
   };
+}
+
+/** One owned game from the Steam Web API. */
+export interface SteamOwnedGame {
+  appid: number;
+  name: string;
+}
+
+/**
+ * Every game the account owns, through the Steam Web API.
+ *
+ * Needs a key from steampowered.com/dev/apikey, the account's SteamID64 and a
+ * profile whose game details are public; the API returns the full owned list
+ * with names, which the local Steam data cannot.
+ */
+export async function steamOwnedGames(
+  apiKey: string,
+  steamid: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SteamOwnedGame[]> {
+  const url =
+    `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${encodeURIComponent(apiKey)}` +
+    `&steamid=${encodeURIComponent(steamid)}&include_appinfo=1&include_played_free_games=1&format=json`;
+  const response = await fetchImpl(url);
+  if (!response.ok) {
+    die(`Steam Web API failed (${response.status}) — check the key and that the profile game list is public`);
+  }
+  const data = (await response.json()) as { response?: { games?: Array<{ appid?: number; name?: string }> } };
+  return (data.response?.games ?? [])
+    .filter((game): game is SteamOwnedGame => typeof game.appid === "number" && typeof game.name === "string")
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

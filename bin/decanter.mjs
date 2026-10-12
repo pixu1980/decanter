@@ -12,15 +12,26 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const entry = join(here, "..", "src", "cli.ts");
+const repoRoot = join(here, "..");
+const entry = join(repoRoot, "src", "cli.ts");
 const argv = process.argv.slice(2);
 
-const wantsTui = argv.length === 0 || argv[0] === "tui" || argv[0] === "ui";
+// Resolve `tsx` from this launcher, not from the caller's folder: `--import tsx`
+// is a bare specifier Node looks up relative to the working directory, so a run
+// from anywhere outside the repo would not find it.
+const tsx = import.meta.resolve("tsx");
+
+const wantsTui = argv.length === 0;
 const nodeArgs = [];
 if (wantsTui) {
   nodeArgs.push("--experimental-ffi");
 }
-nodeArgs.push("--import", "tsx", entry, ...argv);
+nodeArgs.push("--import", tsx, entry, ...argv);
 
-const result = spawnSync(process.execPath, nodeArgs, { stdio: "inherit" });
+// tsx finds `tsconfig.json` from the working directory; point it at the repo's
+// so the JSX runtime (jsxImportSource `@opentui/react`) is the same everywhere.
+const result = spawnSync(process.execPath, nodeArgs, {
+  stdio: "inherit",
+  env: { ...process.env, TSX_TSCONFIG_PATH: join(repoRoot, "tsconfig.json") },
+});
 process.exit(result.status ?? 1);

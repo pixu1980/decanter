@@ -64,8 +64,11 @@ export const KNOWN_GOG_GAMES: Record<number, KnownGame> = {
     name: "The Settlers II - 10th Anniversary",
     slug: "the-settlers-2-10th-anniversary",
     exe: "bin/S2DNG.exe",
-    // 32-bit Direct3D 9: GPTK's Wine 7.7 asserts, so use a current build and
-    // give the game native d3dx9 (the effect compiler is only a stub in Wine).
+    // 32-bit Direct3D 9: GPTK's Wine 7.7 asserts, so use a Gcenx build and give
+    // the game native d3dx9 (the effect compiler is only a stub in Wine).
+    // 11.18 is the version with a prebuilt Rosetta wow64cpu fix, which setup
+    // installs; without it the game crashes in wow64cpu.dll (Wine's 32↔64-bit
+    // switch does not survive a far jump under Rosetta 2).
     wineRuntime: "wine-devel",
     wineVersion: "11.18",
     wine: {
@@ -81,4 +84,12 @@ export const KNOWN_GOG_GAMES: Record<number, KnownGame> = {
 /** The catalog entry for a GOG product id, if any. */
 export function knownGogGame(gogId: number): KnownGame | undefined {
   return KNOWN_GOG_GAMES[gogId];
+}
+
+/** Epic games with hand-tuned settings, keyed by Epic app name. */
+export const KNOWN_EPIC_GAMES: Record<string, KnownGame> = {};
+
+/** The catalog entry for an Epic app name, if any. */
+export function knownEpicGame(appName: string): KnownGame | undefined {
+  return KNOWN_EPIC_GAMES[appName];
 }

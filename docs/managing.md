@@ -63,14 +63,21 @@ Edit the profile by hand or with `decanter edit <game>` to set `exe`,
 `add` already ran these steps; run them again to retry or to reinstall:
 
 ```sh
-decanter setup <game>       # Rosetta, Wine runtime, prefix, SteamCMD, icon, app bundle
+decanter setup <game>       # Rosetta, Wine runtime, wow64 fix, prefix, SteamCMD, icon, app bundle
 decanter download <game>    # SteamCMD, or the guided Steam console
 decanter import <game>      # move a finished download into the prefix
 decanter run <game>         # or open the .app
 ```
 
+For a Gcenx `wine-devel` / `wine-staging` runtime on Apple Silicon, `setup` also
+installs the Rosetta `wow64cpu` fix: Wine switches 32↔64 bit with a far jump
+that Rosetta 2 sometimes does not honour, which crashes 32-bit games in
+`wow64cpu.dll`. The patched DLL (far returns) is downloaded once, verified by
+SHA-256 and copied into both the runtime and the prefix. See
+[troubleshooting](troubleshooting.md#the-game-crashes-right-after-the-d3d-device-is-created-32-bit-games).
+
 `download` uses SteamCMD. Anonymous downloads work for free games; for owned
-games run `decanter login` once so SteamCMD remembers the account. Add
+games run `decanter login steam` once so SteamCMD remembers the account. Add
 `--manual` to skip SteamCMD and drive the Steam console yourself.
 
 ## Updating
@@ -91,6 +98,33 @@ its own copy of the Wine loader plus symlinks into the shared runtime, which is
 what gives the running game a real macOS app menu and a working Cmd+Q. Rebuild
 it after a runtime update, or whenever `doctor` says the bundle runtime is
 missing.
+
+The bundle name is sanitized for macOS: a `:` becomes ` - ` (the Finder shows a
+`:` in a filename as `/`) and symbol characters such as `®`, `™` and `©` are
+dropped. `The Settlers® 2: 10th Anniversary` therefore builds as
+`The Settlers 2 - 10th Anniversary.app`. Rebuilding removes the bundle left by
+the older, unsanitized name.
+
+## The catalog
+
+`c` in the interface opens the catalog: every **game** the three stores own, in
+one filterable table. `list <store>` still prints the provider's full list — the
+catalog drops what is not a game. Steam's `common.type` in the appinfo cache
+separates a `Game` from a `Tool`, so runtimes, dedicated servers, SDKs, DLC,
+soundtracks and demos stay out.
+
+A game owned on more than one store is a single row listing its stores. `enter`
+installs the only copy directly, or opens a **store picker** when the game is
+owned on several, so you choose which store to fetch from. A row marked
+`installed` (from any store) opens the registered game instead.
+
+The catalog reads the same caches `list` writes: Steam comes from the client's
+owner cache offline, GOG and Epic from their cached library. Run `list gog` /
+`list epic` once (with a login) before the catalog shows them.
+
+While a game installs, the **Install** screen shows the resolved metadata (game,
+store, id) and streams the engine output. When it finishes the interface returns
+to the games list with the new game selected; `esc` cancels a running install.
 
 ## Window mode
 
@@ -243,8 +277,9 @@ Some games need Wine tweaks of their own. A profile carries a `wine` block that
 - `env` — extra environment variables for the launch.
 
 Example, The Settlers II: 10th Anniversary (GOG, 32-bit Direct3D 9):
-`wineRuntime: "wine-devel"`, `wine.tricks: ["d3dx9"]`,
-`wine.virtualDesktop: "1280x720"`.
+`wineRuntime: "wine-devel"`, `wineVersion: "11.18"`,
+`wine.tricks: ["d3dx9"]`, `wine.virtualDesktop: "1280x720"`. The pinned version
+is the one `setup` applies the Rosetta `wow64cpu` fix to.
 
 `import` fills the `wine` block automatically: a PE reader switches a 32-bit
 executable to `wine-devel` and adds the D3DX winetricks, and the Lutris API
