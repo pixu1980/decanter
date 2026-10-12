@@ -22,6 +22,19 @@ jobs:
           node-version: 26.4
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm test:tui
+      - name: Checks
+        run: |
+          set -o pipefail
+          status=0
+          for task in typecheck test test:tui; do
+            if ! pnpm "$task" 2>&1 | tee "$task.log"; then
+              status=1
+              {
+                echo "### pnpm $task failed"
+                echo '```'
+                tail -80 "$task.log"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          exit "$status"
