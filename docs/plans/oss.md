@@ -22,9 +22,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
   - [ ] **7.2**: Source-only: say so in the README and keep `private: true`.
   - [ ] **7.3**: Publishing: follow pix-process-npm-release (Trusted Publishing, provenance, staged publish), set `name`, drop `private`, add `repository`/`homepage`/`bugs`/`keywords`.
   - [ ] **7.4**: Either way, add the `repository` field so tools can link the source.
-- [ ] **Step 9 - OSS-009 (medium)**: No CODE_OF_CONDUCT.md, so expected community behavior and how it is enforced are undefined.
-  - [ ] **9.1**: Adopt Contributor Covenant 2.1 as CODE_OF_CONDUCT.md.
-  - [ ] **9.2**: Set the enforcement contact and link the file from the README and CONTRIBUTING.md.
 - [ ] **Step 10 - OSS-010 (low)**: No issue or pull request templates and no repository topics, so reports and PRs arrive unstructured.
   - [ ] **10.1**: Add .github/ISSUE_TEMPLATE/bug.yml and feature.yml.
   - [ ] **10.2**: Add .github/pull_request_template.md with a `pnpm check` checkbox.

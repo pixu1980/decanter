@@ -73,6 +73,8 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance: Node floor | `cat .nvmrc` and `node --test tests/unit/nodeFloor.test.ts` | `.nvmrc` pins 26.8.2; 3 tests pass (the floor, the pin, and that no `engines` field exists); `bin/node-floor.mjs` is called by the launcher and the prepare hook |
 | Governance: CI Node | `.github/workflows/ci.yml` and `release.yml` | both use `node-version-file: .nvmrc` |
 
+| Governance: code of conduct | `ls CODE_OF_CONDUCT.md` and `grep -n CODE_OF_CONDUCT README.md CONTRIBUTING.md` | Contributor Covenant 2.1 verbatim with the enforcement contact filled in; linked from the README docs list and a CONTRIBUTING section |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
