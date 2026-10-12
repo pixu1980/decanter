@@ -2,7 +2,7 @@
   "name": "decanter",
   "version": "0.1.0",
   "private": true,
-  "description": "Wrap any Windows-only Steam game into a native macOS .app (Wine + D3DMetal), with a CLI and an OpenTUI interface.",
+  "description": "Wrap any Windows-only PC game (Steam, GOG or Epic) into a native macOS .app (Wine + D3DMetal), with a CLI and an OpenTUI interface.",
   "type": "module",
   "license": "MIT",
   "bin": {

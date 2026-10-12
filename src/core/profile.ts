@@ -1,6 +1,7 @@
 // The per-game profile (`~/.decanter/games/<slug>/game.json`).
 //
-// A profile is everything the engine needs to know about one Steam game. It is
+// A profile is everything the engine needs to know about one game (Steam, GOG
+// or Epic). It is
 // created by `decanter add`, imported from a legacy `game.conf` by
 // `decanter migrate`, or edited by hand.
 //
@@ -90,7 +91,7 @@ export interface GameProfile {
   store: Store;
   appid: number;
   depot: number;
-  /** GOG product id (0 for Steam games). */
+  /** GOG product id (0 for a game from another store). */
   gogId: number;
   /** Epic app name (the entitlement's `entitlementName`), empty otherwise. */
   epicAppName: string;

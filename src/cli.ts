@@ -486,7 +486,7 @@ async function sizeOf(dir: string): Promise<number> {
 }
 
 function printHelp(): void {
-  process.stdout.write(`decanter ${VERSION} — wrap any Windows-only Steam game into a macOS .app
+  process.stdout.write(`decanter ${VERSION} — wrap any Windows-only PC game (Steam, GOG, Epic) into a macOS .app
 
 usage: decanter [command] [game] [options]      (no command opens the TUI)
 
