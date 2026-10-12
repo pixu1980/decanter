@@ -22,19 +22,22 @@ jobs:
           node-version: 26.4
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Environment
+        run: |
+          echo "::notice::node $(node -v) on $(node -e 'console.log(process.platform, process.arch)')"
+          node --experimental-ffi -e "console.log('ffi ok')" && echo "::notice::--experimental-ffi accepted" || echo "::error::--experimental-ffi rejected"
       - name: Checks
         run: |
           set -o pipefail
           status=0
           for task in typecheck test test:tui; do
-            if ! pnpm "$task" 2>&1 | tee "$task.log"; then
+            if pnpm "$task" > "$task.log" 2>&1; then
+              cat "$task.log"
+            else
               status=1
-              {
-                echo "### pnpm $task failed"
-                echo '```'
-                tail -80 "$task.log"
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
+              tail -25 "$task.log" | while IFS= read -r line; do
+                echo "::error title=pnpm $task::$line"
+              done
             fi
           done
           exit "$status"
