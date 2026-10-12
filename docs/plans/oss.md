@@ -17,10 +17,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 4 - OSS-004 (high)**: No SECURITY.md; there is no private channel or timeline to report a vulnerability in a tool that downloads third-party binaries.
-  - [ ] **4.1**: Add SECURITY.md with a reporting contact (email or GitHub private advisory) and a disclosure timeline (for example 90 days).
-  - [ ] **4.2**: Enable private vulnerability reporting in the repository settings.
-  - [ ] **4.3**: Link SECURITY.md from the README.
 - [ ] **Step 5 - OSS-005 (medium)**: The conventional-commit rule is enforced only by the author's global git hook, not by the repository, so a contributor's commit can break changelog generation.
   - [ ] **5.1**: Ship a commit-msg hook in the repository and point `core.hooksPath` at it from a `prepare` script.
   - [ ] **5.2**: Document the hook in CONTRIBUTING.md.

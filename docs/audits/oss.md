@@ -58,6 +58,8 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance: contribution path | `ls CONTRIBUTING.md` and `grep -n CONTRIBUTING README.md` | `CONTRIBUTING.md` present and linked from the README Docs section |
 | Contribution path: clean-clone gate | `git clone . "$D/repo" && cd "$D/repo" && pnpm install --frozen-lockfile && pnpm test:tui` | passes (15/15); a fresh clone needs nothing else |
 
+| Governance: security policy | `ls SECURITY.md` and `grep -n SECURITY README.md` | present and linked; contact (GitHub private advisory and an email) with a 7-day acknowledgement and a 90-day fix target |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`

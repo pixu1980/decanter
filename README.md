@@ -240,6 +240,7 @@ CI runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which is
 - [docs/troubleshooting.md](docs/troubleshooting.md) - when something breaks
 - [docs/plans/execution-plan.md](docs/plans/execution-plan.md) - the build plan
 - [CONTRIBUTING.md](CONTRIBUTING.md) - set up, commit convention and pull requests
+- [SECURITY.md](SECURITY.md) - how to report a vulnerability
 
 ## Inspirations
 
