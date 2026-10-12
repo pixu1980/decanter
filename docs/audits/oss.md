@@ -14,7 +14,8 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance and community files | filesystem check for CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, GOVERNANCE, CHANGELOG, AUTHORS, MAINTAINERS, .mailmap, .editorconfig, .gitattributes, FUNDING.yml, CODEOWNERS | every one MISSING |
 | `.github` tree | `ls -R .github` | `NO .github` |
 | CI workflows | `git ls-files '.github/**'` | empty |
-| License text | `head -5 LICENSE` | `MIT License` / `Copyright (c) 2026 Ignacio Martin Vazquez` |
+| License text | `head -3 LICENSE` | `MIT License` / `Copyright (c) 2026 Emiliano "pixu1980" Pisu` |
+| Copyright credit placement | `grep -rniI 'ignacio\|martin vazquez' --exclude-dir=.git .` | README.md `## Inspirations`; no source file, config or LICENSE mentions the name |
 | GitHub repository metadata | `GET https://api.github.com/repos/pixu1980/decanter` | `private: false`, `visibility: public`, `license.spdx_id: MIT`, `default_branch: main`, `created_at: 2026-10-12T10:25:19Z`, `has_issues: true`, `has_pull_requests: true`, `has_discussions: false`, `topics: []`, `open_issues: 0`, `web_commit_signoff_required: false` |
 | Commit author | `git log --format='%an <%ae>' -1` | `Emiliano Pisu <pisuemiliano.1980@gmail.com>` |
 | Remote origin | `git remote get-url origin` | `git@github.com:pixu1980/decanter.git` |

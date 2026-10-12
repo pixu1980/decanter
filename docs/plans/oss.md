@@ -19,10 +19,10 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 - [ ] **Step 1 - OSS-001 (high)**: LICENSE names a copyright holder that does not match the repository author, so ownership of the source is ambiguous.
   - [x] **1.1**: Ask the maintainer to confirm the legal copyright holder for the LICENSE. Confirmed: `Emiliano "pixu1980" Pisu`.
-  - [ ] **1.2**: Write the confirmed holder into LICENSE line 3.
-  - [ ] **1.3**: Add an AUTHORS file and reference it from LICENSE when there is more than one holder.
-  - [ ] **1.4**: Verify GitHub detects the license: `curl -s https://api.github.com/repos/pixu1980/decanter` shows `license.spdx_id: MIT`.
-  - [ ] **1.5**: Credit Ignacio Martin Vazquez under an inspirations or credits section (README or AUTHORS), and remove the name from anywhere else.
+  - [x] **1.2**: Write the confirmed holder into LICENSE line 3. Done: `Copyright (c) 2026 Emiliano "pixu1980" Pisu`.
+  - [x] **1.3**: Add an AUTHORS file and reference it from LICENSE when there is more than one holder. Not needed: a single holder.
+  - [x] **1.4**: Verify GitHub detects the license: `curl -s https://api.github.com/repos/pixu1980/decanter` shows `license.spdx_id: MIT`.
+  - [x] **1.5**: Credit Ignacio Martin Vazquez under an inspirations or credits section (README or AUTHORS), and remove the name from anywhere else. Done: `README.md` `## Inspirations`.
 - [ ] **Step 2 - OSS-002 (high)**: No CI: nothing runs `pnpm check` on a pull request, so a contribution can land untested.
   - [ ] **2.1**: Add .github/workflows/ci.yml triggered on pull_request and on push to main.
   - [ ] **2.2**: Run `pnpm install --frozen-lockfile` then `pnpm check`, on the Node version from engines.

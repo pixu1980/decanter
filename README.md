@@ -1,6 +1,6 @@
 # decanter
 
-Wrap **any Windows-only PC game — Steam, GOG or Epic** — into a real macOS
+Wrap **any Windows-only PC game (Steam, GOG or Epic)** into a real macOS
 `.app` on Apple Silicon, through Wine and Apple's D3DMetal (Game Porting
 Toolkit). One repo, one runtime registry, one CLI, one terminal interface.
 
@@ -20,7 +20,7 @@ already owns games on.
 - **Offline where it can.** The Steam owned list and the whole catalog read the
   clients' own caches; GOG and Epic log in once, then work from the cache.
 - **Full lifecycle.** run, window mode, logs, saves, mods, backups, uninstall,
-  runtime upgrade and rollback — idempotent, and every step honours `--dry-run`.
+  runtime upgrade and rollback, idempotent, and every step honors `--dry-run`.
 - **OpenTUI interface** (`@opentui/react`) over the same engine as the CLI.
 
 > Unofficial fan tool. **You must own each game on the store you download it
@@ -58,7 +58,7 @@ runtimes, dedicated servers, SDKs, DLC, soundtracks and demos stay out.
   `wine-devel` / `wine-staging` build when GPTK's Wine 7.7 cannot run the game.
   An opt-in `gptk-apple` runtime overlays the newer D3DMetal from Apple's Game
   Porting Toolkit 4.0 DMG onto the Gcenx loader (only the D3DMetal layer; the
-  redist's 4.0 bridge DLLs are skipped because they do not initialise on Wine
+  redist's 4.0 bridge DLLs are skipped because they do not initialize on Wine
   7.7). For a Gcenx runtime on Apple Silicon, `setup` also installs the Rosetta
   far-return `wow64cpu.dll` fix that stops 32-bit games crashing in
   `wow64cpu.dll`.
@@ -147,7 +147,7 @@ logged in with. `list steam` reads the owned list from the Steam client's own
 caches (the library folders and `appcache/appinfo.vdf`) with no key and no
 network; when a **Steam Web API key** is set it uses the API instead
 (`decanter config steamApiKey=<key>`, free from
-[steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey); the
+[the Steam Web API key page](https://steamcommunity.com/dev/apikey); the
 SteamID is auto-detected or set with `steamId`). The profile's **Game details**
 must be **Public** for the API path.
 
@@ -227,4 +227,10 @@ pnpm check          # all of the above
 - [docs/troubleshooting.md](docs/troubleshooting.md) - when something breaks
 - [docs/plans/execution-plan.md](docs/plans/execution-plan.md) - the build plan
 
-MIT licensed. Wine and GPTK packaging by [Gcenx](https://github.com/Gcenx).
+## Inspirations
+
+- Ignacio Martin Vazquez
+
+Wine and GPTK packaging by [Gcenx](https://github.com/Gcenx).
+
+MIT licensed.
