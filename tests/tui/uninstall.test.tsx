@@ -51,8 +51,32 @@ async function settle(setup: Awaited<ReturnType<typeof testRender>>, ms = 120): 
   await setup.renderOnce();
 }
 
+/**
+ * Render until the frame satisfies `predicate`.
+ *
+ * `renderer.waitForFrame` gives up after 20 passes, which a loaded CI runner
+ * misses; this waits on wall clock instead.
+ */
+async function waitForFrame(
+  setup: Awaited<ReturnType<typeof testRender>>,
+  predicate: (frame: string) => boolean,
+  timeoutMs = 8000,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  let frame = "";
+  while (Date.now() < deadline) {
+    await setup.renderOnce();
+    frame = setup.captureCharFrame();
+    if (predicate(frame)) {
+      return frame;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`frame predicate not met within ${timeoutMs} ms: ${frame.slice(0, 200)}`);
+}
+
 async function openAction(setup: Awaited<ReturnType<typeof testRender>>, key: string): Promise<void> {
-  await setup.waitForFrame((frame) => frame.includes("Test Game"));
+  await waitForFrame(setup, (frame) => frame.includes("Test Game"));
   setup.mockInput.pressKey("RETURN");
   await settle(setup);
   const index = ACTIONS.findIndex((action) => action.key === key);
