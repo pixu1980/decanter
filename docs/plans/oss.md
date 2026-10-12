@@ -22,9 +22,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
   - [ ] **7.2**: Source-only: say so in the README and keep `private: true`.
   - [ ] **7.3**: Publishing: follow pix-process-npm-release (Trusted Publishing, provenance, staged publish), set `name`, drop `private`, add `repository`/`homepage`/`bugs`/`keywords`.
   - [ ] **7.4**: Either way, add the `repository` field so tools can link the source.
-- [ ] **Step 8 - OSS-008 (medium)**: README requires Node 26.4+ but package.json declares no `engines`, so the requirement is unenforced.
-  - [ ] **8.1**: Add `engines.node` (`>=26.4`) to package.json.
-  - [ ] **8.2**: Use that field to pick the Node version in CI.
 - [ ] **Step 9 - OSS-009 (medium)**: No CODE_OF_CONDUCT.md, so expected community behavior and how it is enforced are undefined.
   - [ ] **9.1**: Adopt Contributor Covenant 2.1 as CODE_OF_CONDUCT.md.
   - [ ] **9.2**: Set the enforcement contact and link the file from the README and CONTRIBUTING.md.

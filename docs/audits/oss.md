@@ -70,6 +70,9 @@ the sources it consulted. No opinions - those belong in the review.
 
 | Release: first tag and GitHub release | `git tag -a v0.1.0` and `GET https://api.github.com/repos/pixu1980/decanter/releases` | tag `v0.1.0` pushed; the Release workflow completed `success`; the release body is 1832 bytes |
 
+| Governance: Node floor | `cat .nvmrc` and `node --test tests/unit/nodeFloor.test.ts` | `.nvmrc` pins 26.8.2; 3 tests pass (the floor, the pin, and that no `engines` field exists); `bin/node-floor.mjs` is called by the launcher and the prepare hook |
+| Governance: CI Node | `.github/workflows/ci.yml` and `release.yml` | both use `node-version-file: .nvmrc` |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
