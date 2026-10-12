@@ -10,3 +10,10 @@ coverage/
 # local Apple DMGs (redistributables, not part of the repo)
 docs/dmg/
 *.dmg
+
+# secrets and local credentials (never commit)
+.env
+.env.*
+*.local
+auth.json
+config.json

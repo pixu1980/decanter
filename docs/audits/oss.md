@@ -44,6 +44,12 @@ the sources it consulted. No opinions - those belong in the review.
 | Start script | `node -e require('./package.json').scripts.start` | `node bin/decanter.mjs` (repaired this session; it previously ran `src/cli.ts tui`, an unknown command) |
 | Dangling doc references | `grep -rn 'plans/epic-support\|plans/runtime-and-icons\|plans/gptk-4-overlay' src/` | 0 (repaired this session) |
 
+| Secrets: tracked env or credential files | `git ls-files \| grep -iE '\.env\|auth\.json'` | none tracked |
+| Secrets: credential files in history | `git log --all --diff-filter=A --name-only \| grep -iE 'auth\.json\|config\.json\|\.env'` | none ever added (only `tsconfig.json` matched the `config` filter) |
+| Secrets: personal token location | `ls -la ~/.decanter/gog ~/.decanter/epic` and `~/.decanter/config.json` | `gog/auth.json`, `epic/auth.json` and the machine settings live outside the repository, under the user home |
+| Secrets: committed credentials | `grep -rnE 'CLIENT_SECRET\|steamGridDbKey: \"' src/` | GOG client id and secret (`src/core/gog.ts:23-24`), Epic client id and secret (`src/core/epic.ts:24-25`), shared `steamGridDbKey` default (`src/core/config.ts:53`) |
+| Secrets: `.gitignore` guard | `grep -q '\.env' .gitignore` | before this run: no match, so a `.env` dropped in the tree would be committed |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
