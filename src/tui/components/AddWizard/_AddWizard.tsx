@@ -10,6 +10,7 @@ import { useKeyboard } from "@opentui/react";
 import { useState } from "react";
 
 import { theme } from "../../theme.ts";
+import { useTerminalDimensions } from "@opentui/react";
 
 /** Values collected by the wizard. */
 export interface AddValues {
@@ -50,6 +51,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
   const [slug, setSlug] = useState("");
   const [runtime, setRuntime] = useState("");
   const [field, setField] = useState<Field>("store");
+  const { width } = useTerminalDimensions();
 
   const submit = () =>
     onSubmit({
@@ -105,7 +107,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
         border
         borderStyle="rounded"
         borderColor={field === "store" ? theme.borderActive : theme.border}
-        style={{ width: 52, height: 5 }}
+        style={{ width: Math.min(52, Math.max(28, width - 4)), height: 5 }}
       >
         <select
           options={STORES}
@@ -155,6 +157,7 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
 
 /** The confirmation button: Enter (or space) here starts the install. */
 function InstallButton({ focused, busy }: { focused: boolean; busy: boolean }) {
+  const { width } = useTerminalDimensions();
   return (
     <box
       title=" Action "
@@ -162,7 +165,7 @@ function InstallButton({ focused, busy }: { focused: boolean; busy: boolean }) {
       border
       borderStyle="rounded"
       borderColor={focused ? theme.borderActive : theme.border}
-      style={{ width: 52, height: 3, alignItems: "center", justifyContent: "center" }}
+      style={{ width: Math.min(52, Math.max(28, width - 4)), height: 3, alignItems: "center", justifyContent: "center" }}
     >
       <text fg={focused ? theme.strong : theme.text}>{busy ? "[ Installing… ]" : "[ Install ]"}</text>
     </box>
@@ -171,6 +174,7 @@ function InstallButton({ focused, busy }: { focused: boolean; busy: boolean }) {
 
 /** A titled, bordered input, the same look as the settings fields. */
 function Field({ label, focused, children }: { label: string; focused: boolean; children: React.ReactNode }) {
+  const { width } = useTerminalDimensions();
   return (
     <box
       title={` ${label} `}
@@ -178,7 +182,7 @@ function Field({ label, focused, children }: { label: string; focused: boolean; 
       border
       borderStyle="rounded"
       borderColor={focused ? theme.borderActive : theme.border}
-      style={{ width: 52, height: 3 }}
+      style={{ width: Math.min(52, Math.max(28, width - 4)), height: 3 }}
     >
       {children}
     </box>

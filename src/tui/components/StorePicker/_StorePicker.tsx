@@ -6,6 +6,7 @@
 // docs: docs/managing.md
 
 import type { CatalogEntry } from "../../../core/library.ts";
+import { useTerminalDimensions } from "@opentui/react";
 import { theme } from "../../theme.ts";
 
 export interface StorePickerProps {
@@ -22,6 +23,7 @@ const STORE_COLORS: Record<string, string> = {
 
 /** Render the store choice for one game. */
 export function StorePicker({ title, entries, index }: StorePickerProps) {
+  const { width } = useTerminalDimensions();
   return (
     <box
       title=" Install from "
@@ -29,7 +31,7 @@ export function StorePicker({ title, entries, index }: StorePickerProps) {
       border
       borderStyle="rounded"
       borderColor={theme.borderActive}
-      style={{ flexDirection: "column", width: 64, paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
+      style={{ flexDirection: "column", width: Math.min(64, Math.max(28, width - 4)), paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
     >
       <text fg={theme.strong}>{title}</text>
       <text fg={theme.muted}>Owned on more than one store — choose where to install it.</text>
@@ -38,7 +40,7 @@ export function StorePicker({ title, entries, index }: StorePickerProps) {
         return (
           <box
             key={entry.store}
-            style={{ flexDirection: "row", backgroundColor: active ? theme.selection : undefined }}
+            style={{ flexDirection: "row", flexShrink: 0, backgroundColor: active ? theme.selection : undefined }}
           >
             <text fg={active ? theme.strong : theme.text}>
               {active ? "▶ " : "  "}

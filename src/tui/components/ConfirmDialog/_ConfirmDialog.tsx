@@ -5,6 +5,8 @@
 //
 // docs: docs/architecture.md
 
+import { useTerminalDimensions } from "@opentui/react";
+
 import { theme } from "../../theme.ts";
 
 export interface ConfirmDialogProps {
@@ -15,6 +17,7 @@ export interface ConfirmDialogProps {
 
 /** Render a destructive-action confirmation. */
 export function ConfirmDialog({ title, message, detail }: ConfirmDialogProps) {
+  const { width } = useTerminalDimensions();
   return (
     <box
       title={` ${title} `}
@@ -22,7 +25,7 @@ export function ConfirmDialog({ title, message, detail }: ConfirmDialogProps) {
       border
       borderStyle="rounded"
       borderColor={theme.danger}
-      style={{ flexDirection: "column", width: 62, paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
+      style={{ flexDirection: "column", width: Math.min(62, Math.max(28, width - 4)), paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
     >
       <text fg={theme.strong}>{message}</text>
       {detail ? <text fg={theme.muted}>{detail}</text> : null}

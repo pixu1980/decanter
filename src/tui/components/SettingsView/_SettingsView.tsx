@@ -3,7 +3,9 @@
 // docs: docs/managing.md
 
 import type { Config } from "../../../core/config.ts";
+import { useTerminalDimensions } from "@opentui/react";
 import { theme } from "../../theme.ts";
+import { truncate } from "../../text.ts";
 import { Panel } from "../Panel/index.ts";
 
 export interface LoginState {
@@ -71,6 +73,7 @@ export function SettingsView({
   onEditSubmit,
 }: SettingsViewProps) {
   const labelWidth = Math.max(18, ...rows.map((row) => row.label.length));
+  const { width } = useTerminalDimensions();
 
   return (
     <Panel title="Settings" flexGrow={1}>
@@ -86,14 +89,16 @@ export function SettingsView({
                 ? "enter toggle"
                 : "enter run";
         return (
-          <box key={row.key} style={{ flexDirection: "row" }}>
-            <box style={{ width: labelWidth + 2 }}>
+          <box key={row.key} style={{ flexDirection: "row", flexShrink: 0 }}>
+            <box style={{ width: labelWidth + 2, flexShrink: 0 }}>
               <text fg={selected ? theme.accent : theme.faint}>{`${selected ? "› " : "  "}${row.label}`}</text>
             </box>
             {isEditing ? (
               <input value={editing.value} focused placeholder={row.value} onInput={onEditValue} onSubmit={onEditSubmit} />
             ) : (
-              <text fg={row.kind === "action" && row.value === "not logged in" ? theme.warning : theme.text}>{row.value}</text>
+              <text fg={row.kind === "action" && row.value === "not logged in" ? theme.warning : theme.text}>
+                {truncate(row.value, Math.max(8, width - labelWidth - 12))}
+              </text>
             )}
             <text fg={theme.muted}>{`   ${hint}`}</text>
           </box>
@@ -107,7 +112,7 @@ export function SettingsView({
           border
           borderStyle="rounded"
           borderColor={theme.borderActive}
-          style={{ width: 60, height: 3 }}
+          style={{ width: Math.min(60, Math.max(28, width - 4)), height: 3 }}
         >
           <input
             value={code}

@@ -2,8 +2,11 @@
 //
 // docs: docs/architecture.md
 
+import { useTerminalDimensions } from "@opentui/react";
+
 import type { GameRow } from "../../helpers/index.ts";
 import { symbols, theme } from "../../theme.ts";
+import { truncate } from "../../text.ts";
 import { Panel } from "../Panel/index.ts";
 
 export interface GameListProps {
@@ -13,9 +16,13 @@ export interface GameListProps {
 
 /** Render the list of games. */
 export function GameList({ rows, selected }: GameListProps) {
+  const { width } = useTerminalDimensions();
+  const nameWidth = Math.max(10, width - 46);
   return (
     <Panel title={`Games${rows.length ? ` (${rows.length})` : ""}`} flexGrow={1}>
-      {rows.length === 0 ? <EmptyState /> : rows.map((row, index) => renderRow(row, index === selected))}
+      {rows.length === 0
+        ? <EmptyState />
+        : rows.map((row, index) => renderRow(row, index === selected, nameWidth))}
     </Panel>
   );
 }
@@ -29,20 +36,21 @@ function EmptyState() {
   );
 }
 
-function renderRow(row: GameRow, active: boolean) {
+function renderRow(row: GameRow, active: boolean, nameWidth: number) {
   return (
     <box
       key={row.profile.slug}
       style={{
         flexDirection: "row",
+        flexShrink: 0,
         justifyContent: "space-between",
         backgroundColor: active ? theme.selection : undefined,
       }}
     >
       <text fg={active ? theme.strong : theme.text}>
-        {active ? symbols.pointer : " "} {row.profile.name}
+        {truncate(`${active ? symbols.pointer : " "} ${row.profile.name}`, nameWidth)}
       </text>
-      <box style={{ flexDirection: "row", gap: 2 }}>
+      <box style={{ flexDirection: "row", flexShrink: 0, gap: 2 }}>
         <text fg={row.imported ? theme.success : theme.faint}>
           {row.imported ? "installed" : "not installed"}
         </text>

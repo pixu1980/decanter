@@ -7,7 +7,9 @@
 // docs: docs/managing.md
 
 import type { WizardRow } from "../../../core/wizard.ts";
+import { useTerminalDimensions } from "@opentui/react";
 import { theme } from "../../theme.ts";
+import { truncate } from "../../text.ts";
 import { Panel } from "../Panel/index.ts";
 
 export interface SetupViewProps {
@@ -17,6 +19,7 @@ export interface SetupViewProps {
 /** Render the credential checklist. */
 export function SetupView({ rows }: SetupViewProps) {
   const set = rows.filter((row) => row.value !== "").length;
+  const { width } = useTerminalDimensions();
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1, gap: 1 }}>
@@ -25,16 +28,16 @@ export function SetupView({ rows }: SetupViewProps) {
           No credential lives in the source. They are stored in ~/.decanter/config.json on this machine only.
         </text>
         {rows.map((row) => (
-          <box key={row.field.id} style={{ flexDirection: "row" }}>
-            <box style={{ width: 22 }}>
+          <box key={row.field.id} style={{ flexDirection: "row", flexShrink: 0 }}>
+            <box style={{ width: 22, flexShrink: 0 }}>
               <text fg={theme.strong}>{row.field.label}</text>
             </box>
-            <box style={{ width: 9 }}>
+            <box style={{ width: 9, flexShrink: 0 }}>
               <text fg={row.value !== "" ? theme.success : theme.muted}>
                 {row.value !== "" ? "set" : "missing"}
               </text>
             </box>
-            <text fg={theme.faint}>{row.field.help}</text>
+            <text fg={theme.faint}>{truncate(row.field.help, Math.max(8, width - 36))}</text>
           </box>
         ))}
         <text fg={theme.muted}>enter — run the wizard in a Terminal · r — re-check · esc — skip</text>

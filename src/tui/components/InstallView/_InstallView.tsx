@@ -52,8 +52,8 @@ export function InstallView({ title, store, id, lines, busy, pageSize }: Install
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <box style={{ flexDirection: "row" }}>
-      <box style={{ width: 10 }}>
+    <box style={{ flexDirection: "row", flexShrink: 0 }}>
+      <box style={{ width: 10, flexShrink: 0 }}>
         <text fg={theme.faint}>{label}</text>
       </box>
       <text fg={theme.text}>{value}</text>

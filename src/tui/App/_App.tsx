@@ -63,6 +63,7 @@ import { SettingsView, settingsRows, type LoginState } from "../components/Setti
 import { StorePicker } from "../components/StorePicker/index.ts";
 import { InstallView } from "../components/InstallView/index.ts";
 import { StatusBar } from "../components/StatusBar/index.ts";
+import { theme } from "../theme.ts";
 import { SetupView } from "../components/SetupView/index.ts";
 import { wizardRows } from "../../core/wizard.ts";
 import { Activity, type ActivityLine } from "../components/Activity/index.ts";
@@ -628,7 +629,7 @@ export function App() {
   });
 
   return (
-    <box style={{ flexDirection: "column", flexGrow: 1, padding: 1, gap: 1 }}>
+    <box style={{ flexDirection: "column", flexGrow: 1, padding: 1, gap: 1, backgroundColor: theme.panel }}>
       <Header breadcrumb={breadcrumbFor(view, current)} right={`${rows.length} game(s) · ? help`} />
 
       {pending || helpOpen || storePick ? (

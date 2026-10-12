@@ -9,6 +9,7 @@
 // docs: docs/managing.md
 
 import type { CatalogGame } from "../../../core/library.ts";
+import { useTerminalDimensions } from "@opentui/react";
 import { theme } from "../../theme.ts";
 import { Panel } from "../Panel/index.ts";
 
@@ -31,6 +32,8 @@ const STORE_COLORS: Record<string, string> = {
 /** Render the catalog table with a filter input. */
 export function CatalogView({ games, index, filter, onFilter, busy, pageSize }: CatalogViewProps) {
   const idWidth = 22;
+  const { width } = useTerminalDimensions();
+  const filterWidth = Math.min(52, Math.max(24, width - 4));
   const storesWidth = 16;
   const total = games.length;
   const size = Math.max(1, Math.min(pageSize, total || 1));
@@ -46,7 +49,7 @@ export function CatalogView({ games, index, filter, onFilter, busy, pageSize }: 
         border
         borderStyle="rounded"
         borderColor={theme.borderActive}
-        style={{ width: 52, height: 3 }}
+        style={{ width: filterWidth, height: 3 }}
       >
         <input value={filter} focused placeholder="type to filter by name or store" onInput={onFilter} />
       </box>

@@ -2,6 +2,8 @@
 //
 // docs: docs/architecture.md
 
+import { useTerminalDimensions } from "@opentui/react";
+
 import { theme } from "../../theme.ts";
 import { VERSION } from "../../../core/version.ts";
 
@@ -53,6 +55,7 @@ const SECTIONS: Section[] = [
 
 /** Render the keyboard reference. */
 export function HelpOverlay() {
+  const { width } = useTerminalDimensions();
   return (
     <box
       title=" Keyboard shortcuts "
@@ -60,13 +63,13 @@ export function HelpOverlay() {
       border
       borderStyle="rounded"
       borderColor={theme.border}
-      style={{ flexDirection: "column", width: 58, paddingX: 2, paddingY: 1, gap: 0, backgroundColor: theme.panel }}
+      style={{ flexDirection: "column", width: Math.min(58, Math.max(24, width - 4)), paddingX: 2, paddingY: 1, gap: 0, backgroundColor: theme.panel }}
     >
       {SECTIONS.map((section) => (
         <box key={section.title} style={{ flexDirection: "column" }}>
           <text fg={theme.accent}>{section.title}</text>
           {section.shortcuts.map((shortcut) => (
-            <box key={shortcut.keys} style={{ flexDirection: "row" }}>
+            <box key={shortcut.keys} style={{ flexDirection: "row", flexShrink: 0 }}>
               <text fg={theme.strong}>{`  ${shortcut.keys.padEnd(12)}`}</text>
               <text fg={theme.muted}>{shortcut.label}</text>
             </box>
