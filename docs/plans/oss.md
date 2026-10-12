@@ -22,9 +22,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
   - [ ] **7.2**: Source-only: say so in the README and keep `private: true`.
   - [ ] **7.3**: Publishing: follow pix-process-npm-release (Trusted Publishing, provenance, staged publish), set `name`, drop `private`, add `repository`/`homepage`/`bugs`/`keywords`.
   - [ ] **7.4**: Either way, add the `repository` field so tools can link the source.
-- [ ] **Step 12 - OSS-012 (low)**: No dependency-update automation; three runtime dependencies are pinned exactly and drift silently.
-  - [ ] **12.1**: Add .github/dependabot.yml for npm on a weekly schedule, or a Renovate config.
-  - [ ] **12.2**: Gate: Dependabot opens a PR and CI runs on it.
 - [ ] **Step 13 - OSS-013 (low)**: No linter, formatter or .editorconfig, so style consistency relies on review alone.
   - [ ] **13.1**: Add .editorconfig.
   - [ ] **13.2**: Add a formatter/linter and a `lint` script included in `pnpm check`.
