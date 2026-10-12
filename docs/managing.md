@@ -14,7 +14,7 @@ Store (Steam/GOG/Epic)   ~/.decanter/games/<slug>/       Wine prefix
                          assets/   (icon)                        ▲
                          saves/    (saves, a link          │ import (rsync)
                                     when in the prefix)     │
-store downloader ─────── download ──▶ ~/.decanter/{steamcmd,gog,epic}/…
+store downloader ─────── download ──▶ ~/.decanter/{steamcmd,gog,epic}/...
 ```
 
 The depot download is **moved**, not copied: after `import` the depot folder is
@@ -34,7 +34,7 @@ empty, so the next download fetches the current build again.
 `list <store>` prints one store's owned games. `add --store <store>` registers
 one; each store has its own id flag (`--appid`, `--gog-id`, `--epic-app`). The
 download, import and icon steps dispatch on the store, so the rest of the
-lifecycle — setup, run, window mode, saves, backups, uninstall — is identical.
+lifecycle, setup, run, window mode, saves, backups, uninstall, is identical.
 
 ## Adding a game
 
@@ -93,7 +93,7 @@ decanter run <game>         # or open the .app
 
 For a Gcenx `wine-devel` / `wine-staging` runtime on Apple Silicon, `setup` also
 installs the Rosetta `wow64cpu` fix: Wine switches 32↔64 bit with a far jump
-that Rosetta 2 sometimes does not honour, which crashes 32-bit games in
+that Rosetta 2 sometimes does not honor, which crashes 32-bit games in
 `wow64cpu.dll`. The patched DLL (far returns) is downloaded once, verified by
 SHA-256 and copied into both the runtime and the prefix. See
 [troubleshooting](troubleshooting.md#the-game-crashes-right-after-the-d3d-device-is-created-32-bit-games).
@@ -132,7 +132,7 @@ the older, unsanitized name.
 ## The catalog
 
 `c` in the interface opens the catalog: every **game** the three stores own, in
-one filterable table. `list <store>` still prints the provider's full list — the
+one filterable table. `list <store>` still prints the provider's full list, the
 catalog drops what is not a game. Steam's `common.type` in the appinfo cache
 separates a `Game` from a `Tool`, so runtimes, dedicated servers, SDKs, DLC,
 soundtracks and demos stay out.
@@ -165,6 +165,7 @@ Unity games store their screen mode as a JSON blob in the Wine registry. Set in
     "unityModeValue": "Screenmanager Fullscreen mode_h..."
   }
 }
+
 ```
 
 Then `decanter windowed <game>` and `decanter fullscreen <game>` flip the
@@ -178,6 +179,29 @@ decanter uninstall <game> --purge
 decanter setup <game>
 decanter download <game>
 ```
+
+## Credentials and the first-run wizard
+
+No credential ships in the source. They all live in `~/.decanter/config.json`
+under `credentials`, and `decanter init` collects them in one pass (the TUI opens
+the same screen on a first run). `decanter config <id>=<value>` writes one:
+
+```sh
+decanter init
+decanter config gog.clientId=<id>
+decanter config steam.apiKey=<key>
+```
+
+| Credential id | What it is | Where to get it |
+|---|---|---|
+| `steam.apiKey` | Steam Web API key, for `list steam` | the Steam Web API key page (free) |
+| `steam.steamId` | SteamID64, auto-detected from Steam when empty | the steamid.io lookup |
+| `steamGridDb` | SteamGridDB key, for missing artwork | the SteamGridDB profile |
+| `gog.clientId` / `gog.clientSecret` | GOG Galaxy public client | the gogdl or Heroic source |
+| `epic.clientId` / `epic.clientSecret` | Epic launcher public client | the legendary source |
+
+A store whose credentials are missing is blocked with a pointer to the wizard,
+and the catalog reads each configured store's local cache before the fetch.
 
 ## Settings and environment
 
@@ -197,12 +221,10 @@ Settings live in `~/.decanter/config.json`.
 | `<PREFIX>_SAVES` | Saves folder for one game |
 | `SM_UPDATE_TIMEOUT` | Seconds the guided console flow waits (default 1800) |
 
-`steamApiKey` in `config.json` is the Steam Web API key `list steam` uses for
-the owned list (free from
-[steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey));
-`steamId` overrides the auto-detected SteamID64. `steamGridDbKey` is the
-SteamGridDB API key used when the Steam artwork is missing. Change either with
-`decanter config steamApiKey=<key>` / `steamGridDbKey=<key>`.
+`credentials.steam.apiKey` / `credentials.steam.steamId` feed `list steam`,
+`credentials.steamGridDb` feeds the missing-artwork lookup, and
+`credentials.gog` / `credentials.epic` carry the launcher public clients. See
+[the credentials section](#credentials-and-the-first-run-wizard) to set them.
 
 `<PREFIX>` is derived from the slug, for example `GK2` for
 `graveyard-keeper-2`.
@@ -210,7 +232,7 @@ SteamGridDB API key used when the Steam artwork is missing. Change either with
 ## GPTK 4.0 from Apple's DMG
 
 Apple ships `Game Porting Toolkit 4.0` only from
-[developer.apple.com](https://developer.apple.com/download/all/) (an Apple ID is
+[Apple developer downloads](https://developer.apple.com/download/all/) (an Apple ID is
 required); Gcenx's Homebrew cask is still on D3DMetal 3.0. To use the newer
 D3DMetal for one game:
 
@@ -235,7 +257,7 @@ D3DMetal for one game:
 `setup` clones the Gcenx loader into `~/.decanter/wine/gptk-apple` and overlays
 the DMG's `redist/lib/external` (D3DMetal framework plus `libd3dshared.dylib`)
 on top of it. The redist's `wine` bridge DLLs are skipped: the 4.0 bridges do not
-initialise on Apple's frozen Wine 7.7, while the 3.0 bridges the loader already
+initialize on Apple's frozen Wine 7.7, while the 3.0 bridges the loader already
 carries work with the 4.0 framework. The clone uses APFS copy-on-write, so it
 costs only the new D3DMetal. The default `gptk` runtime is untouched, and
 `doctor` shows which D3DMetal a game now uses. Once the overlay exists the DMG
@@ -248,7 +270,7 @@ launches recorded for it:
 
 ```
 $ decanter runtime graveyard-keeper-2
-Graveyard Keeper 2 — runtime
+Graveyard Keeper 2, runtime
   runtime        gptk-apple
   description    Game Porting Toolkit (Apple) · wine-7.7 · D3DMetal 4.0b2
   wine           wine-7.7
@@ -274,7 +296,7 @@ offer:
 
 The app bundle is rebuilt after a change. Every launch records the runtime in
 the profile, so `decanter runtime-rollback <game>` returns to the most recent
-runtime that is not the current one — the fastest way back from a `gptk` →
+runtime that is not the current one, the fastest way back from a `gptk` →
 `gptk-apple` switch or a newer `wine-devel` build that misbehaves. In the TUI
 the **Runtime**, **Upgrade runtime** and **Roll back runtime** actions do the
 same.
@@ -292,17 +314,18 @@ Some games need Wine tweaks of their own. A profile carries a `wine` block that
   "virtualDesktop": "1280x720",
   "env": { "WINEDLLOVERRIDES": "..." }
 }
+
 ```
 
-- `tricks` — winetricks verbs installed once during `setup` (needs the
+- `tricks`, winetricks verbs installed once during `setup` (needs the
   `winetricks` formula; the applied set is recorded in
   `<prefix>/.decanter-tricks`).
-- `dllOverrides` — extra `WINEDLLOVERRIDES` for the launch.
-- `args` — extra arguments for the game executable.
-- `virtualDesktop` — run in a Wine virtual desktop of that size, so a game that
+- `dllOverrides`, extra `WINEDLLOVERRIDES` for the launch.
+- `args`, extra arguments for the game executable.
+- `virtualDesktop`, run in a Wine virtual desktop of that size, so a game that
   grabs the screen stays in a closable window (e.g. The Settlers II needs
   `d3dx9` and a virtual desktop).
-- `env` — extra environment variables for the launch.
+- `env`, extra environment variables for the launch.
 
 Example, The Settlers II: 10th Anniversary (GOG, 32-bit Direct3D 9):
 `wineRuntime: "wine-devel"`, `wineVersion: "11.18"`,

@@ -34,6 +34,10 @@ manifest), so the download, import and add steps are small per-store dispatch
 tables in `lifecycle.ts` and `add.ts` rather than one interface every store must
 satisfy; adding a store is a new provider plus one entry per table.
 
+Every store's credentials live in `config.json` under `credentials`; none is in
+the source. `decanter init` (CLI) and the TUI Setup screen write them through the
+same field list, and a store with no credentials is blocked (ADR 018).
+
 ## Runtime registry
 
 There is no per-game repo. `decanter add` and `decanter migrate` write a
@@ -130,13 +134,13 @@ store.
 `epic.ts` mirrors the GOG client: OAuth with the public launcher client (browser
 plus a pasted authorization code, tokens under the decanter home), entitlements
 and the catalog for lookup and artwork, and a build resolved through the
-launcher host. Content is a binary BuildPatch manifest — the parser is a
+launcher host. Content is a binary BuildPatch manifest, the parser is a
 faithful port of legendary's format (`0x44BEC00C` magic, an optionally zlib
-body, then the metadata, chunk data list and file manifest list) — and the
+body, then the metadata, chunk data list and file manifest list), and the
 chunks are fetched from the build CDN bases, inflated and verified by SHA-1.
 `add --store epic`, `download`, `import` and `icon` branch on the store. `run`
 fetches an exchange code and passes the launcher arguments legendary computes
-(`-AUTH_TYPE=exchangecode`, `-epicapp`, `-epicusername`, `-epicsandboxid`, …)
+(`-AUTH_TYPE=exchangecode`, `-epicapp`, `-epicusername`, `-epicsandboxid`, ...)
 through `open --args`, so authenticated titles start; the EOS overlay for
 multiplayer is still the next step. See
 [ADR 017](adr/017-epic.md).
@@ -183,7 +187,7 @@ D3DMetal.
 Only the DMG's `redist/lib/external` is overlaid: the D3DMetal framework plus
 `libd3dshared.dylib`. The redist also ships `wine/x86_64-unix` and
 `wine/x86_64-windows` bridge DLLs (d3d10/11/12, dxgi, nvapi64, nvngx), but those
-4.0 bridges do not initialise on Apple's frozen Wine 7.7 (`LdrInitializeThunk
+4.0 bridges do not initialize on Apple's frozen Wine 7.7 (`LdrInitializeThunk
 "d3d11.dll" failed to initialize ... status c0000142`), so the loader keeps its
 own bridge DLLs and `ensureWine` deliberately skips the redist `wine` folder.
 Verified with D3DMetal 4.0b2: Graveyard Keeper 2 boots and renders through the
@@ -207,12 +211,12 @@ the loader directly, so the bundle needs no Node runtime at play time.
 and `icon.ts` tries them in order, stopping at the first that produces an
 `.icns`, then builds `icon.png` plus `icon.icns` with `sips` and `iconutil`:
 
-1. **Steam** — the vertical Steam library art (600x900), then SteamGridDB
+1. **Steam**, the vertical Steam library art (600x900), then SteamGridDB
    (square icons first, then vertical grids), then the smaller Steam artwork
    (logos and capsules);
-2. **GOG** — the product artwork (`icon`, `logo2x`, `logo`, `background`) from
-   the cached `meta.gogImages` map, made absolute (`//host/…` → `https://host/…`);
-3. **Epic** — the catalog images from the cached `meta.epicImages` map;
+2. **GOG**, the product artwork (`icon`, `logo2x`, `logo`, `background`) from
+   the cached `meta.gogImages` map, made absolute (`//host/...` → `https://host/...`);
+3. **Epic**, the catalog images from the cached `meta.epicImages` map;
 4. the icon embedded in the game executable, with `wrestool` / `icotool`
    (Homebrew `icoutils`);
 5. a placeholder generated from the game's initial with a built-in bitmap font.
@@ -235,9 +239,9 @@ hand.
 
 ## Safety
 
-- Every external command goes through `exec`, the single place that honours
+- Every external command goes through `exec`, the single place that honors
   `--dry-run`, so a dry run never touches disk.
-- Registry writes and removals honour dry-run too (`fsx.ts`).
+- Registry writes and removals honor dry-run too (`fsx.ts`).
 - `die` throws a `CliError`; `cli.ts` is the only place that turns it into an
   exit code, so the engine never calls `process.exit`.
 - Destructive commands confirm first unless `--yes`.
@@ -252,7 +256,7 @@ captures `process.stdout`/`stderr` so engine logging never corrupts the frame.
 
 Destructive actions never let the engine prompt on stdin: `actions.ts` marks
 them, `_App.tsx` asks in-app and runs them with `yes: true`. `theme.ts` owns the
-palette, so screens do not hard-code colours (ADR 005).
+palette, so screens do not hard-code colors (ADR 005).
 
 ## Tests
 

@@ -266,7 +266,7 @@ export function epicConfigured(config: Config): boolean {
 /** GOG credentials, or a message pointing at the wizard. */
 export function requireGog(config: Config): GogCredentials {
   if (!gogConfigured(config)) {
-    die("GOG is not configured — run: decanter init");
+    die("GOG is not configured - run: decanter init");
   }
   return config.credentials.gog;
 }
@@ -274,7 +274,7 @@ export function requireGog(config: Config): GogCredentials {
 /** Epic credentials, or a message pointing at the wizard. */
 export function requireEpic(config: Config): EpicCredentials {
   if (!epicConfigured(config)) {
-    die("Epic is not configured — run: decanter init");
+    die("Epic is not configured - run: decanter init");
   }
   return config.credentials.epic;
 }
@@ -282,7 +282,7 @@ export function requireEpic(config: Config): EpicCredentials {
 /** Steam Web API credentials, or a message pointing at the wizard. */
 export function requireSteam(config: Config): SteamCredentials {
   if (!steamConfigured(config)) {
-    die("Steam is not configured — run: decanter init");
+    die("Steam is not configured - run: decanter init");
   }
   return config.credentials.steam;
 }

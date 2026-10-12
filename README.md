@@ -35,7 +35,9 @@ already owns games on.
 | **Epic** | the launcher library API | Epic's BuildPatch manifest (binary manifest + hashed chunks) | `decanter login epic` (OAuth, paste the code) |
 
 `list <store>` prints one store's full library. The catalog keeps only games, so
-runtimes, dedicated servers, SDKs, DLC, soundtracks and demos stay out.
+runtimes, dedicated servers, SDKs, DLC, soundtracks and demos stay out. Every
+credential lives in `~/.decanter/config.json`, collected by `decanter init`; a
+store with no credentials is blocked until the wizard sets them.
 
 ## What it does
 
@@ -88,9 +90,16 @@ pnpm setup                # links the global `decanter` command
 pnpm start                # opens the terminal interface from the checkout
 ```
 
+On a machine with no credentials the first run opens the **setup wizard**
+(CLI: `decanter init`). It collects every credential and writes it to
+`~/.decanter/config.json`; no credential ships in this repository.
+
 ## Quick start
 
 ```sh
+# configure the stores once
+decanter init
+
 # open the terminal interface
 decanter
 
@@ -116,6 +125,7 @@ once; the build is then fetched through the store's own content system.
 
 | Command | What it does |
 |---|---|
+| `init` | First-run wizard: collect every credential into `~/.decanter` |
 | `list [store]` | List registered games, or a store's owned games (`steam`, `gog`, `epic`) |
 | `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
 | `remove <game>` | Uninstall and forget a game (`--purge` deletes the prefix) |
@@ -142,14 +152,13 @@ once; the build is then fetched through the store's own content system.
 | (no command) | Open the terminal interface |
 | `version` / `help` | Version / this list |
 
-`list <store>` needs the store to be readable. GOG and Epic use the account you
-logged in with. `list steam` reads the owned list from the Steam client's own
-caches (the library folders and `appcache/appinfo.vdf`) with no key and no
-network; when a **Steam Web API key** is set it uses the API instead
-(`decanter config steamApiKey=<key>`, free from
-[the Steam Web API key page](https://steamcommunity.com/dev/apikey); the
-SteamID is auto-detected or set with `steamId`). The profile's **Game details**
-must be **Public** for the API path.
+`list <store>` needs that store configured. Each store's owned list is read from
+its **local cache first** (Steam's library folders and `appcache/appinfo.vdf`, or
+the GOG and Epic cache `list` writes); the store API is the refresh and the
+fallback (`--refresh`). `decanter init` configures every store in one pass and
+stores the values in `~/.decanter/config.json`. The Steam Web API key is free at
+[the Steam Web API key page](https://steamcommunity.com/dev/apikey), and the
+profile's **Game details** must be **Public** for the API path.
 
 Other flags: `--refresh` (`list`) fetches from the store instead of the cache,
 `--manual` (`download`) skips SteamCMD for the Steam console, `--installer

@@ -77,7 +77,3 @@ finding stays open. This file is deleted by the run that finds nothing open.
 - [ ] **Step 15 - OSS-015 (info)**: Funding is undefined: no FUNDING.yml and no statement, while the role expects funding to be transparent and independent of one payer.
   - [x] **15.1**: Decide with the maintainer whether the project accepts funding. Confirmed: funding accepted.
   - [ ] **15.2**: If yes, add .github/FUNDING.yml and a funding section to the README; if no, state that the project is unfunded.
-- [ ] **Step 16 - OSS-016 (medium)**: No `.gitignore` guard for secrets: a `.env`, `auth.json` or `config.json` added by a contributor would be committed; personal tokens live outside the repository today, and the repository ships the shared SteamGridDB key as the config default.
-  - [x] **16.1**: Add `.env`, `.env.*`, `*.local`, `auth.json` and `config.json` to `.gitignore`. Done this run.
-  - [ ] **16.2**: Document the credential model (personal tokens under `~/.decanter/`, public-client credentials in `src/` by design) in SECURITY.md when OSS-004 lands.
-  - [ ] **16.3**: Add a secret scan (gitleaks) to CI once OSS-002 lands.

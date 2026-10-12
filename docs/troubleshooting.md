@@ -39,19 +39,31 @@ prefix's Wine processes and retries `open` once, and `decanter quit` detects the
 open bundle even when the game executable is gone. If it still fails, run
 `decanter quit <game>`, then `pkill -f 'Contents/MacOS/launch'` and retry.
 
+## A store is not configured
+
+```
+decanter: Steam is not configured - run: decanter init
+```
+
+No credential ships in the source, and the error names the store missing one.
+Run `decanter init` (or the TUI Setup screen) and paste the value. GOG and Epic
+want the launcher public-client id and secret, which no user can generate: copy
+them from the reference projects (gogdl or Heroic for GOG, legendary for Epic).
+The Steam Web API key is free at the Steam Web API key page.
+
 ## GOG login: `redirect_uri_mismatch`
 
 GOG validates the OAuth `redirect_uri` at the token step and only accepts the
 registered `https://embed.gog.com/on_login_success?origin=client`, so a local
 loopback server cannot capture the code. `decanter login gog` opens that URL,
-and after logging in you paste the **redirect URL** (or just the `code`) —
+and after logging in you paste the **redirect URL** (or just the `code`) -
 `extractGogCode` pulls the `code` out of either. The token error body is shown,
 so a bad or reused code says so explicitly.
 
 ## Epic login: the authorization code is rejected
 
 `decanter login epic` opens the Epic OAuth URL; after logging in you paste the
-`code` it prints (or the whole redirect URL — `extractEpicCode` pulls the code
+`code` it prints (or the whole redirect URL, `extractEpicCode` pulls the code
 out of either). The code is single-use and short-lived, so an expired or
 already-used one fails at the token exchange with the error body shown; run
 `decanter login epic` again for a fresh code. Tokens live under
@@ -127,7 +139,7 @@ and are disabled by Gatekeeper.
 
 ## The game crashes right after the D3D device is created (32-bit games)
 
-A 32-bit game can die with a Wine page fault just as it instantiates Direct3D, or
+A 32-bit game can crash with a Wine page fault just as it instantiates Direct3D, or
 later when a mission loads:
 
 ```
