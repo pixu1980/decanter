@@ -80,7 +80,7 @@ the sources it consulted. No opinions - those belong in the review.
 
 | Governance: governance document | `ls GOVERNANCE.md` and `grep -n GOVERNANCE README.md` | the roles, the ADR process, the funding boundary and the change process; linked from the README docs list |
 
-| Governance: dependency updates | `ls .github/dependabot.yml` and the GitHub Dependabot page | weekly npm updates, grouped (runtime: `@opentui/*` and `react`; development), 5 open pull requests, commit messages `chore(deps): ...` so the commit check accepts them |
+| Governance: dependency updates | `ls .github/dependabot.yml`, `pulls?state=open` and the check runs | weekly npm updates grouped (runtime: `@opentui/*` and `react`; development), 5 open, `chore(deps)` messages. Dependabot opened PR #1 (runtime group) and PR #2 (development); CI ran `success` on both branches and PR #1 shows `pnpm check` and `commit messages` green |
 
 ## Files read
 
