@@ -1,0 +1,73 @@
+name: Bug report
+description: Something does not work as expected
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Fill in what you can: a clear report is worth more
+        than a complete one.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game and store
+      description: The game name, the store (Steam, GOG or Epic) and the slug.
+      placeholder: The Cosmic Wheel Sisterhood, Steam, the-cosmic-wheel-sisterhood
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. decanter add --appid 1340480
+        2. decanter run the-cosmic-wheel-sisterhood
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS and hardware
+      placeholder: macOS 15.2, Apple M2
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Node and decanter version
+      placeholder: Node 26.8.2, decanter 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: decanter status and doctor output
+      description: Paste `decanter status <game>` and `decanter doctor <game>`.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log tail
+      description: The last lines of `decanter logs <game> -n 100`.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I did not paste a credential (API key, token or OAuth secret).
+          required: true
