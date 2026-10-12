@@ -17,10 +17,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 5 - OSS-005 (medium)**: The conventional-commit rule is enforced only by the author's global git hook, not by the repository, so a contributor's commit can break changelog generation.
-  - [ ] **5.1**: Ship a commit-msg hook in the repository and point `core.hooksPath` at it from a `prepare` script.
-  - [ ] **5.2**: Document the hook in CONTRIBUTING.md.
-  - [ ] **5.3**: Add a CI step that validates a pull request's commit messages against `type(scope): subject`.
 - [ ] **Step 6 - OSS-006 (medium)**: No release process: 0 tags, no CHANGELOG, no release workflow, so users cannot pin or track a version.
   - [x] **6.1**: Confirm the first version and the release cadence with the maintainer. Confirmed: `v0.1.0` now, then on demand; semantic versioning derived from Conventional Commits.
   - [ ] **6.2**: Generate CHANGELOG.md from Conventional Commits at tag time (pix-process-changelog).

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Reject a commit message that is not a scoped Conventional Commit.
+#
+# Installed by `pnpm install` (bin/install-hooks.mjs) into .git/hooks/commit-msg,
+# so the rule holds for every contributor, not only the maintainer.
+#
+# docs: CONTRIBUTING.md
+
+first="$(sed -n '1p' "$1")"
+case "$first" in "Merge "*|"Revert "*) exit 0 ;; esac
+printf '%s\n' "$first" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\([a-z0-9._-]+\)!?: .+$' && exit 0
+echo "commit-msg: use a conventional commit WITH a scope, e.g. feat(cli): add the wizard" >&2
+exit 1

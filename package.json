@@ -15,6 +15,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepare": "node bin/install-hooks.mjs",
     "setup": "pnpm add --global .",
     "start": "node bin/decanter.mjs",
     "test": "node --test tests/unit/*.test.ts",

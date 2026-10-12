@@ -66,6 +66,12 @@ Keep the subject imperative and at most 72 characters, with no trailing period.
 Add a body only when the reason is not obvious from the subject. One logical
 change per commit: split unrelated edits before committing.
 
+A `commit-msg` hook in `.githooks/` enforces the format. `pnpm install` runs
+`prepare`, which copies it into `.git/hooks/`, so it works on a fresh clone with
+no manual step; CI validates the commit subjects of every pull request again.
+Use `git commit --no-verify` only to get out of a genuinely wrong state, never
+for a message the rule would reject.
+
 Branch names use the same vocabulary, `feat/`, `fix/`, `docs/` or `chore/`
 followed by a short kebab-case description, for example `feat/store-picker`.
 
