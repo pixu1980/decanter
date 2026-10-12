@@ -17,17 +17,11 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 1 - OSS-001 (high)**: LICENSE names a copyright holder that does not match the repository author, so ownership of the source is ambiguous.
-  - [x] **1.1**: Ask the maintainer to confirm the legal copyright holder for the LICENSE. Confirmed: `Emiliano "pixu1980" Pisu`.
-  - [x] **1.2**: Write the confirmed holder into LICENSE line 3. Done: `Copyright (c) 2026 Emiliano "pixu1980" Pisu`.
-  - [x] **1.3**: Add an AUTHORS file and reference it from LICENSE when there is more than one holder. Not needed: a single holder.
-  - [x] **1.4**: Verify GitHub detects the license: `curl -s https://api.github.com/repos/pixu1980/decanter` shows `license.spdx_id: MIT`.
-  - [x] **1.5**: Credit Ignacio Martin Vazquez under an inspirations or credits section (README or AUTHORS), and remove the name from anywhere else. Done: `README.md` `## Inspirations`.
 - [ ] **Step 2 - OSS-002 (high)**: No CI: nothing runs `pnpm check` on a pull request, so a contribution can land untested.
-  - [ ] **2.1**: Add .github/workflows/ci.yml triggered on pull_request and on push to main.
-  - [ ] **2.2**: Run `pnpm install --frozen-lockfile` then `pnpm check`, on the Node version from engines.
-  - [ ] **2.3**: Set top-level `permissions: contents: read` and pin every action to a full commit SHA.
-  - [ ] **2.4**: Require this check in the main branch protection rule.
+  - [x] **2.1**: Add .github/workflows/ci.yml triggered on pull_request and on push to main. Done this run.
+  - [x] **2.2**: Run `pnpm install --frozen-lockfile` then `pnpm check`. Done: Node 26.4 in the workflow; OSS-008 moves it to engines.
+  - [x] **2.3**: Set top-level `permissions: contents: read` and pin every action to a full commit SHA. Done: checkout, setup-node and pnpm/action-setup pinned to their v4.4.0 commits.
+  - [ ] **2.4**: Require this check in the main branch protection rule. Maintainer GitHub setting, not a repo file.
   - [ ] **2.5**: Gate: a pull request shows the CI job green.
 - [ ] **Step 3 - OSS-003 (high)**: No CONTRIBUTING.md; the path from first issue to merge (setup, commit format, checks, PR flow) is undocumented.
   - [ ] **3.1**: Write CONTRIBUTING.md: prerequisites, `pnpm install`, branch naming, `type(scope): subject`, `pnpm check` before a PR, and how a PR is reviewed.
