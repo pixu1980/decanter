@@ -11,7 +11,7 @@ import { readJson, writeJson } from "./fsx.ts";
 import { libraryCachePath } from "./paths.ts";
 import type { Store } from "./profile.ts";
 import type { GameProfile } from "./profile.ts";
-import { epicConfigured, gogConfigured, loadConfig, steamConfigured } from "./config.ts";
+import { loadConfig } from "./config.ts";
 import { listGames } from "./registry.ts";
 import { readAppInfo, type AppInfoEntry } from "./appinfo.ts";
 import { steamLibraryCacheAppIds } from "./steamcmd.ts";
@@ -78,29 +78,24 @@ export interface CatalogGame {
 }
 
 /**
- * Merge the configured stores' local libraries into one sorted catalog.
+ * Merge the stores' caches into one sorted catalog.
  *
- * A store with no credentials contributes nothing: the local cache wins over the
- * fetch, but only for a store the user has configured.
+ * The local cache wins and needs no credential: Steam reads the client's own
+ * caches, GOG and Epic read the cache `list` wrote. A key is required only to
+ * fetch, which the catalog never does.
  */
 export async function buildCatalog(): Promise<CatalogGame[]> {
   const config = await loadConfig();
   const entries: CatalogEntry[] = [];
 
-  if (steamConfigured(config)) {
-    const appids = await steamLibraryCacheAppIds(config.steamRoot);
-    const info = await readAppInfo(config.steamRoot);
-    entries.push(...steamCatalogEntries(appids, info));
+  const appids = await steamLibraryCacheAppIds(config.steamRoot);
+  const info = await readAppInfo(config.steamRoot);
+  entries.push(...steamCatalogEntries(appids, info));
+  for (const game of (await readLibraryCache("gog")) ?? []) {
+    entries.push({ store: "gog", id: game.id, title: game.title, detail: game.detail, installed: false });
   }
-  if (gogConfigured(config)) {
-    for (const game of (await readLibraryCache("gog")) ?? []) {
-      entries.push({ store: "gog", id: game.id, title: game.title, detail: game.detail, installed: false });
-    }
-  }
-  if (epicConfigured(config)) {
-    for (const game of (await readLibraryCache("epic")) ?? []) {
-      entries.push({ store: "epic", id: game.id, title: game.title, detail: game.detail, installed: false });
-    }
+  for (const game of (await readLibraryCache("epic")) ?? []) {
+    entries.push({ store: "epic", id: game.id, title: game.title, detail: game.detail, installed: false });
   }
 
   const registered = await listGames();

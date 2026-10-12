@@ -45,8 +45,10 @@ open bundle even when the game executable is gone. If it still fails, run
 decanter: Steam is not configured - run: decanter init
 ```
 
-No credential ships in the source, and the error names the store missing one.
-Run `decanter init` (or the TUI Setup screen) and paste the value. GOG and Epic
+No credential ships in the source, and the error names the store missing one. It
+appears when a fetch is needed: a `list` with a warm cache answers without any
+credential, and only an empty cache or `--refresh` asks for it. Run
+`decanter init` (or the TUI Setup screen) and paste the value. GOG and Epic
 want the launcher public-client id and secret, which no user can generate: copy
 them from the reference projects (gogdl or Heroic for GOG, legendary for Epic).
 The Steam Web API key is free at the Steam Web API key page.

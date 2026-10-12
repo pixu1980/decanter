@@ -200,8 +200,9 @@ decanter config steam.apiKey=<key>
 | `gog.clientId` / `gog.clientSecret` | GOG Galaxy public client | the gogdl or Heroic source |
 | `epic.clientId` / `epic.clientSecret` | Epic launcher public client | the legendary source |
 
-A store whose credentials are missing is blocked with a pointer to the wizard,
-and the catalog reads each configured store's local cache before the fetch.
+A store whose credentials are missing still answers `list` from its cache; the
+credential is required only to fetch, and `decanter init` sets it. The catalog
+reads each store's local cache before the fetch.
 
 ## Settings and environment
 

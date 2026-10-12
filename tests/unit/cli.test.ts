@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -58,6 +59,35 @@ test("list reports an empty registry", () => {
   const result = run(["list"], tempHome());
   assert.equal(result.status, 0);
   assert.match(result.stdout, /no games yet/);
+});
+
+test("list gog reads the cache with no credential", async () => {
+  const home = tempHome();
+  await mkdir(join(home, "gog"), { recursive: true });
+  await writeFile(
+    join(home, "gog", "library.json"),
+    JSON.stringify({ at: "", games: [{ id: "1", title: "Cached GOG Game", detail: "" }] }),
+  );
+  const result = run(["list", "gog"], home);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Cached GOG Game/);
+});
+
+test("list steam reads the client cache with no Web API key", async () => {
+  const home = tempHome();
+  const steamRoot = join(home, "steam");
+  await mkdir(join(steamRoot, "appcache", "librarycache", "440"), { recursive: true });
+  await writeFile(join(home, "config.json"), JSON.stringify({ steamRoot }));
+  const result = run(["list", "steam"], home);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /440/);
+  assert.match(result.stdout, /local cache/);
+});
+
+test("list epic fails without a credential when there is no cache", () => {
+  const result = run(["list", "epic"], tempHome());
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /not configured/);
 });
 
 test("an unknown command fails with a hint", () => {

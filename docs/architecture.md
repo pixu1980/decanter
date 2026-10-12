@@ -36,7 +36,8 @@ satisfy; adding a store is a new provider plus one entry per table.
 
 Every store's credentials live in `config.json` under `credentials`; none is in
 the source. `decanter init` (CLI) and the TUI Setup screen write them through the
-same field list, and a store with no credentials is blocked (ADR 018).
+same field list. The cache answers `list` and the catalog without a credential;
+the credential gates the fetch only (ADR 018).
 
 ## Runtime registry
 

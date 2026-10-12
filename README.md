@@ -37,7 +37,8 @@ already owns games on.
 `list <store>` prints one store's full library. The catalog keeps only games, so
 runtimes, dedicated servers, SDKs, DLC, soundtracks and demos stay out. Every
 credential lives in `~/.decanter/config.json`, collected by `decanter init`; a
-store with no credentials is blocked until the wizard sets them.
+store with no credentials still answers from its cache, and the wizard is
+required only to fetch.
 
 ## What it does
 

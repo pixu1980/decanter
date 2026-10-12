@@ -458,31 +458,23 @@ async function cmdList(args: ParsedArgs): Promise<void> {
   const refresh = flagBool(args.flags, "refresh");
   const config = await loadConfig();
 
-  // Every provider needs its credentials; the local cache is preferred over the
-  // fetch, so a warm cache answers without hitting the store API.
-  if (store === "steam") {
-    requireSteam(config);
-    if (!refresh) {
-      const appids = await steamLibraryCacheAppIds(config.steamRoot);
-      if (appids.length > 0) {
-        const names = await readAppInfoNames(config.steamRoot);
-        const games: LibraryGame[] = appids
-          .map((appid) => ({ id: String(appid), title: names.get(appid) ?? String(appid), detail: "" }))
-          .sort((a, b) => a.title.localeCompare(b.title));
-        printGames(games);
-        log(`${games.length} Steam game(s) from the local cache — 'list steam --refresh' to update`);
-        return;
-      }
+  // The cache answers first and needs no credential: Steam reads the client's own
+  // caches, GOG and Epic read the cache `list` wrote. A key is required only to
+  // fetch, so a warm cache works with the logins alone.
+  if (store === "steam" && !refresh) {
+    const appids = await steamLibraryCacheAppIds(config.steamRoot);
+    if (appids.length > 0) {
+      const names = await readAppInfoNames(config.steamRoot);
+      const games: LibraryGame[] = appids
+        .map((appid) => ({ id: String(appid), title: names.get(appid) ?? String(appid), detail: "" }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+      printGames(games);
+      log(`${games.length} Steam game(s) from the local cache — 'list steam --refresh' to update`);
+      return;
     }
   }
-  if (store === "gog") {
-    requireGog(config);
-  }
-  if (store === "epic") {
-    requireEpic(config);
-  }
 
-  // Everything else: the local cache first, the store API on a miss/refresh.
+  // The local cache first, the store API on a miss or --refresh.
   const result = await libraryFor(store as Store, refresh, () => fetchStoreLibrary(store as Store, config));
   printGames(result.games);
   log(
@@ -506,6 +498,7 @@ async function fetchStoreLibrary(store: Store, config: Config): Promise<LibraryG
       detail: game.namespace,
     }));
   }
+  requireSteam(config);
   const steamid = config.credentials.steam.steamId || (await detectSteamId(config.steamRoot));
   if (!steamid) {
     die("could not find a SteamID — open Steam once, or run 'decanter config steamId=<steamid64>'");
