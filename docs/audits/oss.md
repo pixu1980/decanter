@@ -78,6 +78,8 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance: issue and PR templates | `ls .github/ISSUE_TEMPLATE .github/pull_request_template.md` | `bug.yml` and `feature.yml` issue forms, and a PR template with a `pnpm check` checkbox |
 | Governance: repository topics | manual GitHub setting | set by the maintainer from the repository page; topics are not a repo file |
 
+| Governance: governance document | `ls GOVERNANCE.md` and `grep -n GOVERNANCE README.md` | the roles, the ADR process, the funding boundary and the change process; linked from the README docs list |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
