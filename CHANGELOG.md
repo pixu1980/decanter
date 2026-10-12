@@ -4,10 +4,11 @@ All notable changes to this project. Generated from the commits by
 `pnpm changelog`; `chore`, `ci`, `build`, `test` and `style` commits earn no
 entry but stay in the git log.
 
-## Unreleased - 2026-10-12
+## v0.1.0 - 2026-10-12
 
 ### Added
 
+- **release**: generate the changelog and publish a release per tag (`4ec8e65`)
 - **cli**: add the first-run credential wizard (`525306d`)
 - **epic**: add the Epic store and a unified cross-store catalog (`818aa3b`)
 - **gog**: GOG support, provider-aware icons and runtime management (`f5c94b7`)

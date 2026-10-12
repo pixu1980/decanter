@@ -68,6 +68,8 @@ the sources it consulted. No opinions - those belong in the review.
 | Release: changelog file | `node bin/changelog.mjs --write` | writes CHANGELOG.md from the git history; `pnpm changelog` prints it |
 | Release: workflow | `.github/workflows/release.yml` | on a `v*` tag: builds the notes with `bin/changelog.mjs --tag` and runs `gh release create`; job permission `contents: write` |
 
+| Release: first tag and GitHub release | `git tag -a v0.1.0` and `GET https://api.github.com/repos/pixu1980/decanter/releases` | tag `v0.1.0` pushed; the Release workflow completed `success`; the release body is 1832 bytes |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
