@@ -55,6 +55,9 @@ the sources it consulted. No opinions - those belong in the review.
 | CI: workflow | `.github/workflows/ci.yml` | checkout, pnpm/action-setup and setup-node pinned to their v4.4.0 commits; `permissions: contents: read`; macos runner, Node 26.8.2, pnpm 12.11.2 |
 | CI: first green run | `GET https://api.github.com/repos/pixu1980/decanter/actions/runs/38270808910` | `conclusion: success`; install, typecheck, unit and TUI steps all success |
 
+| Governance: contribution path | `ls CONTRIBUTING.md` and `grep -n CONTRIBUTING README.md` | `CONTRIBUTING.md` present and linked from the README Docs section |
+| Contribution path: clean-clone gate | `git clone . "$D/repo" && cd "$D/repo" && pnpm install --frozen-lockfile && pnpm test:tui` | passes (15/15); a fresh clone needs nothing else |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`

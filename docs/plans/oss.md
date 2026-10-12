@@ -17,10 +17,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 3 - OSS-003 (high)**: No CONTRIBUTING.md; the path from first issue to merge (setup, commit format, checks, PR flow) is undocumented.
-  - [ ] **3.1**: Write CONTRIBUTING.md: prerequisites, `pnpm install`, branch naming, `type(scope): subject`, `pnpm check` before a PR, and how a PR is reviewed.
-  - [ ] **3.2**: Link CONTRIBUTING.md from the README.
-  - [ ] **3.3**: Gate: a newcomer can go from clone to a green PR using only CONTRIBUTING.md.
 - [ ] **Step 4 - OSS-004 (high)**: No SECURITY.md; there is no private channel or timeline to report a vulnerability in a tool that downloads third-party binaries.
   - [ ] **4.1**: Add SECURITY.md with a reporting contact (email or GitHub private advisory) and a disclosure timeline (for example 90 days).
   - [ ] **4.2**: Enable private vulnerability reporting in the repository settings.
