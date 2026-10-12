@@ -249,6 +249,11 @@ export function App() {
   // Rows that fit between the catalog header and the status line; the activity
   // panel takes its own space when it is on screen.
   const catalogPageSize = Math.max(3, height - (busy || activity.length > 0 ? 22 : 13));
+  const activityShown = (busy || activity.length > 0) && view.name !== "install";
+  const activityPage = 6;
+  // The shell keeps rows for the padding, the header, the status line and the
+  // gaps; the activity panel adds its own rows when it is on screen.
+  const detailReserved = 9 + (activityShown ? activityPage + 2 : 0);
 
   const openCatalog = useCallback(async () => {
     setBusy(true);
@@ -647,7 +652,13 @@ export function App() {
           {view.name === "games" ? <GameList rows={rows} selected={listIndex} /> : null}
           {view.name === "setup" ? <SetupView rows={config ? wizardRows(config) : []} /> : null}
           {view.name === "detail" && current ? (
-            <GameDetail row={rows[listIndex]!} fields={fields} actions={ACTIONS} selected={actionIndex} />
+            <GameDetail
+              row={rows[listIndex]!}
+              fields={fields}
+              actions={ACTIONS}
+              selected={actionIndex}
+              reserved={detailReserved}
+            />
           ) : null}
           {view.name === "catalog" ? (
             <CatalogView
@@ -703,7 +714,7 @@ export function App() {
         </box>
       )}
 
-      {(busy || activity.length > 0) && view.name !== "install" ? <Activity lines={activity} busy={busy} /> : null}
+      {activityShown ? <Activity lines={activity} busy={busy} pageSize={activityPage} /> : null}
 
       <StatusBar message={status} busy={busy} hints={hintsFor(view)} />
     </box>

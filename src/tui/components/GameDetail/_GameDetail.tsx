@@ -23,6 +23,8 @@ export interface GameDetailProps {
   fields: StatusField[];
   actions: ActionItem[];
   selected: number;
+  /** Rows the app shell keeps for its own chrome and the activity panel. */
+  reserved?: number;
 }
 
 /** The inner width of a panel: the app padding, the two borders and paddingX. */
@@ -30,27 +32,62 @@ function innerWidth(terminal: number): number {
   return Math.max(20, terminal - 6);
 }
 
-/** The first row of a window that keeps `selected` visible. */
-function windowStart(total: number, selected: number, size: number): number {
-  return Math.min(Math.max(0, selected - Math.floor(size / 2)), Math.max(0, total - size));
+/** The rows a slice of actions occupies, counting one header per group change. */
+function countRows(actions: ActionItem[], start: number, end: number): number {
+  let rows = 0;
+  let lastGroup = "";
+  for (let index = start; index < end; index += 1) {
+    const action = actions[index]!;
+    if (action.group !== lastGroup) {
+      rows += 1;
+    }
+    rows += 1;
+    lastGroup = action.group;
+  }
+  return rows;
+}
+
+/**
+ * The window of actions that fits `size` rows and keeps `selected` visible.
+ * Grows to the right first, then to the left, so the list reads naturally.
+ */
+function windowActions(
+  actions: ActionItem[],
+  selected: number,
+  size: number,
+): { start: number; items: ActionItem[] } {
+  let start = Math.min(Math.max(0, selected), Math.max(0, actions.length - 1));
+  let end = start + 1;
+  for (;;) {
+    if (end < actions.length && countRows(actions, start, end + 1) <= size) {
+      end += 1;
+      continue;
+    }
+    if (start > 0 && countRows(actions, start - 1, end) <= size) {
+      start -= 1;
+      continue;
+    }
+    break;
+  }
+  return { start, items: actions.slice(start, end) };
 }
 
 /** Render the detail view. */
-export function GameDetail({ row, fields, actions, selected }: GameDetailProps) {
+export function GameDetail({ row, fields, actions, selected, reserved = 12 }: GameDetailProps) {
   const { width, height } = useTerminalDimensions();
   const inner = innerWidth(width);
-  // Identity (2 rows), the status panel and the actions panel, their borders,
-  // their titles and the gaps between the three blocks.
-  const actionRows = Math.max(4, height - 12 - fields.length);
-  const start = windowStart(actions.length, selected, actionRows);
-  const visible = actions.slice(start, start + actionRows);
+  // Identity (2 rows), the status panel and the gaps, minus what the shell and
+  // the activity panel keep for themselves.
+  const available = Math.max(8, height - reserved);
+  const actionRows = Math.max(4, available - fields.length - 6);
+  const { start, items } = windowActions(actions, selected, actionRows);
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1, gap: 1 }}>
       <Identity row={row} width={inner} />
       <StatusPanel fields={fields} width={inner} />
       <ActionsPanel
-        actions={visible}
+        actions={items}
         offset={start}
         total={actions.length}
         selected={selected}

@@ -22,10 +22,12 @@ import type { StatusField } from "../../src/core/lifecycle.ts";
 import { normalizeProfile } from "../../src/core/profile.ts";
 import { wizardRows } from "../../src/core/wizard.ts";
 import { ACTIONS } from "../../src/tui/actions.ts";
+import { Activity } from "../../src/tui/components/Activity/index.ts";
 import { App } from "../../src/tui/App/index.ts";
 import { ConfirmDialog } from "../../src/tui/components/ConfirmDialog/index.ts";
 import { GameDetail } from "../../src/tui/components/GameDetail/index.ts";
 import { HelpOverlay } from "../../src/tui/components/HelpOverlay/index.ts";
+import { LogsView } from "../../src/tui/components/LogsView/index.ts";
 import { SetupView } from "../../src/tui/components/SetupView/index.ts";
 import { StorePicker } from "../../src/tui/components/StorePicker/index.ts";
 import type { GameRow } from "../../src/tui/helpers/index.ts";
@@ -107,6 +109,49 @@ test("the game detail labels and hints never overlap", async () => {
       }
     }
     assertIntact(frame, "The Cosmic Wheel Sisterhood");
+  }
+});
+
+test("the detail keeps the last actions visible when the list is scrolled to the end", async () => {
+  const { row, fields } = detailProps();
+  for (const width of WIDTHS) {
+    const frame = await render(
+      <GameDetail row={row} fields={fields} actions={ACTIONS} selected={ACTIONS.length - 1} reserved={9} />,
+      width,
+      30,
+    );
+    assertFits(frame, width);
+    // The window reached the end: the last two actions are on screen and the
+    // range indicator names the tail.
+    assertIntact(frame, "Uninstall app");
+    assertIntact(frame, "Remove game");
+    assert.match(frame, /26 \/ 26/);
+  }
+});
+
+test("the activity panel shows only the tail and never overlaps", async () => {
+  const lines = Array.from({ length: 20 }, (_, index) => ({ line: `engine line ${index + 1}`, level: "info" as const }));
+  for (const width of WIDTHS) {
+    const frame = await render(<Activity lines={lines} busy={false} pageSize={6} />, width, 12);
+    assertFits(frame, width);
+    assertIntact(frame, "engine line 20");
+    assertIntact(frame, "engine line 15");
+    assert.ok(!frame.includes("engine line 1 "), "the activity panel must window to the tail");
+  }
+});
+
+test("the log view scrolls its window without overlapping", async () => {
+  const lines = Array.from({ length: 40 }, (_, index) => `log line ${index + 1}`);
+  for (const width of WIDTHS) {
+    const tail = await render(<LogsView title="Game log" lines={lines} pageSize={10} offset={0} />, width, 16);
+    assertFits(tail, width);
+    assertIntact(tail, "log line 40");
+    assertIntact(tail, "log line 31");
+
+    const scrolled = await render(<LogsView title="Game log" lines={lines} pageSize={10} offset={10} />, width, 16);
+    assertFits(scrolled, width);
+    assertIntact(scrolled, "log line 30");
+    assertIntact(scrolled, "log line 21");
   }
 });
 

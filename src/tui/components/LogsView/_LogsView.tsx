@@ -2,7 +2,10 @@
 //
 // docs: docs/troubleshooting.md
 
+import { useTerminalDimensions } from "@opentui/react";
+
 import { theme } from "../../theme.ts";
+import { truncate } from "../../text.ts";
 import { Panel } from "../Panel/index.ts";
 
 export interface LogsViewProps {
@@ -14,6 +17,7 @@ export interface LogsViewProps {
 
 /** Render a window of the log. */
 export function LogsView({ title, lines, pageSize, offset }: LogsViewProps) {
+  const { width } = useTerminalDimensions();
   if (lines.length === 0) {
     return (
       <Panel title={title} flexGrow={1}>
@@ -28,9 +32,9 @@ export function LogsView({ title, lines, pageSize, offset }: LogsViewProps) {
   return (
     <Panel title={title} flexGrow={1} bottomTitle={` ${start + 1}-${start + window.length} / ${lines.length} `}>
       {window.map((line, index) => (
-        <box key={`${start + index}`} style={{ flexDirection: "row" }}>
+        <box key={`${start + index}`} style={{ flexDirection: "row", flexShrink: 0 }}>
           <text fg={theme.faint}>{String(start + index + 1).padStart(5)} </text>
-          <text fg={theme.text}>{line}</text>
+          <text fg={theme.text}>{truncate(line, Math.max(8, width - 8))}</text>
         </box>
       ))}
     </Panel>
