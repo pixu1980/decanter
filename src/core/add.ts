@@ -10,6 +10,7 @@ import { loadConfig, requireEpic, requireGog } from "./config.ts";
 import { ensureGogToken, gogLibrarySearch, gogProduct, gogSearch } from "./gog.ts";
 import { ensureEpicToken, epicCatalogItem, epicOwnedGames, findOwnedGame } from "./epic.ts";
 import { resolveWindowsDepot } from "./steamcmd.ts";
+import { appInfoWindowsDepot, readAppInfo } from "./appinfo.ts";
 import { gameInstalled } from "./depot.ts";
 import { resolveGamePaths } from "./game.ts";
 import { storeApp, searchApp } from "./store.ts";
@@ -88,9 +89,17 @@ async function addSteamGame(options: AddOptions): Promise<GameProfile> {
   }
 
   let depot = options.depot ?? known?.depot ?? 0;
+  const config = await loadConfig();
   if (!depot) {
-    // Not in the catalog: ask SteamCMD for the Windows content depot.
-    const resolved = await resolveWindowsDepot(appid, (await loadConfig()).steamcmd);
+    // The Steam client cached the app, so its own depot list answers offline.
+    depot = appInfoWindowsDepot((await readAppInfo(config.steamRoot)).get(appid)) ?? 0;
+    if (depot) {
+      log(`depot: ${depot} from the Steam client cache`);
+    }
+  }
+  if (!depot) {
+    // Not cached either: ask SteamCMD for the Windows content depot.
+    const resolved = await resolveWindowsDepot(appid, config.steamcmd);
     if (resolved) {
       log(`depot: resolved ${resolved} from SteamCMD`);
       depot = resolved;

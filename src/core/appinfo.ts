@@ -21,11 +21,20 @@ interface KvObject {
   [key: string]: KvValue;
 }
 
+/** One depot an app declares in the AppInfo cache. */
+export interface AppInfoDepot {
+  id: number;
+  /** `config.oslist`, lowercased and split; empty when the entry has none. */
+  os: string[];
+}
+
 /** What the AppInfo cache knows about one app. */
 export interface AppInfoEntry {
   name?: string;
   /** `common.type`: `Game`, `Tool`, `DLC`, `Video`, `Music`, `Demo`, ... */
   type?: string;
+  /** The depots the app declares, when the cache carries them. */
+  depots?: AppInfoDepot[];
 }
 
 /** Read and parse `<steamRoot>/appcache/appinfo.vdf`; empty when it is missing. */
@@ -102,8 +111,13 @@ export function parseAppInfoEntries(data: Buffer): Map<number, AppInfoEntry> {
       const common = asObject(obj["common"]) ?? asObject(appinfo?.["common"]);
       const name = asString(appinfo?.["name"]) ?? asString(common?.["name"]);
       const type = asString(common?.["type"]) ?? asString(appinfo?.["type"]);
-      if (name || type) {
-        entries.set(appid, { name, type });
+      const depots = readDepots(asObject(obj["depots"]) ?? asObject(appinfo?.["depots"]));
+      if (name || type || depots.length > 0) {
+        const entry: AppInfoEntry = { name, type };
+        if (depots.length > 0) {
+          entry.depots = depots;
+        }
+        entries.set(appid, entry);
       }
     }
     offset = end;
@@ -114,6 +128,43 @@ export function parseAppInfoEntries(data: Buffer): Map<number, AppInfoEntry> {
 
 function asObject(value: KvValue | undefined): KvObject | undefined {
   return typeof value === "object" && value !== null ? value : undefined;
+}
+
+/** The numeric depot entries of a `depots` object; the `branches` key is skipped. */
+function readDepots(depots: KvObject | undefined): AppInfoDepot[] {
+  if (!depots) {
+    return [];
+  }
+  const out: AppInfoDepot[] = [];
+  for (const [key, value] of Object.entries(depots)) {
+    const id = Number.parseInt(key, 10);
+    if (!Number.isFinite(id)) {
+      continue;
+    }
+    const config = asObject(asObject(value)?.["config"]);
+    const os = asString(config?.["oslist"])?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
+    out.push({ id, os });
+  }
+  return out;
+}
+
+/**
+ * The app's Windows content depot from the local cache, or `null`.
+ *
+ * Prefer a depot that names `windows`, then one with no OS list (Steam leaves it
+ * empty for the base-game depot of many titles). Shared and tool depots usually
+ * carry another `oslist`, so they are skipped.
+ */
+export function appInfoWindowsDepot(entry: AppInfoEntry | undefined): number | null {
+  if (!entry?.depots || entry.depots.length === 0) {
+    return null;
+  }
+  const windows = entry.depots.find((depot) => depot.os.includes("windows"));
+  if (windows) {
+    return windows.id;
+  }
+  const unknown = entry.depots.find((depot) => depot.os.length === 0);
+  return unknown?.id ?? null;
 }
 
 function asString(value: KvValue | undefined): string | undefined {

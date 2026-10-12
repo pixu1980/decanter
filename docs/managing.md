@@ -58,11 +58,12 @@ Running `add` again is safe: a registered game that is **not installed** is
 provisioned again without needing `--force`, while an already **installed** game
 is left alone (pass `--force` to re-register and re-provision it).
 
-The Steam **depot id** is not exposed by any public API: find it on
-[SteamDB](https://steamdb.info/) (the Depots tab) or with
-`app_info_print <appid>` in SteamCMD. For a single-depot game it is often the
-appid or the appid plus one, but always confirm it. GOG and Epic need no depot:
-their product id / app name is enough to resolve the build.
+`add` resolves the Steam **depot id** itself: from the built-in catalog for a
+known game, then from the Steam client's own cache (`appcache/appinfo.vdf`,
+offline), then by asking SteamCMD (`app_info_print`). Pass `--depot` to override
+it. When none answers, find it on [SteamDB](https://steamdb.info/) (the Depots
+tab). GOG and Epic need no depot: the product id or the app name resolves the
+build.
 
 ### Known games and executable detection
 
