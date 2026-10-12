@@ -51,6 +51,16 @@ export const KNOWN_GAMES: Record<number, KnownGame> = {
     depot: 773581,
     exe: "game_dev_studio.exe",
   },
+  1340480: {
+    name: "The Cosmic Wheel Sisterhood",
+    slug: "the-cosmic-wheel-sisterhood",
+    bundleId: "local.the-cosmic-wheel-sisterhood",
+    envPrefix: "TCWS",
+    depot: 1340481,
+    exe: "The_Cosmic_Wheel_Sisterhood.exe",
+    installSubdir: "The Cosmic Wheel Sisterhood",
+    backupLabel: "TCWS",
+  },
 };
 
 /** The catalog entry for an appid, if any. */
