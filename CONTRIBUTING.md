@@ -104,6 +104,11 @@ tokens live in `~/.decanter/config.json` or the per-store token files, and
 `.gitignore` blocks `.env`, `auth.json` and `config.json`. `decanter init`
 collects the credentials a contributor needs.
 
+## Code of conduct
+
+Participation is covered by the [Contributor Covenant](CODE_OF_CONDUCT.md);
+report unacceptable behavior to `pisuemiliano.1980@gmail.com`.
+
 ## License
 
 By contributing you agree that your work is released under the [MIT license](LICENSE).
