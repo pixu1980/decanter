@@ -11,6 +11,10 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertNodeFloor } from "./node-floor.mjs";
+
+assertNodeFloor();
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..");
 const entry = join(repoRoot, "src", "cli.ts");

@@ -7,7 +7,8 @@ report, a store fix, a documentation typo.
 ## Before you start
 
 - Apple Silicon Mac, macOS 14 (Sonoma) or newer.
-- Node.js 26.4 or newer.
+- Node.js 26.4 or newer: `nvm use` reads the pinned `.nvmrc`, and
+  `bin/node-floor.mjs` stops an older runtime with a clear message.
 - [pnpm](https://pnpm.io) and [Homebrew](https://brew.sh) installed.
 - A game you own on the store you test against is useful, but most changes do
   not need one.

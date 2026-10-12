@@ -12,6 +12,11 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync, statSync } from "node:f
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertNodeFloor } from "./node-floor.mjs";
+
+// The install step enforces the floor before anything else runs.
+assertNodeFloor();
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const gitDir = join(root, ".git");
 const source = join(root, ".githooks", "commit-msg");
