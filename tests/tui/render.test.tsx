@@ -10,6 +10,9 @@ import { App } from "../../src/tui/App/index.ts";
 import { CatalogView } from "../../src/tui/components/CatalogView/index.ts";
 import { InstallView } from "../../src/tui/components/InstallView/index.ts";
 import { StorePicker } from "../../src/tui/components/StorePicker/index.ts";
+import { SetupView } from "../../src/tui/components/SetupView/index.ts";
+import { defaultConfig } from "../../src/core/config.ts";
+import { wizardRows } from "../../src/core/wizard.ts";
 
 test("renders the empty registry", async () => {
   process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
@@ -246,6 +249,22 @@ test("the store picker lists every store a game is owned on", async () => {
     assert.match(frame, /steam/);
     assert.match(frame, /epic/);
     assert.match(frame, /1190460/);
+  } finally {
+    setup.renderer.destroy();
+  }
+});
+
+test("the setup screen lists every credential and its status", async () => {
+  process.env.DECANTER_HOME = mkdtempSync(join(tmpdir(), "decanter-tui-"));
+  const setup = await testRender(<SetupView rows={wizardRows(defaultConfig())} />, { width: 100, height: 26 });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    await setup.renderOnce();
+    const frame = setup.captureCharFrame();
+    assert.match(frame, /First-run setup/);
+    assert.match(frame, /Steam Web API key/);
+    assert.match(frame, /GOG client secret/);
+    assert.match(frame, /missing/);
   } finally {
     setup.renderer.destroy();
   }

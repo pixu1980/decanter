@@ -9,7 +9,7 @@
 import { createInterface } from "node:readline/promises";
 import { addGame } from "./core/add.ts";
 import { flagBool, flagNumber, flagString, parseArgs, type ParsedArgs } from "./core/args.ts";
-import { loadConfig, requireEpic, requireGog, requireSteam, updateConfig, type Config } from "./core/config.ts";
+import { CREDENTIAL_FIELDS, loadConfig, missingCredentials, requireEpic, requireGog, requireSteam, saveConfig, updateConfig, type Config } from "./core/config.ts";
 import { gameInstalled, updateStatus } from "./core/depot.ts";
 import { exec, setDryRun } from "./core/exec.ts";
 import { exists, remove } from "./core/fsx.ts";
@@ -41,7 +41,8 @@ import {
 } from "./core/lifecycle.ts";
 import { CliError, die, log } from "./core/log.ts";
 import { migrateRepo } from "./core/migrate.ts";
-import { gameDir, gogAuthPath, epicAuthPath } from "./core/paths.ts";
+import { configFile, gameDir, gogAuthPath, epicAuthPath } from "./core/paths.ts";
+import { applyAnswers } from "./core/wizard.ts";
 import { gogExchangeCode, gogLoginUrl, extractGogCode, ensureGogToken, gogLibrary } from "./core/gog.ts";
 import { epicExchangeCode, epicLoginUrl, extractEpicCode, ensureEpicToken, epicOwnedGames } from "./core/epic.ts";
 import type { WineRuntime, Store } from "./core/profile.ts";
@@ -138,6 +139,11 @@ async function main(argv: string[]): Promise<void> {
 
   if (args.command === "config") {
     await cmdConfig(args);
+    return;
+  }
+
+  if (args.command === "init") {
+    await cmdInit(args);
     return;
   }
 
@@ -258,6 +264,70 @@ async function promptLine(prompt: string): Promise<string> {
   }
 }
 
+/** Prompt without echoing what is typed (secrets). */
+async function promptSecret(prompt: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: process.stdin.isTTY });
+  const internal = rl as unknown as { _writeToOutput: (chunk: string) => void };
+  const original = internal._writeToOutput;
+  internal._writeToOutput = () => {};
+  try {
+    return (await rl.question(prompt)).trim();
+  } finally {
+    internal._writeToOutput = original;
+    rl.close();
+    process.stdout.write("\n");
+  }
+}
+
+/**
+ * `init` - the first-run credential wizard.
+ *
+ * Values can be passed inline (`decanter init --gog.clientId=...`) for a
+ * scripted setup; otherwise each field is prompted, an empty answer keeping the
+ * current value.
+ */
+async function cmdInit(args: ParsedArgs): Promise<void> {
+  const config = await loadConfig();
+  const answers: Record<string, string> = {};
+  for (const field of CREDENTIAL_FIELDS) {
+    const inline = flagString(args.flags, field.id);
+    if (inline !== undefined) {
+      answers[field.id] = inline;
+    }
+  }
+
+  if (!process.stdin.isTTY && Object.keys(answers).length === 0) {
+    log("no terminal for the wizard — set a value with:");
+    for (const field of CREDENTIAL_FIELDS) {
+      log(`  decanter config ${field.id}=<value>   # ${field.label} — ${field.help}`);
+    }
+    return;
+  }
+
+  if (process.stdin.isTTY) {
+    log("decanter setup — an empty answer keeps the current value; nothing is stored off this machine:");
+    for (const field of CREDENTIAL_FIELDS) {
+      const current = field.get(config);
+      const shown = current ? (field.secret ? "(set)" : current) : "(empty)";
+      const question = `${field.label} ${shown} — ${field.help}: `;
+      const answer = field.secret ? await promptSecret(question) : await promptLine(question);
+      if (answer !== "") {
+        answers[field.id] = answer;
+      }
+    }
+  }
+
+  const next = applyAnswers(config, answers);
+  await saveConfig(next);
+  log(`credentials saved to ${configFile()}`);
+  const missing = missingCredentials(next);
+  log(
+    missing.length === 0
+      ? "every store is configured"
+      : `still empty: ${missing.map((field) => field.id).join(", ")}`,
+  );
+}
+
 /** `login <store> [arg]` / `logout <store>` for steam, gog or epic. */
 async function cmdAuth(args: ParsedArgs): Promise<void> {
   const login = args.command === "login";
@@ -342,15 +412,23 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
   die(`unknown store '${store}' — expected 'steam', 'gog' or 'epic'`);
 }
 
-async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positionals.length === 0) {
+async function cmdConfig(args: ParsedArgs): Promise<void> {
+  if (args.positionals.length === 0) {
     process.stdout.write(`${JSON.stringify(await loadConfig(), null, 2)}\n`);
     return;
   }
+  const current = await loadConfig();
+  const credentialIds = new Set(CREDENTIAL_FIELDS.map((field) => field.id));
+  const credentialAnswers: Record<string, string> = {};
   const patch: Record<string, unknown> = {};
   for (const pair of args.positionals) {
     const [key, value] = pair.split("=", 2) as [string, string | undefined];
     if (!key || value === undefined) {
       die("usage: decanter config key=value ...");
+    }
+    if (credentialIds.has(key)) {
+      credentialAnswers[key] = value;
+      continue;
     }
     if (key.startsWith("steamcmd.")) {
       const nested = (patch.steamcmd ?? {}) as Record<string, unknown>;
@@ -359,6 +437,9 @@ async function cmdConfig(args: ParsedArgs): Promise<void> {  if (args.positional
     } else {
       patch[key] = value;
     }
+  }
+  if (Object.keys(credentialAnswers).length > 0) {
+    patch.credentials = applyAnswers(current, credentialAnswers).credentials;
   }
   const next = await updateConfig(patch as never);
   process.stdout.write(`${JSON.stringify(next, null, 2)}\n`);
@@ -502,6 +583,7 @@ function printHelp(): void {
 usage: decanter [command] [game] [options]      (no command opens the TUI)
 
 registry:
+  init                  first-run wizard: collect every credential
   list, ls [store]      list registered games, or a store's games (steam, gog, epic)
   add "<name>"          add a game from a store (--store steam|gog|epic, --appid N, --gog-id N, --epic-app N)
   remove <game>         uninstall and forget a game (--purge --yes)

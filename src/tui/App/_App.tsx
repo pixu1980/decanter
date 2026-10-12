@@ -8,9 +8,9 @@
 // docs: docs/architecture.md
 
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { addGame } from "../../core/add.ts";
-import { type Config, loadConfig, requireEpic, requireGog, updateConfig } from "../../core/config.ts";
+import { CREDENTIAL_FIELDS, type Config, loadConfig, missingCredentials, requireEpic, requireGog, updateConfig } from "../../core/config.ts";
 import { buildCatalog, catalogAddArgs, matchesEntry, type CatalogEntry, type CatalogGame } from "../../core/library.ts";
 import { cancel, exec } from "../../core/exec.ts";
 import { exists, remove } from "../../core/fsx.ts";
@@ -63,6 +63,8 @@ import { SettingsView, settingsRows, type LoginState } from "../components/Setti
 import { StorePicker } from "../components/StorePicker/index.ts";
 import { InstallView } from "../components/InstallView/index.ts";
 import { StatusBar } from "../components/StatusBar/index.ts";
+import { SetupView } from "../components/SetupView/index.ts";
+import { wizardRows } from "../../core/wizard.ts";
 import { Activity, type ActivityLine } from "../components/Activity/index.ts";
 import { refreshGames, safeAction, type GameRow } from "../helpers/index.ts";
 
@@ -75,6 +77,7 @@ type View =
   | { name: "logs"; slug: string }
   | { name: "catalog" }
   | { name: "install" }
+  | { name: "setup" }
   | { name: "settings" };
 
 /** Render the interface. */
@@ -108,9 +111,18 @@ export function App() {
   const [catalogFilter, setCatalogFilter] = useState("");
   const [storePick, setStorePick] = useState<{ game: CatalogGame; index: number } | null>(null);
   const [install, setInstall] = useState<{ title: string; store: string; id: string } | null>(null);
+  const setupChecked = useRef(false);
 
   const reload = useCallback(async () => {
-    setConfig(await loadConfig());
+    const nextConfig = await loadConfig();
+    setConfig(nextConfig);
+    // First run with nothing configured: open the wizard once, in a real terminal.
+    if (!setupChecked.current && process.stdin.isTTY) {
+      setupChecked.current = true;
+      if (missingCredentials(nextConfig).length === CREDENTIAL_FIELDS.length) {
+        setView({ name: "setup" });
+      }
+    }
     const next = await refreshGames();
     setRows(next);
     return next;
@@ -552,6 +564,23 @@ export function App() {
       return;
     }
 
+    if (view.name === "setup") {
+      if (name === "return" || name === "i") {
+        void exec("osascript", ["-e", 'tell application "Terminal" to do script "decanter init"'], {
+          allowFailure: true,
+        });
+        setStatus("setup: the wizard is open in a Terminal — press r when it is done");
+      }
+      if (name === "r") {
+        void reload();
+        setStatus("setup: re-checked");
+      }
+      if (name === "escape") {
+        setView({ name: "games" });
+      }
+      return;
+    }
+
     if (view.name === "catalog") {
       if (name === "escape") {
         setView({ name: "games" });
@@ -615,6 +644,7 @@ export function App() {
       ) : (
         <box style={{ flexDirection: "column", flexGrow: 1 }}>
           {view.name === "games" ? <GameList rows={rows} selected={listIndex} /> : null}
+          {view.name === "setup" ? <SetupView rows={config ? wizardRows(config) : []} /> : null}
           {view.name === "detail" && current ? (
             <GameDetail row={rows[listIndex]!} fields={fields} actions={ACTIONS} selected={actionIndex} />
           ) : null}
@@ -780,6 +810,9 @@ function breadcrumbFor(view: View, current: GameRow["profile"] | null): string {
   if (view.name === "install") {
     return "Install";
   }
+  if (view.name === "setup") {
+    return "Setup";
+  }
   if (view.name === "logs") {
     return "Logs";
   }
@@ -824,6 +857,9 @@ function hintsFor(view: View): string {
   }
   if (view.name === "install") {
     return "esc cancel · q quit";
+  }
+  if (view.name === "setup") {
+    return "enter open the wizard · r re-check · esc skip";
   }
   if (view.name === "settings") {
     return "a toggle anonymous · esc back";
