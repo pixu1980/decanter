@@ -20,7 +20,7 @@ const SECTIONS: Section[] = [
     title: "Global",
     shortcuts: [
       { keys: "?", label: "toggle this help" },
-      { keys: "q", label: "quit (game list only)" },
+      { keys: "q", label: "quit (except the add wizard)" },
     ],
   },
   {

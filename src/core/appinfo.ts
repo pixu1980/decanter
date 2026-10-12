@@ -10,7 +10,7 @@
 // token(u64) · hash(20) · changeNumber · [binaryDataHash(20)] · binary KV`. The
 // binary KV keys and string values are indices into the string table.
 //
-// Reference: xPaw/SteamAppInfo. docs: docs/plans/epic-support.md
+// Reference: xPaw/SteamAppInfo. docs: docs/architecture.md
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";

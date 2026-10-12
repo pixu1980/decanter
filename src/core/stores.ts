@@ -7,7 +7,7 @@
 // the download and import steps live in `lifecycle.ts` behind their own small
 // dispatch; everything the rest of the engine reasons about is here.
 //
-// docs: docs/architecture.md, docs/plans/epic-support.md
+// docs: docs/architecture.md, docs/adr/017-epic.md
 
 import { epicGameToken, epicLaunchParameters, ensureEpicToken, epicIconCandidates } from "./epic.ts";
 import { gogIconCandidates } from "./gog.ts";

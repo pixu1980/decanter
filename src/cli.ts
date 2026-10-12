@@ -242,7 +242,7 @@ async function cmdAdd(args: ParsedArgs): Promise<void> {
     slug: flagString(args.flags, "slug"),
     exe: flagString(args.flags, "exe"),
     runtime: flagString(args.flags, "runtime") as WineRuntime | undefined,
-    store: flagString(args.flags, "store") as "steam" | "gog" | undefined,
+    store: flagString(args.flags, "store") as Store | undefined,
     gogId: flagNumber(args.flags, "gog-id"),
     epicAppName: flagString(args.flags, "epic-app"),
     force: flagBool(args.flags, "force"),
@@ -523,6 +523,7 @@ lifecycle:
   backup-saves <game>   copy saves to ~/.decanter/backups
   steam-setup <game>    install Windows Steam inside the prefix
   steam <game>          launch Windows Steam inside the prefix
+  edit <game>           open the profile in $EDITOR (default: open)
   uninstall <game>      remove the app bundle (--purge deletes the prefix)
 
 interface:

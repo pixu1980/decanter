@@ -5,7 +5,7 @@
 // launcher client, JSON REST for entitlements/catalog/assets, and a content
 // delivery of a binary BuildPatch manifest plus hashed chunks.
 //
-// docs: docs/plans/epic-support.md, docs/architecture.md
+// docs: docs/adr/017-epic.md, docs/architecture.md
 
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
