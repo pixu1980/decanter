@@ -3,15 +3,15 @@
 - **Date**: 2026-10-02
 - **Status**: accepted
 - **Tags**: architecture, registry, typescript
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
-Five repos existed: steam-mac-core held a battle-tested zsh engine, and four per-game repos held only a game.conf, a thin wrapper, an icon and docs. Adding a game meant cloning and editing a repo, and the shared engine could only run one game per repo.
+Five repos existed: a shared core held a battle-tested zsh engine, and four per-game repos held only a game.conf, a thin wrapper, an icon and docs. Adding a game meant cloning and editing a repo, and the shared engine could only run one game per repo.
 
 ## Decision
 
-Replace all five with a single TypeScript repo, steam-mac. Games become runtime data: steam-mac add writes ~/.steam-mac/games/<slug>/game.json, and every command resolves a game from that registry. The engine, the CLI and the OpenTUI interface live in the same program.
+Replace all five with a single TypeScript repo (the project is `decanter` since ADR 016). Games become runtime data: `decanter add` writes `~/.decanter/games/<slug>/game.json`, and every command resolves a game from that registry. The engine, the CLI and the OpenTUI interface live in the same program.
 
 ## Consequences
 

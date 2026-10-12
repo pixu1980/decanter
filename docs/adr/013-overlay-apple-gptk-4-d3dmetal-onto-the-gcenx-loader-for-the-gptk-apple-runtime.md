@@ -3,7 +3,7 @@
 - **Date**: 2026-10-03
 - **Status**: accepted
 - **Tags**: wine, runtime, macos, gptk
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -11,7 +11,7 @@ The gptk runtime uses the Gcenx game-porting-toolkit cask, stuck at D3DMetal 3.0
 
 ## Decision
 
-Add an opt-in gptk-apple runtime. resolveWine points it at the gptk-apple overlay app under the wine directory of the steam-mac home, and reads the mounted DMG directory from the appleGptkSource config field. ensureWine clones the Gcenx loader with an APFS copy-on-write clone and overlays only the DMG redist external directory (the D3DMetal framework and the shared Direct3D library); the redist wine bridge DLLs are skipped because their 4.0 builds fail to initialise on the frozen Apple Wine 7.7, while the loader 3.0 bridges work with the 4.0 framework. status and doctor report the D3DMetal framework version instead of the misleading Wine string, so the runtime is verified rather than assumed. The default gptk path and the shared cask are left untouched.
+Add an opt-in gptk-apple runtime. resolveWine points it at the gptk-apple overlay app under the wine directory of the decanter home, and reads the mounted DMG directory from the appleGptkSource config field. ensureWine clones the Gcenx loader with an APFS copy-on-write clone and overlays only the DMG redist external directory (the D3DMetal framework and the shared Direct3D library); the redist wine bridge DLLs are skipped because their 4.0 builds fail to initialise on the frozen Apple Wine 7.7, while the loader 3.0 bridges work with the 4.0 framework. status and doctor report the D3DMetal framework version instead of the misleading Wine string, so the runtime is verified rather than assumed. The default gptk path and the shared cask are left untouched.
 
 ## Consequences
 

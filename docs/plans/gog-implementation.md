@@ -6,7 +6,7 @@ Feature plan. Study: `docs/plans/gog-support.md`. Design chosen by the user:
 
 ## Files to change
 
-- `src/core/profile.ts` — `store: "steam" | "gog"`, `gogId?: number`
+- `src/core/profile.ts` — `store: "steam" | "gog" | "epic"`, `gogId?: number`
 - `src/core/config.ts` — `gog` account block (optional)
 - `src/core/paths.ts` — `~/.decanter/gog/` (tokens, downloads)
 - `src/core/gog.ts` — new: auth, tokens, owned games, product, installers, builds, manifests, secure link, download

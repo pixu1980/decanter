@@ -3,7 +3,7 @@
 - **Date**: 2026-10-03
 - **Status**: superseded by [008](008-keep-the-tui-at-the-full-viewport.md)
 - **Tags**: tui, opentui, layout
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 

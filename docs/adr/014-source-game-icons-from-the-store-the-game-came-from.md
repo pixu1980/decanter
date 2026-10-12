@@ -3,7 +3,7 @@
 - **Date**: 2026-10-05
 - **Status**: accepted
 - **Tags**: icons, gog, stores
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 

@@ -3,16 +3,21 @@
 `decanter` is a single TypeScript program. A thin CLI (`src/cli.ts`) and an
 OpenTUI interface (`src/tui/`) both call the same engine in `src/core/`. The
 engine resolves a game from a runtime registry, downloads its Windows build
-through Steam, and turns the Wine prefix into a native `.app`.
+through Steam, GOG or Epic, and turns the Wine prefix into a native `.app`.
 
 ```
 src/cli.ts ─┐
-            ├─▶ src/core/lifecycle.ts ─┬─▶ depot.ts      (Steam depot download + import)
-src/tui/  ──┘                          ├─▶ exe.ts        (executable detection after import)
-                                       ├─▶ steamcmd.ts   (headless download)
-                                       ├─▶ store.ts      (store metadata + artwork)
+            ├─▶ src/core/lifecycle.ts ─┬─▶ stores.ts     (the Steam/GOG/Epic provider registry)
+src/tui/  ──┘                          ├─▶ depot.ts      (Steam depot download + import)
+                                       ├─▶ steamcmd.ts   (headless Steam download)
+                                       ├─▶ gog.ts        (GOG auth + Galaxy content system)
+                                       ├─▶ epic.ts       (Epic auth + BuildPatch manifest)
+                                       ├─▶ exe.ts        (executable detection after import)
+                                       ├─▶ store.ts      (Steam store metadata + artwork)
                                        ├─▶ catalog.ts    (known-game profile defaults)
+                                       ├─▶ library.ts    (the cross-store catalog)
                                        ├─▶ wine.ts       (runtime provisioning)
+                                       ├─▶ wow64.ts      (Rosetta far-return wow64cpu fix)
                                        ├─▶ icon.ts       (.icns from art, exe or a placeholder)
                                        ├─▶ bundle.ts     (the .app)
                                        └─▶ registry.ts   (games under ~/.decanter)
@@ -83,8 +88,9 @@ prefix derived from the slug (`GK2_PREFIX`, `GK2_APP`, `GK2_WINE_APP`,
 
 ### Known games and executable detection
 
-The Steam store does not expose the executable name or the save layout, so
-`catalog.ts` holds that data per appid (currently Graveyard Keeper 2). `add`
+A store does not always expose the executable name or the save layout, so
+`catalog.ts` holds that data per store and id (currently Graveyard Keeper 2 and
+Game Dev Studio on Steam, The Settlers II - 10th Anniversary on GOG). `add`
 merges a catalog entry under any explicit flag. For a game without an entry the
 profile starts with `<slug>.exe`, and `import` runs `exe.ts` when that file is
 missing: it picks the executable whose name matches the game, otherwise the
@@ -107,6 +113,18 @@ and the app bundle rebuilt, so opening the `.app` launches the real game.
 - The guided fallback opens `steam://open/console`, tells the user to run
   `download_depot`, and watches the depot folder until it stops growing.
 
+## GOG integration
+
+`gog.ts` mirrors the GOG client: OAuth2 with the public Galaxy client (browser
+plus a pasted redirect URL, tokens under `~/.decanter/gog/`), the owned list and
+the product (with its image map) from the GOG API, and a Windows build resolved
+through the Galaxy content system. The build is a zlib meta document listing
+depots, a zlib depot manifest listing files, directories and links, and content
+chunks fetched with a per-build secure link, inflated and verified by MD5. GOG
+builds are DRM-free, so the game runs with no launcher and `run` needs no extra
+arguments. `add --store gog`, `download`, `import` and `icon` branch on the
+store.
+
 ## Epic integration
 
 `epic.ts` mirrors the GOG client: OAuth with the public launcher client (browser
@@ -121,7 +139,7 @@ fetches an exchange code and passes the launcher arguments legendary computes
 (`-AUTH_TYPE=exchangecode`, `-epicapp`, `-epicusername`, `-epicsandboxid`, …)
 through `open --args`, so authenticated titles start; the EOS overlay for
 multiplayer is still the next step. See
-[docs/plans/epic-support.md](plans/epic-support.md).
+[ADR 017](adr/017-epic.md).
 
 ## Wine runtimes
 
@@ -185,35 +203,35 @@ the loader directly, so the bundle needs no Node runtime at play time.
 
 ## Icons
 
-`icon.ts` tries the sources in order, stopping at the first that produces an
-`.icns`, and builds `icon.png` plus `icon.icns` with `sips` and `iconutil`:
+`stores.ts` gives each store its own artwork candidates (`StoreProvider.art`),
+and `icon.ts` tries them in order, stopping at the first that produces an
+`.icns`, then builds `icon.png` plus `icon.icns` with `sips` and `iconutil`:
 
-1. for a Steam game, the vertical Steam library art (600x900) and the other
-   store candidates;
-2. for a GOG game, the product artwork (`icon`, `logo2x`, `logo`, `background`)
-   from the cached `meta.gogImages` map, made absolute (`//host/…` →
-   `https://host/…`);
-3. SteamGridDB, square icons first then vertical grids (Steam games only);
-4. the smaller Steam artwork (logos and capsules);
-5. the icon embedded in the game executable, with `wrestool` / `icotool`
+1. **Steam** — the vertical Steam library art (600x900), then SteamGridDB
+   (square icons first, then vertical grids), then the smaller Steam artwork
+   (logos and capsules);
+2. **GOG** — the product artwork (`icon`, `logo2x`, `logo`, `background`) from
+   the cached `meta.gogImages` map, made absolute (`//host/…` → `https://host/…`);
+3. **Epic** — the catalog images from the cached `meta.epicImages` map;
+4. the icon embedded in the game executable, with `wrestool` / `icotool`
    (Homebrew `icoutils`);
-6. a placeholder generated from the game's initial with a built-in bitmap font.
+5. a placeholder generated from the game's initial with a built-in bitmap font.
 
 Missing art is not fatal: a game without an icon still gets a working bundle.
-For a GOG game the Steam CDN and SteamGridDB are skipped entirely (an appid-0
-SteamGridDB lookup used to return an unrelated image), the stale Steam artefacts
-of an earlier run are removed, and `decanter icon` rebuilds the bundle so the
-new icon actually reaches the app.
+Each store's `art` prunes the files another store's run may have left behind (an
+appid-0 SteamGridDB lookup once returned an unrelated image), and `decanter icon`
+rebuilds the bundle so the new icon actually reaches the app.
 
 ## Provisioning
 
 `addGame` writes the profile, then calls `provisionGame`, which runs `setup`
-(Rosetta, Wine, SteamCMD, prefix, icon, bundle), `download` (SteamCMD, or the
-guided Steam console) and `import` in order. When the depot id is missing the
+(Rosetta, Wine, the wow64 fix, prefix, SteamCMD, icon, bundle), `download` (the
+store's content system) and `import` in order. When a required id is missing the
 game stays registered and the pipeline stops with a message. When the icon is
 still a placeholder or missing, it is re-provisioned after the import so the
 executable icon can replace it; a good icon found before the download is left
-alone. `setup` installs SteamCMD, so the tool never needs it installed by hand.
+alone. `setup` installs SteamCMD, so Steam downloads never need it installed by
+hand.
 
 ## Safety
 

@@ -3,11 +3,11 @@
 - **Date**: 2026-10-05
 - **Status**: accepted
 - **Tags**: naming, paths, layout
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
-The tool started as a Steam-only wrapper, so its name and its home directory both said steam. It now downloads from Steam, GOG and soon Epic, and the old layout scattered a game across three places: the profile under the home, the Wine prefix under a Games folder, and the saves under the user Documents folder (through the prefix Documents symlink). The name hid what the tool does and the split layout made backups, uninstalls and a future Epic integration harder to reason about.
+The tool started as a Steam-only wrapper, so its name and its home directory both said steam. It now downloads from Steam, GOG and Epic, and the old layout scattered a game across three places: the profile under the home, the Wine prefix under a Games folder, and the saves under the user Documents folder (through the prefix Documents symlink). The name hid what the tool does and the split layout made backups, uninstalls and a future Epic integration harder to reason about.
 
 ## Decision
 

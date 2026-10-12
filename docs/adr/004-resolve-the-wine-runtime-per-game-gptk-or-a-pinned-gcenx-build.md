@@ -3,7 +3,7 @@
 - **Date**: 2026-10-02
 - **Status**: accepted
 - **Tags**: wine, runtime, macos
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -11,7 +11,7 @@ GPTK carries D3DMetal for Direct3D but bundles Wine 7.7, whose memory manager as
 
 ## Decision
 
-wineRuntime selects gptk (default) or wine-devel / wine-staging. setup provisions the gptk cask through Homebrew, or downloads the pinned Gcenx tarball (wineVersion) into ~/.steam-mac/wine. The app bundle copies whichever loader exists and skips the preloader when absent.
+wineRuntime selects gptk (default) or wine-devel / wine-staging. setup provisions the gptk cask through Homebrew, or downloads the pinned Gcenx tarball (wineVersion) into ~/.decanter/wine. The app bundle copies whichever loader exists and skips the preloader when absent.
 
 ## Consequences
 

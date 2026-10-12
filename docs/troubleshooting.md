@@ -48,6 +48,16 @@ and after logging in you paste the **redirect URL** (or just the `code`) —
 `extractGogCode` pulls the `code` out of either. The token error body is shown,
 so a bad or reused code says so explicitly.
 
+## Epic login: the authorization code is rejected
+
+`decanter login epic` opens the Epic OAuth URL; after logging in you paste the
+`code` it prints (or the whole redirect URL — `extractEpicCode` pulls the code
+out of either). The code is single-use and short-lived, so an expired or
+already-used one fails at the token exchange with the error body shown; run
+`decanter login epic` again for a fresh code. Tokens live under
+`~/.decanter/epic/` and refresh automatically; when a download asks for a login
+the refresh token has expired too, so log in again.
+
 ## SteamCMD cannot download the depot
 
 `decanter download` uses SteamCMD first and falls back to the Steam console.
@@ -156,7 +166,8 @@ Anniversary to `11.18`) or build the DLL for that version with the upstream
 decanter icon <game>
 ```
 
-The icon comes from the Steam library art, or from the game executable when the
+The icon comes from the store the game came from (the Steam library art, the GOG
+artwork or the Epic catalog images), then from the game executable when the
 store has none (needs `brew install icoutils`). A missing icon never blocks the
 build.
 

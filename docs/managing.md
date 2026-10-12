@@ -8,29 +8,50 @@ command is idempotent, and destructive actions ask first.
 ## Mental model
 
 ```
-Steam store            ~/.decanter/games/<slug>/        Wine prefix
-   appid  ──── add ──▶  game.json (profile)               games/<slug>/prefix
-                        manifest  (installed build)       drive_c/<installSubdir>/
-                        assets/   (icon)                         ▲
-                        saves/    (saves, a link           │ import (rsync)
-                                   when in the prefix)      │
-SteamCMD / Steam console ────── download ──▶ ~/.decanter/steamcmd/…
+Store (Steam/GOG/Epic)   ~/.decanter/games/<slug>/       Wine prefix
+  appid / gogId /        game.json (profile)             games/<slug>/prefix
+  epicAppName ── add ──▶ manifest  (installed build)     drive_c/<installSubdir>/
+                         assets/   (icon)                        ▲
+                         saves/    (saves, a link          │ import (rsync)
+                                    when in the prefix)     │
+store downloader ─────── download ──▶ ~/.decanter/{steamcmd,gog,epic}/…
 ```
 
 The depot download is **moved**, not copied: after `import` the depot folder is
 empty, so the next download fetches the current build again.
 
+## Stores
+
+`decanter` speaks three stores; `profile.store` is `steam`, `gog` or `epic`, and
+`src/core/stores.ts` is the single place that describes them.
+
+| Store | Identifier | Download | Login |
+|---|---|---|---|
+| Steam | `appid` + a depot id | SteamCMD (`download_depot`), a guided Steam console as fallback | `decanter login steam` |
+| GOG | `gogId` (product id) | the Galaxy content system (build → manifest → chunks) | `decanter login gog` |
+| Epic | `epicAppName` + namespace | the BuildPatch manifest | `decanter login epic` |
+
+`list <store>` prints one store's owned games. `add --store <store>` registers
+one; each store has its own id flag (`--appid`, `--gog-id`, `--epic-app`). The
+download, import and icon steps dispatch on the store, so the rest of the
+lifecycle — setup, run, window mode, saves, backups, uninstall — is identical.
+
 ## Adding a game
 
 ```sh
+# Steam
 decanter add "Graveyard Keeper 2" --depot 4358691
 decanter add --appid 57640 --depot 57641
+# GOG
+decanter add --store gog --gog-id 1207659163
+# Epic
+decanter add --store epic --epic-app Boga
 ```
 
-`add` resolves the app on the Steam store, caches its metadata, fetches the
+`add` resolves the app on the selected store, caches its metadata, fetches the
 icon, writes the profile, then provisions the game: `setup`, `download` and
-`import` run automatically (SteamCMD is downloaded by `setup`). When a step
-cannot continue (no depot id, no login) the game stays registered and the
+`import` run automatically (for Steam, SteamCMD is downloaded by `setup`). When a
+step cannot continue (no depot id, no login) the game stays registered and the
 command says how to resume.
 
 Running `add` again is safe: a registered game that is **not installed** is
@@ -40,7 +61,8 @@ is left alone (pass `--force` to re-register and re-provision it).
 The Steam **depot id** is not exposed by any public API: find it on
 [SteamDB](https://steamdb.info/) (the Depots tab) or with
 `app_info_print <appid>` in SteamCMD. For a single-depot game it is often the
-appid or the appid plus one, but always confirm it.
+appid or the appid plus one, but always confirm it. GOG and Epic need no depot:
+their product id / app name is enough to resolve the build.
 
 ### Known games and executable detection
 
@@ -76,9 +98,11 @@ that Rosetta 2 sometimes does not honour, which crashes 32-bit games in
 SHA-256 and copied into both the runtime and the prefix. See
 [troubleshooting](troubleshooting.md#the-game-crashes-right-after-the-d3d-device-is-created-32-bit-games).
 
-`download` uses SteamCMD. Anonymous downloads work for free games; for owned
-games run `decanter login steam` once so SteamCMD remembers the account. Add
-`--manual` to skip SteamCMD and drive the Steam console yourself.
+For Steam, `download` uses SteamCMD. Anonymous downloads work for free games; for
+owned games run `decanter login steam` once so SteamCMD remembers the account.
+Add `--manual` to skip SteamCMD and drive the Steam console yourself. For GOG and
+Epic, log in once (`decanter login gog` / `decanter login epic`) and `download`
+fetches the build through the store's own content system.
 
 ## Updating
 

@@ -1,47 +1,76 @@
 # decanter
 
-Wrap **any Windows-only Steam game** into a real macOS `.app` on Apple Silicon,
-through Wine and Apple's D3DMetal (Game Porting Toolkit). One repo, one runtime
-registry, one CLI, one terminal interface.
+Wrap **any Windows-only PC game — Steam, GOG or Epic** — into a real macOS
+`.app` on Apple Silicon, through Wine and Apple's D3DMetal (Game Porting
+Toolkit). One repo, one runtime registry, one CLI, one terminal interface.
 
-This is the unified successor to the per-game wrapper repos
-(`steam-mac-core`, `broken-sword-directors-cut`, `graveyard-keeper-2`,
-`office-management-101`, `the-cosmic-wheel-sisterhood`). Instead of one git repo
-per game, it keeps every game in a registry under `~/.decanter/games/<slug>/`.
+`decanter` is the unified successor to the earlier per-game wrapper repos:
+instead of one git repo per game, it keeps every game in a registry under
+`~/.decanter/games/<slug>/`, and it speaks all three stores a Mac player
+already owns games on.
 
-> Unofficial fan tool. **You must own the game on Steam.** This repo contains no
-> game files.
+- **Three stores, one pipeline.** **Steam** (SteamCMD depots), **GOG** (the
+  Galaxy content system, DRM-free) and **Epic** (the BuildPatch manifest) all
+  resolve to the same profile, the same Wine prefix and the same `.app`.
+- **One catalog.** `c` lists every **game** the three stores own, one row per
+  game; a game owned on more than one store is a single row and `enter` asks
+  which store to install from.
+- **Automatic provisioning.** `add` runs setup, download and import in one
+  step, and fetches the icon from the store the game came from.
+- **Offline where it can.** The Steam owned list and the whole catalog read the
+  clients' own caches; GOG and Epic log in once, then work from the cache.
+- **Full lifecycle.** run, window mode, logs, saves, mods, backups, uninstall,
+  runtime upgrade and rollback — idempotent, and every step honours `--dry-run`.
+- **OpenTUI interface** (`@opentui/react`) over the same engine as the CLI.
+
+> Unofficial fan tool. **You must own each game on the store you download it
+> from.** This repo contains no game files.
+
+## Stores
+
+| Store | Owned list | Download | Login |
+|---|---|---|---|
+| **Steam** | the client's local caches (no key), or the Web API when a key is set | SteamCMD depots, with a guided Steam-console fallback | `decanter login steam` |
+| **GOG** | the GOG API (`embed.gog.com`) | the Galaxy content system (build → manifest → chunks), DRM-free | `decanter login gog` (OAuth, paste the redirect URL) |
+| **Epic** | the launcher library API | Epic's BuildPatch manifest (binary manifest + hashed chunks) | `decanter login epic` (OAuth, paste the code) |
+
+`list <store>` prints one store's full library. The catalog keeps only games, so
+runtimes, dedicated servers, SDKs, DLC, soundtracks and demos stay out.
 
 ## What it does
 
-- Registers a game from the Steam store (name or appid), caching its metadata.
+- Registers a game from **Steam, GOG or Epic** (name or id), caching its
+  metadata for offline lookups.
 - Provisions a new game in one step: `add` runs setup, then download and import.
-- Knows Graveyard Keeper 2 out of the box (the built-in catalog fills the
-  executable, save folders and window-mode registry key); for any other game it
-  detects the executable after `import` and rebuilds the bundle.
+- Knows a small built-in catalog out of the box (Graveyard Keeper 2 and Game Dev
+  Studio on Steam, The Settlers II - 10th Anniversary on GOG); for any other
+  game it detects the executable after `import` and rebuilds the bundle.
 - Fetches the app icon automatically from the store the game came from: the
-  Steam CDN (library art, then SteamGridDB, then the smaller artwork), the
-  GOG image CDN for GOG games, or the Epic catalog images, then the icon
-  embedded in the `.exe`, and finally a generated placeholder.
-- Installs **SteamCMD** itself as part of `setup`, so depot downloads need no
-  manual tooling.
+  Steam CDN (library art, then SteamGridDB, then the smaller artwork), the GOG
+  image CDN for GOG games, or the Epic catalog images, then the icon embedded in
+  the `.exe`, and finally a generated placeholder.
+- Downloads the Windows build per store: **SteamCMD** depots for Steam (falling
+  back to the guided Steam-console flow when a login is missing), the Galaxy
+  content system for GOG, and the BuildPatch manifest for Epic.
+- Installs **SteamCMD** itself as part of `setup`, so Steam depot downloads need
+  no manual tooling.
 - Provisions the Wine runtime: Game Porting Toolkit by default, a pinned Gcenx
   `wine-devel` / `wine-staging` build when GPTK's Wine 7.7 cannot run the game.
   An opt-in `gptk-apple` runtime overlays the newer D3DMetal from Apple's Game
   Porting Toolkit 4.0 DMG onto the Gcenx loader (only the D3DMetal layer; the
   redist's 4.0 bridge DLLs are skipped because they do not initialise on Wine
-  7.7).
+  7.7). For a Gcenx runtime on Apple Silicon, `setup` also installs the Rosetta
+  far-return `wow64cpu.dll` fix that stops 32-bit games crashing in
+  `wow64cpu.dll`.
 - Reports the Wine + Direct3D stack a game uses (`Game Porting Toolkit (Apple) ·
   D3DMetal 4.0b2`, `Wine devel 11.18 · DX9 (native d3dx9)`), tries the newest
   runtime available, and rolls back to the previous runtime that worked.
-- Downloads the Windows depot with **SteamCMD**, falling back to the guided
-  Steam-console flow when a login is missing.
-- Imports the depot into a Wine prefix, tracks the depot manifest and reports
-  whether an update is available.
+- Imports the build into a Wine prefix, tracks the installed manifest and
+  reports whether an update is available.
 - Builds a native `.app` that hosts the Wine loader itself, so the game gets a
   normal macOS app menu and a working **Cmd+Q**.
 - Manages the full lifecycle: run, window mode, logs, saves, mods, backups,
-  uninstall. Everything is idempotent and honours `--dry-run`.
+  uninstall.
 - Ships an **OpenTUI** interface (`@opentui/react`) for all of the above.
 
 ## Requirements
@@ -49,7 +78,7 @@ per game, it keeps every game in a registry under `~/.decanter/games/<slug>/`.
 - Apple Silicon Mac, macOS 14 (Sonoma) or newer
 - Node.js 26.4 or newer (the OpenTUI interface needs `--experimental-ffi`)
 - [Homebrew](https://brew.sh)
-- A Steam account that owns the games you add
+- An account on the store(s) you use; you must own the games you add
 
 ## Install
 
@@ -66,32 +95,36 @@ pnpm start                # opens the terminal interface from the checkout
 decanter
 
 # or use the CLI: add resolves, sets up, downloads and imports in one step
-decanter add "Graveyard Keeper 2" --depot 4358691
+decanter add "Graveyard Keeper 2" --depot 4358691        # Steam
+decanter add --store gog --gog-id 1207659163             # GOG
+decanter add --store epic --epic-app Boga                # Epic
 decanter run graveyard-keeper-2
 ```
 
-For a game in the built-in catalog (currently Graveyard Keeper 2) `add` needs
-nothing else. For any other game, pass `--exe Name.exe` when you know it, or let
-`import` detect the executable in the game folder and rewrite the profile. The
-TUI's add wizard has the same optional **Exe** field.
+For a game in the built-in catalog `add` needs nothing else. For any other game,
+pass `--exe Name.exe` when you know it, or let `import` detect the executable in
+the game folder and rewrite the profile. The TUI's add wizard has the same
+optional **Exe** field and a **Steam / GOG / Epic** store select.
 
-`download` uses SteamCMD. Anonymous downloads work for free games; for owned
-games run `decanter login steam` once so SteamCMD remembers your account. If SteamCMD
-cannot help, the command falls back to opening the Steam console and waits for
-`download_depot` to finish.
+`download` is store-specific. For Steam, anonymous downloads work for free
+games; run `decanter login steam` once for owned games so SteamCMD remembers
+your account, and if SteamCMD cannot help the command falls back to the Steam
+console. For GOG and Epic, run `decanter login gog` / `decanter login epic`
+once; the build is then fetched through the store's own content system.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `list [store]` | List registered games, or a store's owned games (`steam`, `gog`, `epic`) || `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
+| `list [store]` | List registered games, or a store's owned games (`steam`, `gog`, `epic`) |
+| `add "<name>"` / `add --appid N` | Register a game and provision it (setup → download → import) |
 | `remove <game>` | Uninstall and forget a game (`--purge` deletes the prefix) |
 | `migrate <path>` | Import a legacy per-game repo into the registry |
 | `config [key=value ...]` | Show or change machine-wide settings |
 | `login <store> [arg]` / `logout <store>` | Log in to / out of `steam`, `gog` or `epic` |
 | `setup <game>` | Runtime, prefix, icon, app bundle |
-| `download <game>` | Fetch the Windows depot (`--manual` for the Steam console) |
-| `import <game>` | Move a finished depot download into the prefix |
+| `download <game>` | Fetch the Windows build (`--manual` for the Steam console) |
+| `import <game>` | Move a finished download into the prefix |
 | `update <game>` | Check for and install an update (`--check` exits 3 if any) |
 | `run <game>` | Launch the game |
 | `windowed` / `fullscreen <game>` | Switch the Unity screen mode when configured |
@@ -140,11 +173,11 @@ redirect URL is the reliable way). The add wizard picks the store with a
 ```
 bin/decanter.mjs        launcher (adds --experimental-ffi for the TUI only)
 src/cli.ts               command line entry point
-src/core/                engine: profiles, registry, Steam, Wine, bundle, lifecycle
+src/core/                engine: profiles, registry, stores (Steam/GOG/Epic), Wine, bundle, lifecycle
 src/tui/                 OpenTUI interface (@opentui/react)
 tests/unit/              node:test unit and integration tests
 tests/tui/               render tests for the interface
-docs/                    architecture, managing, troubleshooting, ADRs, plan
+docs/                    architecture, managing, troubleshooting, ADRs, handoffs, plans
 ```
 
 Everything the tool creates at runtime lives under `~/.decanter` (override with

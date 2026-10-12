@@ -3,7 +3,7 @@
 - **Date**: 2026-10-02
 - **Status**: accepted
 - **Tags**: tui, opentui, react
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 

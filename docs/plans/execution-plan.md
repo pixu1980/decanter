@@ -1,11 +1,10 @@
 # Execution plan — `decanter` unified wrapper
 
-Goal: replace the five per-game repos (`steam-mac-core`, `broken-sword-directors-cut`,
-`graveyard-keeper-2`, `office-management-101`, `the-cosmic-wheel-sisterhood`) with a
-single TypeScript repo that wraps **any** Windows-only Steam game into a native
-`.app` on Apple Silicon: registry of games, automatic depot download (SteamCMD with
-guided-console fallback), automatic icon, updates, lifecycle, and an OpenTUI
-(@opentui/react) interface.
+Goal: replace the legacy per-game wrapper repos (archived under `.archive/`) with a
+single TypeScript repo that wraps **any** Windows-only PC game — Steam, GOG or Epic
+— into a native `.app` on Apple Silicon: a registry of games, a per-store download
+(SteamCMD depots, the Galaxy content system, the Epic BuildPatch manifest), an
+automatic icon, updates, lifecycle, and an OpenTUI (@opentui/react) interface.
 
 ## Decisions taken (from the foundation interview)
 
@@ -13,7 +12,7 @@ guided-console fallback), automatic icon, updates, lifecycle, and an OpenTUI
 - **Stack**: full TypeScript rewrite (engine + CLI + TUI), pnpm, exact versions.
 - **Depot download**: SteamCMD when configured, guided Steam-console fallback otherwise.
 - **Game registry**: runtime only, `~/.decanter/games/<slug>/game.json`.
-- **Icon**: auto from the Steam CDN, fallback to the icon embedded in the exe (icoutils).
+- **Icon**: auto from the store's CDN (Steam, GOG, Epic), fallback to the icon embedded in the exe (icoutils).
 - **TUI**: `@opentui/react`.
 - **Legacy repos**: profiles migrated into the registry, repos archived then removed.
 - **Build order**: all in parallel.
@@ -75,7 +74,7 @@ logs/                       CLI/TUI logs
 - [x] ADRs for structural decisions (pix_tool_process_adr)
 - [x] `tsc --noEmit`, `node --test` (34 unit tests), OpenTUI render test
 - [x] Migrate the four legacy profiles into `~/.decanter/games/`
-- [x] Archive the legacy repos (`.archive/legacy-wrapper-repos-*.tar.gz` + git bundles), then remove the four per-game repos; `steam-mac-core` is kept on request
+- [x] Archive the legacy repos (`.archive/legacy-wrapper-repos-*.tar.gz` + git bundles), then remove the four per-game repos; the shared core is kept on request
 - [ ] Run the dev server per project convention (not applicable: no server)
 
 ## Verification status
@@ -85,6 +84,17 @@ logs/                       CLI/TUI logs
 - `pnpm test:tui`: 1 render test, 0 failures.
 - `decanter list`, `status`, `doctor` run against the real machine and the four
   migrated games; `doctor broken-sword-directors-cut` passes every check.
+
+## Delivered after this plan
+
+The plan above covers the Steam-first foundation. Two stores followed, each a new
+provider plus one entry per dispatch table (see `docs/architecture.md`):
+
+- **GOG** — `src/core/gog.ts`, the Galaxy content system, `add --store gog` and
+  `login gog` (`docs/plans/gog-implementation.md`).
+- **Epic** — `src/core/epic.ts`, the BuildPatch manifest, `add --store epic` and
+  `login epic`, plus the unified cross-store catalog with the store picker and the
+  install screen (ADR 017–019).
 
 ## Notes
 

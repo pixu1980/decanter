@@ -11,7 +11,7 @@ _Consolidated at the feature close from 7 decisions of this feature (017, 018, 0
 - **Date**: 2026-10-05
 - **Status**: accepted
 - **Tags**: epic, stores, download
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -44,7 +44,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-06
 - **Status**: accepted
 - **Tags**: tui, catalog, stores, opentui
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -77,7 +77,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-06
 - **Status**: accepted
 - **Tags**: tui, catalog, stores
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -110,7 +110,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-07
 - **Status**: accepted
 - **Tags**: wine, runtime, macos, rosetta, wow64
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -144,7 +144,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-12
 - **Status**: accepted
 - **Tags**: docs, closeout, plan
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -171,7 +171,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-12
 - **Status**: accepted
 - **Tags**: docs, closeout, plan
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
@@ -198,7 +198,7 @@ The assumption this leans on, and the observation that would make it wrong.
 - **Date**: 2026-10-12
 - **Status**: accepted
 - **Tags**: docs, closeout, plan
-- **Author**: Emiliano Pisu <emiliano.pisu@webidoo.com>
+- **Author**: Emiliano Pisu <pisuemiliano.1980@gmail.com>
 
 ## Context
 
