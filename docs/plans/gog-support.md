@@ -1,7 +1,7 @@
-# GOG.com support — feasibility study
+# GOG support, feasibility study
 
 Research only. No code yet. The goal is to understand whether `decanter` can do
-for GOG.com games what it already does for Steam: register a game, download the
+for GOG games what it already does for Steam: register a game, download the
 Windows build, install it into a Wine prefix, build the `.app`, and keep the
 update/save/mod lifecycle.
 
@@ -10,7 +10,7 @@ update/save/mod lifecycle.
 | | Steam | GOG |
 |---|---|---|
 | Launcher | Steam client / SteamCMD | GOG Galaxy (Windows-only) |
-| DRM | Steam DRM on launch | **DRM-free** — no launcher needed after download |
+| DRM | Steam DRM on launch | **DRM-free**, no launcher needed after download |
 | Download | depot + manifest (`download_depot`) | offline installer **or** Galaxy content-system build |
 | Auth | SteamCMD login (account + Steam Guard) | OAuth2 (client id + secret, browser redirect) |
 | macOS client | native Steam exists | **no Galaxy for macOS** → Wine, exactly like Steam |
@@ -24,21 +24,21 @@ Two ways to obtain the **Windows** build:
 
 ## Existing tools (from the research)
 
-- **gogdl** (Heroic, Python) — auth + download + install; the closest thing to
+- **gogdl** (Heroic, Python), auth + download + install; the closest thing to
   SteamCMD. Needs Python and `requests`. `gogdl download --game <id> --platform
   windows`.
-- **lgogdownloader** (C++) — offline installers *and* Galaxy builds
+- **lgogdownloader** (C++), offline installers *and* Galaxy builds
   (`--galaxy-install`); Linux-focused, heavy C++ deps, painful on macOS.
-- **asb/gogdl** (Lua + wget), **gogg** (Go), **gogdl-cli** (Rust) — smaller
+- **asb/gogdl** (Lua + wget), **gogg** (Go), **gogdl-cli** (Rust), smaller
   downloaders, mostly offline installers.
-- **GOG Galaxy Pipeline Builder** — official, but developer-portal only.
+- **GOG Galaxy Pipeline Builder**, official, but developer-portal only.
 
 Local toolchain: `python3` 3.14 (Homebrew) is present, `requests` is not;
 `curl`, `xar`, `tar` are available.
 
 ## macOS reality
 
-- No native GOG Galaxy client, so GOG Windows games need Wine — which the
+- No native GOG Galaxy client, so GOG Windows games need Wine, which the
   project already provides.
 - GOG ships macOS builds as `.pkg` (xar), extractable without running the
   installer, but that is irrelevant here: we want the **Windows** build to run
@@ -51,7 +51,7 @@ Local toolchain: `python3` 3.14 (Homebrew) is present, `requests` is not;
 The Steam pipeline is: `store lookup → SteamCMD download → rsync into the
 prefix → .app`. Two GOG designs map onto it.
 
-### Design A — offline installer (recommended first)
+### Design A, offline installer (recommended first)
 
 1. Auth with the GOG API and list the owned game's installers.
 2. Download `setup_*.exe` + `.bin` into `~/.decanter/gog/<slug>/`.
@@ -64,7 +64,7 @@ prefix → .app`. Two GOG designs map onto it.
 - Cons: needs Wine to run the installer; less control over the install dir;
   update tracking is version-string based, not manifest based.
 
-### Design B — Galaxy content-system (parity with Steam)
+### Design B, Galaxy content-system (parity with Steam)
 
 1. Auth (same OAuth).
 2. `GET content-system.gog.com/products/<id>/os/windows/builds?generation=2`
@@ -78,7 +78,7 @@ prefix → .app`. Two GOG designs map onto it.
 
 ## Concrete API notes (verified against the docs)
 
-- Auth: `https://auth.gog.com/auth?client_id=REDACTED&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2`
+- Auth: `https://auth.gog.com/auth?client_id=<gog-client-id>&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2`
   → the user copies the `code` → `GET auth.gog.com/token` returns
   `access_token` + `refresh_token` (~1 h lifetime, refreshable).
 - Owned games: `embed.gog.com/account/getFilteredProducts` (session/token).
@@ -102,7 +102,7 @@ prefix → .app`. Two GOG designs map onto it.
 
 ## Effort and risk
 
-- **Design A**: ~1–2 days. Main risk: installer silent flags vary; some games
+- **Design A**: ~1-2 days. Main risk: installer silent flags vary; some games
   use non-Inno installers.
 - **Design B**: ~1 week. Main risk: content-system protocol drift; chunk
   handling.

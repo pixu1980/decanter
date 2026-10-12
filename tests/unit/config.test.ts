@@ -40,11 +40,9 @@ test("the default config carries an empty credential block", () => {
   assert.deepEqual(config.credentials.epic, { clientId: "", clientSecret: "" });
 });
 
-test("no credential ships in the default config", () => {
+test("no long hex token ships in the default config", () => {
   const json = JSON.stringify(defaultConfig());
-  assert.doesNotMatch(json, /REDACTED/);
-  assert.doesNotMatch(json, /REDACTED/);
-  assert.doesNotMatch(json, /REDACTED/);
+  assert.doesNotMatch(json, /[0-9a-f]{24,}/);
 });
 
 test("credentials round-trip through config.json", async () => {

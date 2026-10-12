@@ -48,7 +48,7 @@ the sources it consulted. No opinions - those belong in the review.
 | Secrets: credential files in history | `git log --all --diff-filter=A --name-only \| grep -iE 'auth\.json\|config\.json\|\.env'` | none ever added (only `tsconfig.json` matched the `config` filter) |
 | Secrets: personal token location | `ls -la ~/.decanter/gog ~/.decanter/epic` and `~/.decanter/config.json` | `gog/auth.json`, `epic/auth.json` and the machine settings live outside the repository, under the user home |
 | Secrets: credentials in the source | `grep -rnE 'CLIENT_SECRET\|steamGridDbKey: \"' src/` | none after ADR 018: every credential lives in `config.json` and is written by `decanter init` |
-| Secrets: the old credential literals anywhere under src | `grep -rn '9d85c43b…\|daafbccc…\|95e427…\|34a02cf8…\|REDACTED' src/` | 0 after ADR 018 |
+| Secrets: the old credential literals anywhere under src | `grep -rn '9d85c43b…\|daafbccc…\|95e427…' src/` | 0 after ADR 018 |
 | Secrets: wizard surfaces | `grep -rn 'CREDENTIAL_FIELDS' src/` | one field list drives `decanter init` and the TUI Setup screen (`src/core/config.ts`, `src/core/wizard.ts`) |
 | Secrets: `.gitignore` guard | `grep -q '\.env' .gitignore` | before this run: no match, so a `.env` dropped in the tree would be committed |
 
