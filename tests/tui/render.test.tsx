@@ -87,6 +87,25 @@ test("the add wizard offers a Steam/GOG store select", async () => {
   }
 });
 
+/** Poll the rendered frame until `predicate` holds, on wall clock. */
+async function waitFor(
+  setup: Awaited<ReturnType<typeof testRender>>,
+  predicate: (frame: string) => boolean,
+  timeoutMs = 5000,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  let frame = "";
+  while (Date.now() < deadline) {
+    await setup.renderOnce();
+    frame = setup.captureCharFrame();
+    if (predicate(frame)) {
+      return frame;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`frame not ready within ${timeoutMs} ms: ${frame.slice(0, 200)}`);
+}
+
 test("the detail view opens the runtime panel", async () => {
   const home = mkdtempSync(join(tmpdir(), "decanter-tui-"));
   process.env.DECANTER_HOME = home;
@@ -119,9 +138,7 @@ test("the detail view opens the runtime panel", async () => {
     await new Promise((resolve) => setTimeout(resolve, 80));
     await setup.renderOnce();
     setup.mockInput.pressKey("RETURN");
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    await setup.renderOnce();
-    const frame = setup.captureCharFrame();
+    const frame = await waitFor(setup, (value) => /Runtime/.test(value) && /History/.test(value));
     assert.match(frame, /Runtime/);
     assert.match(frame, /History/);
     assert.match(frame, /D3DMetal 3.0/);
@@ -165,9 +182,7 @@ test("c opens the catalog with a filter", async () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await setup.renderOnce();
     setup.mockInput.pressKey("c");
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    await setup.renderOnce();
-    const frame = setup.captureCharFrame();
+    const frame = await waitFor(setup, (value) => /Catalog/.test(value));
     assert.match(frame, /Catalog/);
     assert.match(frame, /Filter/);
   } finally {
