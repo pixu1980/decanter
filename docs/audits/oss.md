@@ -52,6 +52,9 @@ the sources it consulted. No opinions - those belong in the review.
 | Secrets: wizard surfaces | `grep -rn 'CREDENTIAL_FIELDS' src/` | one field list drives `decanter init` and the TUI Setup screen (`src/core/config.ts`, `src/core/wizard.ts`) |
 | Secrets: `.gitignore` guard | `grep -q '\.env' .gitignore` | before this run: no match, so a `.env` dropped in the tree would be committed |
 
+| CI: workflow | `.github/workflows/ci.yml` | checkout, pnpm/action-setup and setup-node pinned to their v4.4.0 commits; `permissions: contents: read`; macos runner, Node 26.8.2, pnpm 12.11.2 |
+| CI: first green run | `GET https://api.github.com/repos/pixu1980/decanter/actions/runs/38270808910` | `conclusion: success`; install, typecheck, unit and TUI steps all success |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`

@@ -230,6 +230,9 @@ pnpm test:tui       # OpenTUI render test
 pnpm check          # all of the above
 ```
 
+CI runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which is
+`pnpm check`, on every pull request and every push to `main`.
+
 ## Docs
 
 - [docs/architecture.md](docs/architecture.md) - how the engine is put together

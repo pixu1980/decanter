@@ -17,12 +17,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 2 - OSS-002 (high)**: No CI: nothing runs `pnpm check` on a pull request, so a contribution can land untested.
-  - [x] **2.1**: Add .github/workflows/ci.yml triggered on pull_request and on push to main. Done this run.
-  - [x] **2.2**: Run `pnpm install --frozen-lockfile` then `pnpm check`. Done: Node 26.4 in the workflow; OSS-008 moves it to engines.
-  - [x] **2.3**: Set top-level `permissions: contents: read` and pin every action to a full commit SHA. Done: checkout, setup-node and pnpm/action-setup pinned to their v4.4.0 commits.
-  - [ ] **2.4**: Require this check in the main branch protection rule. Maintainer GitHub setting, not a repo file.
-  - [ ] **2.5**: Gate: a pull request shows the CI job green.
 - [ ] **Step 3 - OSS-003 (high)**: No CONTRIBUTING.md; the path from first issue to merge (setup, commit format, checks, PR flow) is undocumented.
   - [ ] **3.1**: Write CONTRIBUTING.md: prerequisites, `pnpm install`, branch naming, `type(scope): subject`, `pnpm check` before a PR, and how a PR is reviewed.
   - [ ] **3.2**: Link CONTRIBUTING.md from the README.
