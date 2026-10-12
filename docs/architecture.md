@@ -259,6 +259,14 @@ Destructive actions never let the engine prompt on stdin: `actions.ts` marks
 them, `_App.tsx` asks in-app and runs them with `yes: true`. `theme.ts` owns the
 palette, so screens do not hard-code colors (ADR 005).
 
+A screen stays inside the terminal at any width. A flex column shrinks an
+overfull child and the rows then overlap, so every row carries `flexShrink: 0`,
+a list longer than its panel renders only a window around the selection
+(`GameDetail`, `CatalogView`), every dialog caps its width to the viewport, and
+each line is truncated to the space it has (`src/tui/text.ts`).
+`tests/tui/responsive.test.tsx` renders every screen from 48 to 140 columns and
+fails when a line overflows or a label is drawn over its neighbor.
+
 ## Tests
 
 `tests/unit` covers profiles (including the legacy `game.conf` parser), the
