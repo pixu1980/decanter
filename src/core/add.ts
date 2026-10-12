@@ -6,7 +6,7 @@
 //
 // docs: docs/managing.md
 
-import { loadConfig } from "./config.ts";
+import { loadConfig, requireEpic, requireGog } from "./config.ts";
 import { ensureGogToken, gogLibrarySearch, gogProduct, gogSearch } from "./gog.ts";
 import { ensureEpicToken, epicCatalogItem, epicOwnedGames, findOwnedGame } from "./epic.ts";
 import { resolveWindowsDepot } from "./steamcmd.ts";
@@ -133,7 +133,7 @@ async function addSteamGame(options: AddOptions): Promise<GameProfile> {
 
 /** Register a game from Epic: match an owned entitlement and store its ids. */
 async function addEpicGame(options: AddOptions): Promise<GameProfile> {
-  const tokens = await ensureEpicToken();
+  const tokens = await ensureEpicToken(requireEpic(await loadConfig()));
   const query = options.epicAppName ?? options.name ?? "";
   if (!query) {
     die("give an Epic game name or --epic-app");
@@ -189,7 +189,7 @@ async function addEpicGame(options: AddOptions): Promise<GameProfile> {
 async function addGogGame(options: AddOptions): Promise<GameProfile> {
   let gogId = options.gogId ?? 0;
   let name = options.name ?? "";
-  const token = await ensureGogToken();
+  const token = await ensureGogToken(requireGog(await loadConfig()));
 
   if (!gogId) {
     if (!name) {

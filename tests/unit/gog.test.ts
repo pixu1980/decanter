@@ -30,14 +30,14 @@ test("decodeZlib falls back to plain JSON", () => {
 });
 
 test("gogLoginUrl carries the client id", () => {
-  const url = gogLoginUrl();
+  const url = gogLoginUrl({ clientId: "gog-client", clientSecret: "gog-secret" });
   assert.match(url, /auth\.gog\.com\/auth\?/);
-  assert.match(url, /client_id=REDACTED/);
+  assert.match(url, /client_id=gog-client/);
   assert.match(url, /response_type=code/);
 });
 
 test("gogLoginUrl honours a custom redirect", () => {
-  const url = gogLoginUrl("http://localhost:12345/login");
+  const url = gogLoginUrl({ clientId: "gog-client", clientSecret: "gog-secret" }, "http://localhost:12345/login");
   assert.match(url, /redirect_uri=http%3A%2F%2Flocalhost%3A12345%2Flogin/);
 });
 

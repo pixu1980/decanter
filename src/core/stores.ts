@@ -11,6 +11,7 @@
 
 import { epicGameToken, epicLaunchParameters, ensureEpicToken, epicIconCandidates } from "./epic.ts";
 import { gogIconCandidates } from "./gog.ts";
+import { loadConfig, requireEpic } from "./config.ts";
 import { iconCandidates } from "./store.ts";
 import type { GameProfile, Store } from "./profile.ts";
 
@@ -93,7 +94,7 @@ const epicProvider: StoreProvider = {
   configured: (profile) => profile.epicAppName !== "",
   idLabel: "Epic app name",
   launchArgs: async (profile) => {
-    const tokens = await ensureEpicToken();
+    const tokens = await ensureEpicToken(requireEpic(await loadConfig()));
     const code = await epicGameToken(tokens.access_token);
     return epicLaunchParameters({
       appName: profile.epicAppName,

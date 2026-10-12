@@ -9,7 +9,7 @@
 import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { buildApp, bundleRuntimeReady } from "./bundle.ts";
-import { type Config, loadConfig } from "./config.ts";
+import { type Config, loadConfig, requireEpic, requireGog } from "./config.ts";
 import { clearStaleDepotState, gameInstalled, importDepot, updateStatus, waitForDepotDownload } from "./depot.ts";
 import { detectExecutable } from "./exe.ts";
 import { exec, isDryRun, which } from "./exec.ts";
@@ -219,7 +219,7 @@ export async function cmdImport(slug: string, options: ImportOptions = {}): Prom
 
 /** Download the newest GOG build and import it into the prefix. */
 async function downloadGog(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
-  const token = await ensureGogToken();
+  const token = await ensureGogToken(requireGog(await loadConfig()));
   const dest = gogDownloadDir(profile.slug);
 
   // Design B: the Galaxy content-system build.
@@ -326,7 +326,7 @@ async function importGog(profile: GameProfile, paths: GamePaths, wine: WineRunti
 
 /** Download the newest Epic build and import it into the prefix. */
 async function downloadEpic(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
-  const tokens = await ensureEpicToken();
+  const tokens = await ensureEpicToken(requireEpic(await loadConfig()));
   if (!profile.epicNamespace || !profile.epicCatalogItemId) {
     die("Epic namespace/catalog item missing — re-add the game or edit game.json");
   }
@@ -628,7 +628,7 @@ async function guidedConsoleDownload(
 
 /** Epic update: compare the recorded build version with the newest build. */
 async function updateEpic(profile: GameProfile, options: { check?: boolean }): Promise<void> {
-  const tokens = await ensureEpicToken();
+  const tokens = await ensureEpicToken(requireEpic(await loadConfig()));
   const build = await epicBuild(
     profile.epicNamespace,
     profile.epicCatalogItemId,

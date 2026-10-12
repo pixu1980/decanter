@@ -27,14 +27,11 @@ export function settingsRows(config: Config, logins: LoginState): SettingsRow[] 
   const status = (loggedIn: boolean) => (loggedIn ? "logged in" : "not logged in");
   return [
     { key: "steamRoot", label: "steam root", value: config.steamRoot, kind: "text" },
-    { key: "steamApiKey", label: "steam api key", value: config.steamApiKey, kind: "text" },
-    { key: "steamId", label: "steam id", value: config.steamId, kind: "text" },
     { key: "applicationsDir", label: "applications", value: config.applicationsDir, kind: "text" },
     { key: "wineRuntime", label: "wine runtime", value: config.wineRuntime, kind: "select", options: ["gptk", "gptk-apple", "wine-devel", "wine-staging"] },
     { key: "gptkApp", label: "game toolkit", value: config.gptkApp, kind: "text" },
     { key: "gptkCask", label: "game toolkit cask", value: config.gptkCask, kind: "text" },
     { key: "appleGptkSource", label: "apple gptk dmg", value: config.appleGptkSource, kind: "text" },
-    { key: "steamGridDbKey", label: "steamgriddb key", value: config.steamGridDbKey, kind: "text" },
     { key: "logLines", label: "log lines", value: String(config.logLines), kind: "number" },
     { key: "steamcmd.anonymous", label: "steamcmd anon", value: config.steamcmd.anonymous ? "anonymous" : "account", kind: "toggle" },
     { key: "steamcmd.login", label: "steam login", value: status(logins.steam), kind: "action" },

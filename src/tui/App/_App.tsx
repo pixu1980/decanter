@@ -10,7 +10,7 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useState } from "react";
 import { addGame } from "../../core/add.ts";
-import { type Config, loadConfig, updateConfig } from "../../core/config.ts";
+import { type Config, loadConfig, requireEpic, requireGog, updateConfig } from "../../core/config.ts";
 import { buildCatalog, catalogAddArgs, matchesEntry, type CatalogEntry, type CatalogGame } from "../../core/library.ts";
 import { cancel, exec } from "../../core/exec.ts";
 import { exists, remove } from "../../core/fsx.ts";
@@ -146,10 +146,11 @@ export function App() {
     const store = codeLogin;
     setBusy(true);
     try {
+      const config = await loadConfig();
       if (store === "epic") {
-        await epicExchangeCode(extractEpicCode(raw));
+        await epicExchangeCode(requireEpic(config), extractEpicCode(raw));
       } else {
-        await gogExchangeCode(extractGogCode(raw));
+        await gogExchangeCode(requireGog(config), extractGogCode(raw));
       }
       setCodeValue("");
       setCodeLogin(null);
@@ -725,7 +726,8 @@ async function codeStartLogin(
   setStatus: (status: string) => void,
   setOpen: (store: "gog" | "epic") => void,
 ): Promise<void> {
-  await exec("open", [store === "epic" ? epicLoginUrl() : gogLoginUrl()], { allowFailure: true });
+  const config = await loadConfig();
+  await exec("open", [store === "epic" ? epicLoginUrl(requireEpic(config)) : gogLoginUrl(requireGog(config))], { allowFailure: true });
   setOpen(store);
   setStatus(
     store === "epic"

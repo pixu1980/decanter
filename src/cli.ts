@@ -9,7 +9,7 @@
 import { createInterface } from "node:readline/promises";
 import { addGame } from "./core/add.ts";
 import { flagBool, flagNumber, flagString, parseArgs, type ParsedArgs } from "./core/args.ts";
-import { loadConfig, updateConfig, type Config } from "./core/config.ts";
+import { loadConfig, requireEpic, requireGog, requireSteam, updateConfig, type Config } from "./core/config.ts";
 import { gameInstalled, updateStatus } from "./core/depot.ts";
 import { exec, setDryRun } from "./core/exec.ts";
 import { exists, remove } from "./core/fsx.ts";
@@ -287,12 +287,13 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
       log("gog: logged out");
       return;
     }
+    const credentials = requireGog(await loadConfig());
     if (arg) {
-      await gogExchangeCode(extractGogCode(arg));
+      await gogExchangeCode(credentials, extractGogCode(arg));
       log("gog: login stored");
       return;
     }
-    const url = gogLoginUrl();
+    const url = gogLoginUrl(credentials);
     log("log in to GOG in the browser, then paste the redirect URL (or just the code):");
     log(`  ${url}`);
     await exec("open", [url], { allowFailure: true });
@@ -304,7 +305,7 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
     if (!answer) {
       die("no code given");
     }
-    await gogExchangeCode(extractGogCode(answer));
+    await gogExchangeCode(credentials, extractGogCode(answer));
     log("gog: login stored");
     return;
   }
@@ -315,12 +316,13 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
       log("epic: logged out");
       return;
     }
+    const credentials = requireEpic(await loadConfig());
     if (arg) {
-      await epicExchangeCode(extractEpicCode(arg));
+      await epicExchangeCode(credentials, extractEpicCode(arg));
       log("epic: login stored");
       return;
     }
-    const url = epicLoginUrl();
+    const url = epicLoginUrl(credentials);
     log("log in to Epic in the browser, then paste the authorization code it prints:");
     log(`  ${url}`);
     await exec("open", [url], { allowFailure: true });
@@ -332,7 +334,7 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
     if (!answer) {
       die("no code given");
     }
-    await epicExchangeCode(extractEpicCode(answer));
+    await epicExchangeCode(credentials, extractEpicCode(answer));
     log("epic: login stored");
     return;
   }
@@ -375,19 +377,28 @@ async function cmdList(args: ParsedArgs): Promise<void> {
   const refresh = flagBool(args.flags, "refresh");
   const config = await loadConfig();
 
-  // Steam without a key: the client's own caches, fully offline.
-  if (store === "steam" && !config.steamApiKey) {
-    const appids = await steamLibraryCacheAppIds(config.steamRoot);
-    if (appids.length === 0) {
-      die("no Steam library cache to read — open Steam once, or run 'decanter config steamApiKey=<key>'");
+  // Every provider needs its credentials; the local cache is preferred over the
+  // fetch, so a warm cache answers without hitting the store API.
+  if (store === "steam") {
+    requireSteam(config);
+    if (!refresh) {
+      const appids = await steamLibraryCacheAppIds(config.steamRoot);
+      if (appids.length > 0) {
+        const names = await readAppInfoNames(config.steamRoot);
+        const games: LibraryGame[] = appids
+          .map((appid) => ({ id: String(appid), title: names.get(appid) ?? String(appid), detail: "" }))
+          .sort((a, b) => a.title.localeCompare(b.title));
+        printGames(games);
+        log(`${games.length} Steam game(s) from the local cache — 'list steam --refresh' to update`);
+        return;
+      }
     }
-    const names = await readAppInfoNames(config.steamRoot);
-    const games: LibraryGame[] = appids
-      .map((appid) => ({ id: String(appid), title: names.get(appid) ?? String(appid), detail: "" }))
-      .sort((a, b) => a.title.localeCompare(b.title));
-    printGames(games);
-    log(`${games.length} Steam game(s) from the local cache`);
-    return;
+  }
+  if (store === "gog") {
+    requireGog(config);
+  }
+  if (store === "epic") {
+    requireEpic(config);
   }
 
   // Everything else: the local cache first, the store API on a miss/refresh.
@@ -401,24 +412,24 @@ async function cmdList(args: ParsedArgs): Promise<void> {
 /** Fetch a store's owned games from its API (normalised). */
 async function fetchStoreLibrary(store: Store, config: Config): Promise<LibraryGame[]> {
   if (store === "gog") {
-    return (await gogLibrary(await ensureGogToken())).map((game) => ({
+    return (await gogLibrary(await ensureGogToken(requireGog(config)))).map((game) => ({
       id: String(game.id),
       title: game.title,
       detail: "",
     }));
   }
   if (store === "epic") {
-    return (await epicOwnedGames(await ensureEpicToken())).map((game) => ({
+    return (await epicOwnedGames(await ensureEpicToken(requireEpic(config)))).map((game) => ({
       id: game.appName,
       title: game.title,
       detail: game.namespace,
     }));
   }
-  const steamid = config.steamId || (await detectSteamId(config.steamRoot));
+  const steamid = config.credentials.steam.steamId || (await detectSteamId(config.steamRoot));
   if (!steamid) {
     die("could not find a SteamID — open Steam once, or run 'decanter config steamId=<steamid64>'");
   }
-  return (await steamOwnedGames(config.steamApiKey, steamid)).map((game) => ({
+  return (await steamOwnedGames(config.credentials.steam.apiKey, steamid)).map((game) => ({
     id: String(game.appid),
     title: game.name,
     detail: "",

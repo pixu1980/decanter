@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { updateConfig } from "../../src/core/config.ts";
+import { defaultConfig, updateConfig } from "../../src/core/config.ts";
 import { writeJson } from "../../src/core/fsx.ts";
 import { buildCatalog, catalogAddArgs, groupCatalog, steamCatalogEntries } from "../../src/core/library.ts";
 import { withTempHome } from "./_helpers.ts";
@@ -10,7 +10,14 @@ import { withTempHome } from "./_helpers.ts";
 test("buildCatalog merges the store caches", async () => {
   await withTempHome(async () => {
     const home = process.env.DECANTER_HOME!;
-    await updateConfig({ steamRoot: join(home, "steam") });
+    await updateConfig({
+      steamRoot: join(home, "steam"),
+      credentials: {
+        ...defaultConfig().credentials,
+        gog: { clientId: "id", clientSecret: "secret" },
+        epic: { clientId: "id", clientSecret: "secret" },
+      },
+    });
     await writeJson(join(home, "gog", "library.json"), {
       at: "",
       games: [{ id: "1207659163", title: "GOG Game", detail: "" }],
@@ -29,7 +36,13 @@ test("buildCatalog merges the store caches", async () => {
 test("buildCatalog collapses duplicate titles within a store", async () => {
   await withTempHome(async () => {
     const home = process.env.DECANTER_HOME!;
-    await updateConfig({ steamRoot: join(home, "steam") });
+    await updateConfig({
+      steamRoot: join(home, "steam"),
+      credentials: {
+        ...defaultConfig().credentials,
+        epic: { clientId: "id", clientSecret: "secret" },
+      },
+    });
     await writeJson(join(home, "epic", "library.json"), {
       at: "",
       games: [

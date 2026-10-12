@@ -14,6 +14,7 @@ import { isDryRun } from "./exec.ts";
 import { mkdirp, readJson, writeBytes, writeJson } from "./fsx.ts";
 import { die, log } from "./log.ts";
 import { epicAuthPath, epicDownloadsDir } from "./paths.ts";
+import type { EpicCredentials } from "./config.ts";
 
 export const EPIC_ACCOUNT = "https://account-public-service-prod03.ol.epicgames.com";
 export const EPIC_LAUNCHER = "https://launcher-public-service-prod06.ol.epicgames.com";
@@ -21,8 +22,6 @@ export const EPIC_ENTITLEMENTS = "https://entitlement-public-service-prod08.ol.e
 export const EPIC_CATALOG = "https://catalog-public-service-prod06.ol.epicgames.com";
 export const EPIC_LIBRARY = "https://library-service.live.use1a.on.epicgames.com";
 export const EPIC_CDN = "https://download.epicgames.com";
-const CLIENT_ID = "REDACTED";
-const CLIENT_SECRET = "REDACTED";
 const USER_AGENT = "EpicGamesLauncher/14.0.8-22004686+++Portal+Release-Live";
 
 /** A stored Epic OAuth session. */
@@ -40,8 +39,8 @@ export interface EpicTokens {
 // --- auth ---------------------------------------------------------------------
 
 /** The URL the user opens to log in; the page returns an `authorizationCode`. */
-export function epicLoginUrl(): string {
-  const redirect = `https://www.epicgames.com/id/api/redirect?clientId=${CLIENT_ID}&responseType=code`;
+export function epicLoginUrl(credentials: EpicCredentials): string {
+  const redirect = `https://www.epicgames.com/id/api/redirect?clientId=${credentials.clientId}&responseType=code`;
   return `https://www.epicgames.com/id/login?redirectUrl=${encodeURIComponent(redirect)}`;
 }
 
@@ -61,11 +60,12 @@ export function extractEpicCode(input: string): string {
   return url ? decodeURIComponent(url[1]!) : value;
 }
 
-function basicAuth(): string {
-  return Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
+function basicAuth(credentials: EpicCredentials): string {
+  return Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString("base64");
 }
 
 async function requestTokens(
+  credentials: EpicCredentials,
   params: Record<string, string>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<EpicTokens> {
@@ -73,7 +73,7 @@ async function requestTokens(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `basic ${basicAuth()}`,
+      Authorization: `basic ${basicAuth(credentials)}`,
       "User-Agent": USER_AGENT,
     },
     body: new URLSearchParams({ token_type: "eg1", ...params }).toString(),
@@ -89,14 +89,14 @@ async function requestTokens(
 }
 
 /** Exchange the login code for tokens and store them. */
-export async function epicExchangeCode(code: string): Promise<EpicTokens> {
-  return requestTokens({ grant_type: "authorization_code", code });
+export async function epicExchangeCode(credentials: EpicCredentials, code: string): Promise<EpicTokens> {
+  return requestTokens(credentials, { grant_type: "authorization_code", code });
 }
 
 /** Refresh an expired session. Returns `null` when the refresh token is dead. */
-export async function epicRefresh(refreshToken: string): Promise<EpicTokens | null> {
+export async function epicRefresh(credentials: EpicCredentials, refreshToken: string): Promise<EpicTokens | null> {
   try {
-    return await requestTokens({ grant_type: "refresh_token", refresh_token: refreshToken });
+    return await requestTokens(credentials, { grant_type: "refresh_token", refresh_token: refreshToken });
   } catch {
     return null;
   }
@@ -108,15 +108,15 @@ export async function loadEpicTokens(): Promise<EpicTokens | null> {
 }
 
 /** A valid access token, refreshing when needed. Dies when not logged in. */
-export async function ensureEpicToken(): Promise<EpicTokens> {
+export async function ensureEpicToken(credentials: EpicCredentials): Promise<EpicTokens> {
   let tokens = await loadEpicTokens();
   if (!tokens) {
-    die("not logged in to Epic — run: decanter epic login");
+    die("not logged in to Epic — run: decanter login epic");
   }
   if (Date.now() / 1000 >= tokens.loginTime + tokens.expires_in) {
-    const refreshed = await epicRefresh(tokens.refresh_token);
+    const refreshed = await epicRefresh(credentials, tokens.refresh_token);
     if (!refreshed) {
-      die("Epic session expired — run: decanter epic login");
+      die("Epic session expired — run: decanter login epic");
     }
     tokens = refreshed;
   }

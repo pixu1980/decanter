@@ -432,7 +432,7 @@ export async function provisionIcon(
   }
 
   if (profile.store === "steam") {
-    const grid = await downloadSteamGridArt(profile, assetsDir, fetchImpl, config.steamGridDbKey);
+    const grid = await downloadSteamGridArt(profile, assetsDir, fetchImpl, config.credentials.steamGridDb);
     if (grid) {
       log("icon: using SteamGridDB artwork");
       const result = await buildIcns(grid, assetsDir);

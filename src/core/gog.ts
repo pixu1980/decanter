@@ -14,14 +14,13 @@ import { exec, isDryRun } from "./exec.ts";
 import { mkdirp, readJson, remove, writeBytes, writeJson } from "./fsx.ts";
 import { die, log } from "./log.ts";
 import { gogAuthPath, gogDownloadsDir } from "./paths.ts";
+import type { GogCredentials } from "./config.ts";
 
 export const GOG_AUTH = "https://auth.gog.com";
 export const GOG_API = "https://api.gog.com";
 export const GOG_EMBED = "https://embed.gog.com";
 export const GOG_CONTENT_SYSTEM = "https://content-system.gog.com";
 export const GOG_CDN = "https://gog-cdn-fastly.gog.com";
-const CLIENT_ID = "REDACTED";
-const CLIENT_SECRET = "REDACTED";
 const REDIRECT_URI = "https://embed.gog.com/on_login_success?origin=client";
 
 /** A stored OAuth session. */
@@ -36,9 +35,9 @@ export interface GogTokens {
 // --- auth ---------------------------------------------------------------------
 
 /** The URL the user opens to log in; GOG redirects back with a `code`. */
-export function gogLoginUrl(redirectUri: string = REDIRECT_URI): string {
+export function gogLoginUrl(credentials: GogCredentials, redirectUri: string = REDIRECT_URI): string {
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: credentials.clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     layout: "client2",
@@ -46,10 +45,10 @@ export function gogLoginUrl(redirectUri: string = REDIRECT_URI): string {
   return `${GOG_AUTH}/auth?${params.toString()}`;
 }
 
-function tokenUrl(extra: Record<string, string>): string {
+function tokenUrl(credentials: GogCredentials, extra: Record<string, string>): string {
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
+    client_id: credentials.clientId,
+    client_secret: credentials.clientSecret,
     ...extra,
   });
   return `${GOG_AUTH}/token?${params.toString()}`;
@@ -70,9 +69,9 @@ export function extractGogCode(input: string): string {
 }
 
 /** Exchange the login `code` for tokens and store them. */
-export async function gogExchangeCode(code: string, redirectUri: string = REDIRECT_URI): Promise<GogTokens> {
+export async function gogExchangeCode(credentials: GogCredentials, code: string, redirectUri: string = REDIRECT_URI): Promise<GogTokens> {
   const response = await fetch(
-    tokenUrl({ grant_type: "authorization_code", redirect_uri: redirectUri, code }),
+    tokenUrl(credentials, { grant_type: "authorization_code", redirect_uri: redirectUri, code }),
   );
   if (!response.ok) {
     const body = await response.text();
@@ -85,8 +84,8 @@ export async function gogExchangeCode(code: string, redirectUri: string = REDIRE
 }
 
 /** Refresh an expired session. Returns `null` when the refresh token is dead. */
-export async function gogRefresh(refreshToken: string): Promise<GogTokens | null> {
-  const response = await fetch(tokenUrl({ grant_type: "refresh_token", refresh_token: refreshToken }));
+export async function gogRefresh(credentials: GogCredentials, refreshToken: string): Promise<GogTokens | null> {
+  const response = await fetch(tokenUrl(credentials, { grant_type: "refresh_token", refresh_token: refreshToken }));
   if (!response.ok) {
     return null;
   }
@@ -102,15 +101,15 @@ export async function loadGogTokens(): Promise<GogTokens | null> {
 }
 
 /** A valid access token, refreshing when needed. Dies when not logged in. */
-export async function ensureGogToken(): Promise<string> {
+export async function ensureGogToken(credentials: GogCredentials): Promise<string> {
   let tokens = await loadGogTokens();
   if (!tokens) {
-    die("not logged in to GOG — run: decanter gog login");
+    die("not logged in to GOG — run: decanter login gog");
   }
   if (Date.now() / 1000 >= tokens.loginTime + tokens.expires_in) {
-    const refreshed = await gogRefresh(tokens.refresh_token);
+    const refreshed = await gogRefresh(credentials, tokens.refresh_token);
     if (!refreshed) {
-      die("GOG session expired — run: decanter gog login");
+      die("GOG session expired — run: decanter login gog");
     }
     tokens = refreshed;
   }

@@ -111,10 +111,10 @@ function buildManifest(data: Buffer): Buffer {
   return Buffer.concat([header, compressed]);
 }
 
-test("epicLoginUrl carries the launcher client id", () => {
-  const url = epicLoginUrl();
+test("epicLoginUrl carries the client id", () => {
+  const url = epicLoginUrl({ clientId: "epic-client", clientSecret: "epic-secret" });
   assert.match(url, /www\.epicgames\.com\/id\/login\?redirectUrl=/);
-  assert.match(url, /clientId%3DREDACTED/);
+  assert.match(url, /clientId%3Depic-client/);
   assert.match(url, /responseType%3Dcode/);
 });
 
