@@ -64,6 +64,10 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance: hook install | `node bin/install-hooks.mjs` | copies `.githooks/commit-msg` to `.git/hooks/commit-msg` mode 0755; wired to the package `prepare` script so `pnpm install` installs it |
 | Governance: commit check in CI | `.github/workflows/ci.yml` job `commits` | validates `origin/<base>..HEAD` subjects on pull_request; logic simulated locally over 20 subjects (0 rejected) and a scope-less control (rejected) |
 
+| Release: changelog generator | `node --test tests/unit/changelog.test.ts` | 4 tests pass; the renderer groups feat, fix, perf, refactor, revert and docs and drops chore, ci, build, test and style |
+| Release: changelog file | `node bin/changelog.mjs --write` | writes CHANGELOG.md from the git history; `pnpm changelog` prints it |
+| Release: workflow | `.github/workflows/release.yml` | on a `v*` tag: builds the notes with `bin/changelog.mjs --tag` and runs `gh release create`; job permission `contents: write` |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`

@@ -17,11 +17,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
 
 ## Steps
 
-- [ ] **Step 6 - OSS-006 (medium)**: No release process: 0 tags, no CHANGELOG, no release workflow, so users cannot pin or track a version.
-  - [x] **6.1**: Confirm the first version and the release cadence with the maintainer. Confirmed: `v0.1.0` now, then on demand; semantic versioning derived from Conventional Commits.
-  - [ ] **6.2**: Generate CHANGELOG.md from Conventional Commits at tag time (pix-process-changelog).
-  - [ ] **6.3**: Tag the first release (for example `v0.1.0`).
-  - [ ] **6.4**: Add a release workflow that builds the changelog and creates the GitHub release.
 - [ ] **Step 7 - OSS-007 (medium)**: No distribution path: the npm name `decanter` is taken, the package is private and has no repository field, so the only install is a clone.
   - [x] **7.1**: Decide with the maintainer: publish to npm under a scope (`@pixu1980/decanter`) or stay source-only. Confirmed: publish as `@pixu1980/decanter`.
   - [ ] **7.2**: Source-only: say so in the README and keep `private: true`.
