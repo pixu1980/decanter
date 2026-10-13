@@ -27,8 +27,8 @@
     "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:tui"
   },
   "dependencies": {
-    "@opentui/core": "0.5.14",
-    "@opentui/react": "0.5.14",
+    "@opentui/core": "0.5.17",
+    "@opentui/react": "0.5.17",
     "react": "19.3.0"
   },
   "devDependencies": {
