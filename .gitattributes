@@ -1,0 +1,3 @@
+# Normalize line endings: the repository is macOS and Linux, keep LF everywhere
+# so a Windows contribution does not land with CRLF.
+* text=auto eol=lf
