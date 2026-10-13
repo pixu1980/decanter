@@ -25,6 +25,3 @@ finding stays open. This file is deleted by the run that finds nothing open.
 - [ ] **Step 14 - OSS-014 (info)**: No supply-chain artifacts beyond the license: no .gitattributes, no SBOM, no SAST, no signed releases.
   - [ ] **14.1**: Add .gitattributes (`* text=auto eol=lf`).
   - [ ] **14.2**: Decide with the maintainer whether to add CodeQL (SAST) and an SBOM in the release workflow.
-- [ ] **Step 15 - OSS-015 (info)**: Funding is undefined: no FUNDING.yml and no statement, while the role expects funding to be transparent and independent of one payer.
-  - [x] **15.1**: Decide with the maintainer whether the project accepts funding. Confirmed: funding accepted.
-  - [ ] **15.2**: If yes, add .github/FUNDING.yml and a funding section to the README; if no, state that the project is unfunded.

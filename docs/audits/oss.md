@@ -84,6 +84,8 @@ the sources it consulted. No opinions - those belong in the review.
 
 | Governance: formatting | `ls .editorconfig .prettierrc.json .prettierignore` and `pnpm format:check` | Prettier 3.9.10 (exact) formats the code and JSON; markdown, GitHub metadata and the lockfile are excluded, and `pnpm check` runs `format:check` first |
 
+| Governance: funding | `ls .github/FUNDING.yml` and `grep -n Funding GOVERNANCE.md` | GitHub Sponsors for `pixu1980`; the README names it and GOVERNANCE states what the money is for and the boundary |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
