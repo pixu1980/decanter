@@ -86,6 +86,10 @@ the sources it consulted. No opinions - those belong in the review.
 
 | Governance: funding | `ls .github/FUNDING.yml` and `grep -n Funding GOVERNANCE.md` | GitHub Sponsors for `pixu1980`; the README names it and GOVERNANCE states what the money is for and the boundary |
 
+| Governance: line endings | `cat .gitattributes` and `git check-attr eol -- src/cli.ts` | `* text=auto eol=lf`; no binary file is tracked |
+| Governance: SAST | `.github/workflows/codeql.yml` and the CodeQL runs | `javascript-typescript`, on push, pull request and a weekly schedule; `codeql-action` pinned to v3.38.3 |
+| Governance: SBOM and signed releases | the GitHub dependency graph and the release assets | GitHub generates an SBOM from the dependency graph (exportable from the repository page); a release carries no build artifact to sign, and npm provenance arrives with the publish workflow (OSS-007) |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
