@@ -251,4 +251,5 @@ CI runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which is
 
 Wine and GPTK packaging by [Gcenx](https://github.com/Gcenx).
 
-MIT licensed.
+MIT licensed. Funded through [GitHub Sponsors](https://github.com/sponsors/pixu1980);
+see [GOVERNANCE.md](GOVERNANCE.md) for what funding does not buy.

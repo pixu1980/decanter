@@ -41,10 +41,12 @@ shape, or anything a future reader would ask "why is it like this" about.
 
 ## Funding and its boundary
 
-`decanter` accepts no funding today, and no sponsor has a say in it. If funding
-is added, this section states where it goes, and these hold:
+`decanter` accepts funding through GitHub Sponsors (`.github/FUNDING.yml` points
+at the `pixu1980` account). The money pays for the maintainer's time on the
+project. These hold:
 
-- Funding is transparent: the source and the use are named in the repository.
+- Funding is transparent: the source is the repository's Sponsors page, and this
+  document names what it is for.
 - Funding buys nothing in the roadmap, the priorities, the review order or the
   merge decision. Those belong to the maintainer.
 - A sponsor is a user like any other; a feature request from a sponsor is an
