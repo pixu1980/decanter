@@ -31,7 +31,14 @@ export function StorePicker({ title, entries, index }: StorePickerProps) {
       border
       borderStyle="rounded"
       borderColor={theme.borderActive}
-      style={{ flexDirection: "column", width: Math.min(64, Math.max(28, width - 4)), paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
+      style={{
+        flexDirection: "column",
+        width: Math.min(64, Math.max(28, width - 4)),
+        paddingX: 2,
+        paddingY: 1,
+        gap: 1,
+        backgroundColor: theme.panel,
+      }}
     >
       <text fg={theme.strong}>{title}</text>
       <text fg={theme.muted}>Owned on more than one store — choose where to install it.</text>

@@ -78,11 +78,7 @@ export interface ExecOptions {
 }
 
 /** Run a command. Under dry-run this only prints what would run. */
-export async function exec(
-  cmd: string,
-  args: string[] = [],
-  options: ExecOptions = {},
-): Promise<ExecResult> {
+export async function exec(cmd: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
   if (dryRun) {
     log(`dry-run: ${[cmd, ...args].join(" ")}`);
     return { status: 0, stdout: "", stderr: "" };
@@ -132,11 +128,7 @@ export async function exec(
 }
 
 /** Run a command with the terminal attached. A failure stops the program. */
-export async function run(
-  cmd: string,
-  args: string[] = [],
-  options: ExecOptions = {},
-): Promise<void> {
+export async function run(cmd: string, args: string[] = [], options: ExecOptions = {}): Promise<void> {
   const result = await exec(cmd, args, { ...options, stdio: "inherit" });
   if (result.status !== 0) {
     die(`command failed (${result.status}): ${[cmd, ...args].join(" ")}`);
@@ -146,9 +138,9 @@ export async function run(
 /** Run a shell snippet with zsh, exposing legacy helper functions. */
 export async function runShell(script: string, options: ExecOptions = {}): Promise<ExecResult> {
   const prelude = [
-    "sm_log()  { print -r -- \"$*\" }",
-    "sm_warn() { print -ru2 -- \"$*\" }",
-    "sm_die()  { print -ru2 -- \"$*\"; exit 1 }",
+    'sm_log()  { print -r -- "$*" }',
+    'sm_warn() { print -ru2 -- "$*" }',
+    'sm_die()  { print -ru2 -- "$*"; exit 1 }',
   ].join("\n");
   return exec("/bin/zsh", ["-c", `${prelude}\n${script}`], { ...options, allowFailure: true });
 }

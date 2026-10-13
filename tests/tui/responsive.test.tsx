@@ -130,7 +130,10 @@ test("the detail keeps the last actions visible when the list is scrolled to the
 });
 
 test("the activity panel shows only the tail and never overlaps", async () => {
-  const lines = Array.from({ length: 20 }, (_, index) => ({ line: `engine line ${index + 1}`, level: "info" as const }));
+  const lines = Array.from({ length: 20 }, (_, index) => ({
+    line: `engine line ${index + 1}`,
+    level: "info" as const,
+  }));
   for (const width of WIDTHS) {
     const frame = await render(<Activity lines={lines} busy={false} pageSize={6} />, width, 12);
     assertFits(frame, width);
@@ -207,7 +210,13 @@ test("the app views stay inside a narrow terminal", async () => {
   mkdirSync(join(home, "games", "test-game"), { recursive: true });
   writeFileSync(
     join(home, "games", "test-game", "game.json"),
-    JSON.stringify({ name: "A Very Long Game Title That Should Be Truncated", slug: "test-game", appid: 1, depot: 2, exe: "t.exe" }),
+    JSON.stringify({
+      name: "A Very Long Game Title That Should Be Truncated",
+      slug: "test-game",
+      appid: 1,
+      depot: 2,
+      exe: "t.exe",
+    }),
   );
   try {
     for (const width of WIDTHS) {

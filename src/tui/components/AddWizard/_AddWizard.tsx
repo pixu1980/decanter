@@ -120,32 +120,62 @@ export function AddWizard({ onSubmit, onCancel, busy }: AddWizardProps) {
       </box>
 
       <Field label="Name" focused={field === "name"}>
-        <input placeholder="Graveyard Keeper 2" focused={field === "name"} onInput={setName} onSubmit={() => advance("name")} />
+        <input
+          placeholder="Graveyard Keeper 2"
+          focused={field === "name"}
+          onInput={setName}
+          onSubmit={() => advance("name")}
+        />
       </Field>
 
       {store === "steam" ? (
         <>
           <Field label="Appid" focused={field === "appid"}>
-            <input placeholder="4358690" focused={field === "appid"} onInput={setAppid} onSubmit={() => advance("appid")} />
+            <input
+              placeholder="4358690"
+              focused={field === "appid"}
+              onInput={setAppid}
+              onSubmit={() => advance("appid")}
+            />
           </Field>
           <Field label="Depot" focused={field === "depot"}>
-            <input placeholder="4358691" focused={field === "depot"} onInput={setDepot} onSubmit={() => advance("depot")} />
+            <input
+              placeholder="4358691"
+              focused={field === "depot"}
+              onInput={setDepot}
+              onSubmit={() => advance("depot")}
+            />
           </Field>
         </>
       ) : null}
 
       {store === "gog" ? (
         <Field label="GOG id" focused={field === "gogid"}>
-          <input placeholder="1207659163" focused={field === "gogid"} onInput={setGogId} onSubmit={() => advance("gogid")} />
+          <input
+            placeholder="1207659163"
+            focused={field === "gogid"}
+            onInput={setGogId}
+            onSubmit={() => advance("gogid")}
+          />
         </Field>
       ) : null}
 
       <Field label="Slug" focused={field === "slug"}>
-        <input placeholder="graveyard-keeper-2" focused={field === "slug"} onInput={setSlug} onSubmit={() => advance("slug")} />
+        <input
+          placeholder="graveyard-keeper-2"
+          focused={field === "slug"}
+          onInput={setSlug}
+          onSubmit={() => advance("slug")}
+        />
       </Field>
 
       <Field label="Runtime" focused={field === "runtime"}>
-        <input placeholder="gptk-apple" focused={field === "runtime"} onInput={setRuntime} onSubmit={() => advance("runtime")} />
+        <input
+          placeholder="gptk-apple"
+          focused={field === "runtime"}
+          onInput={setRuntime}
+          onSubmit={() => advance("runtime")}
+        />
       </Field>
 
       <InstallButton focused={field === "install"} busy={busy} />
@@ -165,7 +195,12 @@ function InstallButton({ focused, busy }: { focused: boolean; busy: boolean }) {
       border
       borderStyle="rounded"
       borderColor={focused ? theme.borderActive : theme.border}
-      style={{ width: Math.min(52, Math.max(28, width - 4)), height: 3, alignItems: "center", justifyContent: "center" }}
+      style={{
+        width: Math.min(52, Math.max(28, width - 4)),
+        height: 3,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
       <text fg={focused ? theme.strong : theme.text}>{busy ? "[ Installing… ]" : "[ Install ]"}</text>
     </box>

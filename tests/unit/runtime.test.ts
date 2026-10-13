@@ -41,9 +41,7 @@ test("collectRuntime describes the runtime and reports the history", async () =>
         depot: 2,
         exe: "t.exe",
         wineRuntime: "gptk",
-        runtimeHistory: [
-          { wineRuntime: "gptk", wineVersion: "", d3dMetal: "3.0", at: "2026-01-01T00:00:00.000Z" },
-        ],
+        runtimeHistory: [{ wineRuntime: "gptk", wineVersion: "", d3dMetal: "3.0", at: "2026-01-01T00:00:00.000Z" }],
       }),
     );
 

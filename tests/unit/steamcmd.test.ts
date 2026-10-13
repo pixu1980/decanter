@@ -3,7 +3,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { test } from "node:test";
 
-import { detectSteamAccount, loginArgs, parseDepotDownload, parseWindowsDepot, steamcmdHasLogin, steamcmdPath, steamLibraryCacheAppIds } from "../../src/core/steamcmd.ts";
+import {
+  detectSteamAccount,
+  loginArgs,
+  parseDepotDownload,
+  parseWindowsDepot,
+  steamcmdHasLogin,
+  steamcmdPath,
+  steamLibraryCacheAppIds,
+} from "../../src/core/steamcmd.ts";
 import { withTempHome } from "./_helpers.ts";
 
 test("steamLibraryCacheAppIds reads the appid folders", async () => {
@@ -34,7 +42,8 @@ test("loginArgs includes the password when present", () => {
 });
 
 test("parseDepotDownload reads the path and manifest", () => {
-  const output = '...\nDepot download complete : "/Users/me/.decanter/steamcmd/steamapps/content/app_57640/depot_57641" (1234 files, manifest 987654321)\nOK';
+  const output =
+    '...\nDepot download complete : "/Users/me/.decanter/steamcmd/steamapps/content/app_57640/depot_57641" (1234 files, manifest 987654321)\nOK';
   const parsed = parseDepotDownload(output);
   assert.equal(parsed.depotDir, "/Users/me/.decanter/steamcmd/steamapps/content/app_57640/depot_57641");
   assert.equal(parsed.manifest, "987654321");
@@ -51,7 +60,9 @@ test("parseDepotDownload returns nothing for unrelated output", () => {
 });
 
 test("parseDepotDownload normalizes Windows separators", () => {
-  const parsed = parseDepotDownload('Depot download complete : "C:\\steam\\steamapps\\content\\app_1\\depot_2" (5 files, manifest 9)');
+  const parsed = parseDepotDownload(
+    'Depot download complete : "C:\\steam\\steamapps\\content\\app_1\\depot_2" (5 files, manifest 9)',
+  );
   assert.equal(parsed.depotDir, "C:/steam/steamapps/content/app_1/depot_2");
   assert.equal(parsed.manifest, "9");
 });

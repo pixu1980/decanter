@@ -52,15 +52,7 @@ function fakeRuntime(distDir: string, distExe = ""): WineRuntime {
 }
 
 async function writeD3dMetalLib(libDir: string, version: string): Promise<void> {
-  const plist = join(
-    libDir,
-    "external",
-    "D3DMetal.framework",
-    "Versions",
-    "Current",
-    "Resources",
-    "Info.plist",
-  );
+  const plist = join(libDir, "external", "D3DMetal.framework", "Versions", "Current", "Resources", "Info.plist");
   await mkdir(dirname(plist), { recursive: true });
   await writeFile(plist, INFO_PLIST.replace("<string>4.0</string>", `<string>${version}</string>`));
 }

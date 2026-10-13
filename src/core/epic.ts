@@ -480,9 +480,10 @@ export function epicChunkPath(chunk: EpicChunk, version: number): string {
   const dir = epicChunkDir(version);
   const group = String(chunk.groupNum).padStart(2, "0");
   if (version >= 22) {
-    const secret = chunk.secretGuid && chunk.secretGuid.some((part) => part !== 0)
-      ? packGuidLE(chunk.secretGuid).toString("base64url")
-      : "plain";
+    const secret =
+      chunk.secretGuid && chunk.secretGuid.some((part) => part !== 0)
+        ? packGuidLE(chunk.secretGuid).toString("base64url")
+        : "plain";
     const hash = Buffer.alloc(8);
     hash.writeBigUInt64LE(BigInt(chunk.hash));
     const hashB64 = hash.toString("base64url");
@@ -588,16 +589,17 @@ function readFiles(reader: Reader): EpicFileManifest[] {
     }
     return parts;
   });
-  const mimeTypes = version >= 1
-    ? (() => {
-        for (let i = 0; i < count; i += 1) {
-          if (reader.u32() !== 0) {
-            reader.skip(16); // md5
+  const mimeTypes =
+    version >= 1
+      ? (() => {
+          for (let i = 0; i < count; i += 1) {
+            if (reader.u32() !== 0) {
+              reader.skip(16); // md5
+            }
           }
-        }
-        return Array.from({ length: count }, () => reader.fstring());
-      })()
-    : undefined;
+          return Array.from({ length: count }, () => reader.fstring());
+        })()
+      : undefined;
   if (version >= 2) {
     reader.skip(count * 32); // sha256
   }
@@ -816,7 +818,14 @@ export function epicDownloadDir(slug: string): string {
 
 /** Key images from a catalog item, best (iconic) first. */
 export function epicIconCandidates(item: EpicCatalogItem | null): string[] {
-  const order = ["DieselGameBox", "DieselGameBoxTall", "OfferImageTall", "OfferImageWide", "Thumbnail", "DieselStoreFrontTall"];
+  const order = [
+    "DieselGameBox",
+    "DieselGameBoxTall",
+    "OfferImageTall",
+    "OfferImageWide",
+    "Thumbnail",
+    "DieselStoreFrontTall",
+  ];
   const images = item?.keyImages ?? [];
   const urls: string[] = [];
   for (const type of order) {

@@ -61,7 +61,10 @@ test("steamCatalogEntries keeps only apps of type Game", () => {
     [6, { name: "No Type" }],
   ]);
   const entries = steamCatalogEntries([1, 2, 3, 4, 5, 6], info);
-  assert.deepEqual(entries.map((entry) => entry.title), ["A Game", "A Legacy Game"]);
+  assert.deepEqual(
+    entries.map((entry) => entry.title),
+    ["A Game", "A Legacy Game"],
+  );
   assert.equal(entries[0]?.store, "steam");
 });
 

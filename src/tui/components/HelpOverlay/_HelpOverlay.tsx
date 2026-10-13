@@ -47,9 +47,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: "While an action runs",
-    shortcuts: [
-      { keys: "esc", label: "cancel the running action" },
-    ],
+    shortcuts: [{ keys: "esc", label: "cancel the running action" }],
   },
 ];
 
@@ -63,7 +61,14 @@ export function HelpOverlay() {
       border
       borderStyle="rounded"
       borderColor={theme.border}
-      style={{ flexDirection: "column", width: Math.min(58, Math.max(24, width - 4)), paddingX: 2, paddingY: 1, gap: 0, backgroundColor: theme.panel }}
+      style={{
+        flexDirection: "column",
+        width: Math.min(58, Math.max(24, width - 4)),
+        paddingX: 2,
+        paddingY: 1,
+        gap: 0,
+        backgroundColor: theme.panel,
+      }}
     >
       {SECTIONS.map((section) => (
         <box key={section.title} style={{ flexDirection: "column" }}>

@@ -125,9 +125,7 @@ async function steamGridDbLookup(
     if (!body.success || !Array.isArray(body.data)) {
       return [];
     }
-    return body.data
-      .filter((entry) => usableArt(entry))
-      .map((entry) => entry.url as string);
+    return body.data.filter((entry) => usableArt(entry)).map((entry) => entry.url as string);
   } catch {
     return [];
   }
@@ -148,10 +146,7 @@ function asStringArray(value: unknown): string[] | undefined {
 }
 
 /** Resolve a name to the best matching appid. */
-export async function searchApp(
-  term: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<StoreSearchHit | null> {
+export async function searchApp(term: string, fetchImpl: typeof fetch = fetch): Promise<StoreSearchHit | null> {
   const response = await fetchImpl(searchUrl(term));
   if (!response.ok) {
     return null;
@@ -166,10 +161,7 @@ export async function searchApp(
 }
 
 /** Fetch the store details of one app. */
-export async function storeApp(
-  appid: number,
-  fetchImpl: typeof fetch = fetch,
-): Promise<StoreApp | null> {
+export async function storeApp(appid: number, fetchImpl: typeof fetch = fetch): Promise<StoreApp | null> {
   const response = await fetchImpl(detailsUrl(appid));
   if (!response.ok) {
     return null;

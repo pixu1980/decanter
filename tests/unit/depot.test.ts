@@ -4,7 +4,19 @@ import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-import { clearStaleDepotState, depotCacheDirs, depotContentDirs, depotHasContent, findDepotDir, gameInstalled, importDepot, latestManifest, readInstalledManifest, recordManifest, updateStatus } from "../../src/core/depot.ts";
+import {
+  clearStaleDepotState,
+  depotCacheDirs,
+  depotContentDirs,
+  depotHasContent,
+  findDepotDir,
+  gameInstalled,
+  importDepot,
+  latestManifest,
+  readInstalledManifest,
+  recordManifest,
+  updateStatus,
+} from "../../src/core/depot.ts";
 import type { GamePaths } from "../../src/core/game.ts";
 import { normalizeProfile } from "../../src/core/profile.ts";
 import { withTempHome } from "./_helpers.ts";
@@ -22,7 +34,8 @@ function makePaths(older: string, prefix: string, installSubdir: string): GamePa
   };
 }
 
-test("depotContentDirs covers native Steam and SteamCMD", async () => {  await withTempHome(async () => {
+test("depotContentDirs covers native Steam and SteamCMD", async () => {
+  await withTempHome(async () => {
     const profile = normalizeProfile({ name: "Broken Sword", appid: 57640, depot: 57641 });
     const paths = makePaths("/tmp/older", "/tmp/prefix", profile.installSubdir);
     const dirs = depotContentDirs(paths, profile);

@@ -38,8 +38,7 @@ export interface Wow64Fix {
 }
 
 /** Where the far-return patch comes from, for attribution. */
-export const WOW64_FIX_SOURCE =
-  "https://github.com/kic99/TEW_IX_on_Mac/tree/main/wow64cpu-rosetta-fix";
+export const WOW64_FIX_SOURCE = "https://github.com/kic99/TEW_IX_on_Mac/tree/main/wow64cpu-rosetta-fix";
 
 // Pinned to a commit, not `main`: a moving target would silently change what a
 // checksum is meant to prove.
@@ -96,9 +95,7 @@ export async function installRosettaWow64Fix(
   }
   const fix = rosettaWow64Fix(runtime.version);
   if (!fix) {
-    warn(
-      `${runtime.label}: no Rosetta wow64cpu fix for this version: 32-bit games may crash in wow64cpu.dll`,
-    );
+    warn(`${runtime.label}: no Rosetta wow64cpu fix for this version: 32-bit games may crash in wow64cpu.dll`);
     return false;
   }
   return applyWow64Fix(fix, runtime, prefix, options);

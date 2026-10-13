@@ -17,12 +17,14 @@
   "scripts": {
     "prepare": "node bin/install-hooks.mjs",
     "changelog": "node bin/changelog.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "setup": "pnpm add --global .",
     "start": "node bin/decanter.mjs",
     "test": "node --test tests/unit/*.test.ts",
     "test:tui": "node --experimental-ffi --import tsx --test tests/tui/*.test.tsx",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test && pnpm test:tui"
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:tui"
   },
   "dependencies": {
     "@opentui/core": "0.5.14",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",
+    "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "7.0.2"
   }

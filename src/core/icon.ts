@@ -229,9 +229,13 @@ export async function extractExeIcon(exePath: string, assetsDir: string): Promis
   if (dump.status !== 0) {
     return null;
   }
-  const expand = await exec("/bin/zsh", ["-c", `cd ${JSON.stringify(extracted)} && icotool -x ${JSON.stringify(ico)}`], {
-    allowFailure: true,
-  });
+  const expand = await exec(
+    "/bin/zsh",
+    ["-c", `cd ${JSON.stringify(extracted)} && icotool -x ${JSON.stringify(ico)}`],
+    {
+      allowFailure: true,
+    },
+  );
   if (expand.status !== 0) {
     return null;
   }
@@ -337,10 +341,7 @@ export function encodeBmp(width: number, height: number, rgb: Uint8Array): Buffe
 }
 
 /** Generate a placeholder icon from the game's initial; returns its PNG. */
-export async function generatePlaceholderIcon(
-  profile: GameProfile,
-  assetsDir: string,
-): Promise<string | null> {
+export async function generatePlaceholderIcon(profile: GameProfile, assetsDir: string): Promise<string | null> {
   if (isDryRun()) {
     log("dry-run: generate a placeholder icon");
     return null;

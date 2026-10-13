@@ -29,5 +29,5 @@ test("the commit-msg hook rejects a scope-less or free-form message", () => {
 
 test("the commit-msg hook ignores merge and revert subjects", () => {
   assert.equal(check("Merge branch 'main'"), 0);
-  assert.equal(check("Revert \"feat(cli): add the wizard\""), 0);
+  assert.equal(check('Revert "feat(cli): add the wizard"'), 0);
 });

@@ -33,9 +33,7 @@ export function SetupView({ rows }: SetupViewProps) {
               <text fg={theme.strong}>{row.field.label}</text>
             </box>
             <box style={{ width: 9, flexShrink: 0 }}>
-              <text fg={row.value !== "" ? theme.success : theme.muted}>
-                {row.value !== "" ? "set" : "missing"}
-              </text>
+              <text fg={row.value !== "" ? theme.success : theme.muted}>{row.value !== "" ? "set" : "missing"}</text>
             </box>
             <text fg={theme.faint}>{truncate(row.field.help, Math.max(8, width - 36))}</text>
           </box>

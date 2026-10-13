@@ -69,7 +69,11 @@ export function extractGogCode(input: string): string {
 }
 
 /** Exchange the login `code` for tokens and store them. */
-export async function gogExchangeCode(credentials: GogCredentials, code: string, redirectUri: string = REDIRECT_URI): Promise<GogTokens> {
+export async function gogExchangeCode(
+  credentials: GogCredentials,
+  code: string,
+  redirectUri: string = REDIRECT_URI,
+): Promise<GogTokens> {
   const response = await fetch(
     tokenUrl(credentials, { grant_type: "authorization_code", redirect_uri: redirectUri, code }),
   );
@@ -331,9 +335,7 @@ export function chunkUrl(endpoints: GogSecureEndpoint[], compressedMd5: string, 
 /** Depots that belong to the base product and match the language. */
 export function baseDepots(meta: GogBuildMeta, language: string): GogBuildMeta["depots"] {
   const base = meta.depots.filter((depot) => depot.productId === meta.baseProductId);
-  const matching = base.filter(
-    (depot) => depot.languages.includes("*") || depot.languages.includes(language),
-  );
+  const matching = base.filter((depot) => depot.languages.includes("*") || depot.languages.includes(language));
   return matching.length > 0 ? matching : base;
 }
 
@@ -351,11 +353,7 @@ export interface GogDownloadOptions {
  * Returns the absolute path of the game folder (`dest` + the build's
  * `installDirectory`). Patches, DLC and redistributables are out of scope.
  */
-export async function downloadGogBuild(
-  id: number,
-  dest: string,
-  options: GogDownloadOptions,
-): Promise<string> {
+export async function downloadGogBuild(id: number, dest: string, options: GogDownloadOptions): Promise<string> {
   const { token, language = "en-US", onProgress = () => {} } = options;
   const builds = await gogBuilds(id, token);
   if (builds.length === 0) {
@@ -488,7 +486,6 @@ export async function gogPrimaryExecutable(gameDir: string, gogId: number): Prom
     playTasks?: Array<{ isPrimary?: boolean; category?: string; path?: string }>;
   }>(join(gameDir, `goggame-${gogId}.info`));
   const task =
-    info?.playTasks?.find((entry) => entry.isPrimary) ??
-    info?.playTasks?.find((entry) => entry.category === "game");
+    info?.playTasks?.find((entry) => entry.isPrimary) ?? info?.playTasks?.find((entry) => entry.category === "game");
   return task?.path ?? null;
 }

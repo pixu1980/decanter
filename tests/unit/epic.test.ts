@@ -222,10 +222,7 @@ test("epicOwnedGames drops repeated app names", async () => {
       loginTime: 0,
     });
     assert.equal(games.length, 2);
-    assert.deepEqual(
-      games.map((game) => game.appName).sort(),
-      ["Anemone", "Buttercup"],
-    );
+    assert.deepEqual(games.map((game) => game.appName).sort(), ["Anemone", "Buttercup"]);
   } finally {
     globalThis.fetch = original;
   }
@@ -248,16 +245,16 @@ test("epicChunkPath builds the hash_guid path", () => {
     windowSize: 5,
     fileSize: 5n,
   };
-  assert.equal(
-    epicChunkPath(chunk, 18),
-    "ChunksV4/05/1122334455667788_00000001000000020000000300000004.chunk",
-  );
+  assert.equal(epicChunkPath(chunk, 18), "ChunksV4/05/1122334455667788_00000001000000020000000300000004.chunk");
   const modern = epicChunkPath(chunk, 22);
   assert.match(modern, /^ChunksV5\/plain\/05\/.+\.chunk$/);
 });
 
 test("epicChunkUrl joins a base and a path", () => {
-  assert.equal(epicChunkUrl("https://cdn.example/CloudDir/", "/ChunksV4/x.chunk"), "https://cdn.example/CloudDir/ChunksV4/x.chunk");
+  assert.equal(
+    epicChunkUrl("https://cdn.example/CloudDir/", "/ChunksV4/x.chunk"),
+    "https://cdn.example/CloudDir/ChunksV4/x.chunk",
+  );
 });
 
 test("epicManifestUrl and epicCdnBases read the query parameters", () => {

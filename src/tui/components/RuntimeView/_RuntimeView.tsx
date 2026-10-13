@@ -45,8 +45,6 @@ export function RuntimeView({ title, fields, history }: RuntimeViewProps) {
 }
 
 function describe(snapshot: RuntimeSnapshot): string {
-  const detail = snapshot.d3dMetal
-    ? `D3DMetal ${snapshot.d3dMetal}`
-    : snapshot.wineVersion || "unpinned";
+  const detail = snapshot.d3dMetal ? `D3DMetal ${snapshot.d3dMetal}` : snapshot.wineVersion || "unpinned";
   return `${snapshot.wineRuntime} (${detail})`;
 }

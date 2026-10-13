@@ -30,12 +30,23 @@ export function settingsRows(config: Config, logins: LoginState): SettingsRow[] 
   return [
     { key: "steamRoot", label: "steam root", value: config.steamRoot, kind: "text" },
     { key: "applicationsDir", label: "applications", value: config.applicationsDir, kind: "text" },
-    { key: "wineRuntime", label: "wine runtime", value: config.wineRuntime, kind: "select", options: ["gptk", "gptk-apple", "wine-devel", "wine-staging"] },
+    {
+      key: "wineRuntime",
+      label: "wine runtime",
+      value: config.wineRuntime,
+      kind: "select",
+      options: ["gptk", "gptk-apple", "wine-devel", "wine-staging"],
+    },
     { key: "gptkApp", label: "game toolkit", value: config.gptkApp, kind: "text" },
     { key: "gptkCask", label: "game toolkit cask", value: config.gptkCask, kind: "text" },
     { key: "appleGptkSource", label: "apple gptk dmg", value: config.appleGptkSource, kind: "text" },
     { key: "logLines", label: "log lines", value: String(config.logLines), kind: "number" },
-    { key: "steamcmd.anonymous", label: "steamcmd anon", value: config.steamcmd.anonymous ? "anonymous" : "account", kind: "toggle" },
+    {
+      key: "steamcmd.anonymous",
+      label: "steamcmd anon",
+      value: config.steamcmd.anonymous ? "anonymous" : "account",
+      kind: "toggle",
+    },
     { key: "steamcmd.login", label: "steam login", value: status(logins.steam), kind: "action" },
     { key: "steamcmd.logout", label: "steam logout", value: logins.steam ? "remove the login" : "—", kind: "action" },
     { key: "gog.login", label: "gog login", value: status(logins.gog), kind: "action" },
@@ -94,7 +105,13 @@ export function SettingsView({
               <text fg={selected ? theme.accent : theme.faint}>{`${selected ? "› " : "  "}${row.label}`}</text>
             </box>
             {isEditing ? (
-              <input value={editing.value} focused placeholder={row.value} onInput={onEditValue} onSubmit={onEditSubmit} />
+              <input
+                value={editing.value}
+                focused
+                placeholder={row.value}
+                onInput={onEditValue}
+                onSubmit={onEditSubmit}
+              />
             ) : (
               <text fg={row.kind === "action" && row.value === "not logged in" ? theme.warning : theme.text}>
                 {truncate(row.value, Math.max(8, width - labelWidth - 12))}

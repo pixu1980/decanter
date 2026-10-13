@@ -18,7 +18,15 @@ import { type GamePaths, resolveGamePaths, WINDOWS_STEAM_ARG, windowsSteamExe } 
 import { provisionIcon } from "./icon.ts";
 import { readPe } from "./pe.ts";
 import { lutrisLookup } from "./lutris.ts";
-import { downloadGogBuild, ensureGogToken, gogBuffer, gogDownloadDir, gogPrimaryExecutable, gogProduct, windowsInstallers } from "./gog.ts";
+import {
+  downloadGogBuild,
+  ensureGogToken,
+  gogBuffer,
+  gogDownloadDir,
+  gogPrimaryExecutable,
+  gogProduct,
+  windowsInstallers,
+} from "./gog.ts";
 import { downloadEpicBuild, ensureEpicToken, epicBuild, epicDownloadDir } from "./epic.ts";
 import { providerFor } from "./stores.ts";
 import { ensureQuitHotkey } from "./hotkey.ts";
@@ -181,7 +189,10 @@ interface DownloadOptions {
 }
 
 /** Per-store import step, selected by `profile.store`. */
-const IMPORTERS: Record<Store, (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: ImportOptions) => Promise<void>> = {
+const IMPORTERS: Record<
+  Store,
+  (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: ImportOptions) => Promise<void>
+> = {
   steam: async (profile, paths, wine, options) => {
     await finalizeImport(profile, paths, wine, options.manifest);
   },
@@ -190,7 +201,10 @@ const IMPORTERS: Record<Store, (profile: GameProfile, paths: GamePaths, wine: Wi
 };
 
 /** Per-store download step, selected by `profile.store`. */
-const DOWNLOADERS: Record<Store, (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: DownloadOptions) => Promise<void>> = {
+const DOWNLOADERS: Record<
+  Store,
+  (profile: GameProfile, paths: GamePaths, wine: WineRuntime, options: DownloadOptions) => Promise<void>
+> = {
   steam: downloadSteam,
   gog: (profile, paths, wine) => downloadGog(profile, paths, wine),
   epic: (profile, paths, wine) => downloadEpic(profile, paths, wine),
@@ -430,11 +444,7 @@ async function applyHeuristics(profile: GameProfile, paths: GamePaths): Promise<
   if (info.imports.some((dll) => /^d3dx11_\d+\.dll$/.test(dll))) tricks.add("d3dx11");
 
   // Community settings from Lutris, when the game is listed there.
-  const lutris = await lutrisLookup(
-    profile.store,
-    providerFor(profile.store).catalogId(profile),
-    profile.name,
-  );
+  const lutris = await lutrisLookup(profile.store, providerFor(profile.store).catalogId(profile), profile.name);
   if (lutris) {
     for (const trick of lutris.tricks) tricks.add(trick);
     for (const override of lutris.dllOverrides) {
@@ -484,11 +494,7 @@ async function applyHeuristics(profile: GameProfile, paths: GamePaths): Promise<
  * known once the depot is in the prefix. When the configured file is missing,
  * detect the executable in the game folder, record it and rebuild the bundle.
  */
-async function ensureExecutable(
-  profile: GameProfile,
-  paths: GamePaths,
-  wine: WineRuntime,
-): Promise<void> {
+async function ensureExecutable(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
   if (exists(join(paths.gameDir, profile.exe))) {
     return;
   }
@@ -513,10 +519,7 @@ async function ensureExecutable(
  * `refreshIcon` the icon is re-provisioned at the end, so the executable icon
  * can replace a placeholder once the files are in the prefix.
  */
-export async function provisionGame(
-  slug: string,
-  options: { refreshIcon?: boolean } = {},
-): Promise<void> {
+export async function provisionGame(slug: string, options: { refreshIcon?: boolean } = {}): Promise<void> {
   if (isDryRun()) {
     log(`dry-run: would provision ${slug}: setup → download → import`);
     return;
@@ -526,7 +529,9 @@ export async function provisionGame(
   const { profile } = await loadContext(slug);
   const provider = providerFor(profile.store);
   if (!provider.configured(profile)) {
-    warn(`no ${provider.idLabel} for ${slug} — set it with 'decanter edit ${slug}', then run 'decanter download ${slug}'`);
+    warn(
+      `no ${provider.idLabel} for ${slug} — set it with 'decanter edit ${slug}', then run 'decanter download ${slug}'`,
+    );
     return;
   }
 
@@ -565,7 +570,9 @@ async function downloadSteam(
 ): Promise<void> {
   const config = await loadConfig();
   if (config.steamcmd.anonymous) {
-    warn("steamcmd is in anonymous mode — anonymous downloads work for free games only; run 'decanter login' for owned games");
+    warn(
+      "steamcmd is in anonymous mode — anonymous downloads work for free games only; run 'decanter login' for owned games",
+    );
   }
   await clearStaleDepotState(profile, paths);
 
@@ -829,11 +836,7 @@ async function setWindowMode(slug: string, want: 0 | 1): Promise<void> {
   log(`done — start the game with: decanter run ${slug}`);
 }
 
-async function gameScreenMode(
-  profile: GameProfile,
-  paths: GamePaths,
-  wine: WineRuntime,
-): Promise<number | null> {
+async function gameScreenMode(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<number | null> {
   if (!profile.window.enabled) {
     return null;
   }
@@ -912,12 +915,7 @@ async function setGameScreenMode(
   }
 }
 
-async function regValue(
-  wine: WineRuntime,
-  paths: GamePaths,
-  key: string,
-  value: string,
-): Promise<string | null> {
+async function regValue(wine: WineRuntime, paths: GamePaths, key: string, value: string): Promise<string | null> {
   const result = await exec(wine.distExe, ["reg", "query", key, "/v", value], {
     env: { WINEPREFIX: paths.prefix },
     allowFailure: true,
@@ -944,8 +942,7 @@ export interface RuntimeReport {
 export async function collectRuntime(slug: string): Promise<RuntimeReport> {
   const { profile, wine } = await loadContext(slug);
   const details = await runtimeDetails(wine, profile);
-  const flavor =
-    wine.name === "wine-devel" || wine.name === "wine-staging" ? wine.name.slice("wine-".length) : "";
+  const flavor = wine.name === "wine-devel" || wine.name === "wine-staging" ? wine.name.slice("wine-".length) : "";
   const latest = flavor ? await latestWineVersion(flavor) : null;
   const fields: StatusField[] = [
     { label: "runtime", value: exists(wine.distExe) ? wine.name : `${wine.name} (not installed)` },
@@ -1153,7 +1150,10 @@ export async function collectStatus(slug: string): Promise<StatusReport> {
         value: exists(wine.distExe) ? details.summary : `${wine.label} (missing — run: decanter setup ${slug})`,
       },
       { label: "prefix", value: exists(join(paths.prefix, "drive_c")) ? paths.prefix : `missing (${paths.prefix})` },
-      { label: "game", value: (await gameInstalled(profile, paths)) ? humanSize(await dirBytes(paths.gameDir)) : "not imported" },
+      {
+        label: "game",
+        value: (await gameInstalled(profile, paths)) ? humanSize(await dirBytes(paths.gameDir)) : "not imported",
+      },
       { label: "exe", value: profile.exe },
       { label: "manifest", value: manifestLine(status.state, installed, status.latest) },
       { label: "window mode", value: await windowModeLine(profile, paths, wine) },
@@ -1358,9 +1358,7 @@ function runtimeLogPath(slug: string): string {
 
 /** The game log, or the loader log the bundle writes, whichever exists. */
 function findLogPath(paths: GamePaths, slug: string): string | null {
-  return [paths.playerLog, runtimeLogPath(slug)].find(
-    (path): path is string => Boolean(path) && exists(path),
-  ) ?? null;
+  return [paths.playerLog, runtimeLogPath(slug)].find((path): path is string => Boolean(path) && exists(path)) ?? null;
 }
 
 /** Read the tail of the game log; empty when there is none. */
@@ -1442,7 +1440,12 @@ export async function cmdSteamSetup(slug: string, options: { force?: boolean } =
   const installer = join(paths.prefix, "drive_c", "SteamSetup.exe");
   log("downloading the Windows Steam installer");
   await mkdirp(join(paths.prefix, "drive_c"));
-  await exec("curl", ["-fL", "-o", installer, "https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe"]);
+  await exec("curl", [
+    "-fL",
+    "-o",
+    installer,
+    "https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe",
+  ]);
   await exec(wine.distExe, ["C:\\SteamSetup.exe", "/S"], { env: { WINEPREFIX: paths.prefix } });
   log("installed — run 'decanter steam' once to log in");
 }
@@ -1463,10 +1466,7 @@ export async function cmdSteam(slug: string): Promise<void> {
 // --- uninstall ----------------------------------------------------------------
 
 /** Remove the app bundle, and with `purge` the whole prefix. */
-export async function cmdUninstall(
-  slug: string,
-  options: { purge?: boolean; yes?: boolean },
-): Promise<void> {
+export async function cmdUninstall(slug: string, options: { purge?: boolean; yes?: boolean }): Promise<void> {
   const { profile, paths } = await loadContext(slug);
   log(`this removes: ${paths.app}`);
   if (options.purge) {

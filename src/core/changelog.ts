@@ -47,7 +47,7 @@ export function cleanSubject(subject: string): string {
     .replace(/[\u2013\u2014]/g, "-")
     .replace(/\u2026/g, "...")
     .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201c\u201d]/g, "\"")
+    .replace(/[\u201c\u201d]/g, '"')
     .replace(/GOG\.com/g, "GOG");
 }
 
@@ -98,9 +98,7 @@ export function renderSection(version: string, date: string, commits: CommitEntr
 }
 
 /** Render the full changelog from the newest section first. */
-export function renderChangelog(
-  sections: Array<{ version: string; date: string; commits: CommitEntry[] }>,
-): string {
+export function renderChangelog(sections: Array<{ version: string; date: string; commits: CommitEntry[] }>): string {
   const body = sections.map((section) => renderSection(section.version, section.date, section.commits));
   return `${HEADER}\n${body.join("\n\n")}\n`;
 }

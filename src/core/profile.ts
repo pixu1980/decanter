@@ -328,10 +328,7 @@ export function profileFromLegacy(text: string, fallbackSlug: string): GameProfi
     logName: str(values.GAME_LOG_NAME),
     modsSubdir: str(values.GAME_MODS_SUBDIR),
     wineRuntime:
-      runtime === "wine-devel" ||
-      runtime === "wine-staging" ||
-      runtime === "gptk" ||
-      runtime === "gptk-apple"
+      runtime === "wine-devel" || runtime === "wine-staging" || runtime === "gptk" || runtime === "gptk-apple"
         ? runtime
         : undefined,
     wineVersion: str(values.GAME_WINE_VERSION),

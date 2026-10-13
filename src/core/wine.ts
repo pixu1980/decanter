@@ -44,24 +44,18 @@ function capitalize(value: string): string {
 
 /** Resolve which Wine runtime the game uses and where it lives. */
 export function resolveWine(profile: GameProfile, config: Config): WineRuntime {
-  const name =
-    (envOverride(profile, "WINE_RUNTIME") as WineRuntimeName | undefined) ??
-    profile.wineRuntime;
+  const name = (envOverride(profile, "WINE_RUNTIME") as WineRuntimeName | undefined) ?? profile.wineRuntime;
   const version = envOverride(profile, "WINE_VERSION") ?? profile.wineVersion;
 
   if (name === "gptk") {
-    const app =
-      envOverride(profile, "WINE_APP") ??
-      envOverride(profile, "GPTK_APP") ??
-      config.gptkApp;
+    const app = envOverride(profile, "WINE_APP") ?? envOverride(profile, "GPTK_APP") ?? config.gptkApp;
     return build({ name, label: "Game Porting Toolkit", app, cask: config.gptkCask, version });
   }
 
   if (name === "gptk-apple") {
     const app = envOverride(profile, "WINE_APP") ?? appleGptkAppDir();
     const baseApp = envOverride(profile, "GPTK_APP") ?? config.gptkApp;
-    const appleSource =
-      envOverride(profile, "GPTK_APPLE_SOURCE") ?? config.appleGptkSource;
+    const appleSource = envOverride(profile, "GPTK_APPLE_SOURCE") ?? config.appleGptkSource;
     return build({
       name,
       label: "Game Porting Toolkit (Apple)",
@@ -80,8 +74,7 @@ export function resolveWine(profile: GameProfile, config: Config): WineRuntime {
     }
     const flavor = name.slice("wine-".length);
     const app =
-      envOverride(profile, "WINE_APP") ??
-      join(wineBuildDir(flavor, version), `Wine ${capitalize(flavor)}.app`);
+      envOverride(profile, "WINE_APP") ?? join(wineBuildDir(flavor, version), `Wine ${capitalize(flavor)}.app`);
     return build({ name, label: `Wine ${flavor} ${version}`, app, cask: "", version });
   }
 
@@ -155,15 +148,7 @@ export async function d3dMetalVersion(runtime: WineRuntime): Promise<string | nu
 
 /** Read the D3DMetal version from any directory holding an `external` folder. */
 export async function readD3dMetalVersion(libDir: string): Promise<string | null> {
-  const plist = join(
-    libDir,
-    "external",
-    "D3DMetal.framework",
-    "Versions",
-    "Current",
-    "Resources",
-    "Info.plist",
-  );
+  const plist = join(libDir, "external", "D3DMetal.framework", "Versions", "Current", "Resources", "Info.plist");
   if (!exists(plist)) {
     return null;
   }
@@ -247,10 +232,7 @@ const GCENX_RELEASES = "https://api.github.com/repos/Gcenx/macOS_Wine_builds/rel
  * GitHub returns releases newest-first; the asset name is checked so a release
  * that only publishes the other flavor is skipped.
  */
-export async function latestWineVersion(
-  flavor: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<string | null> {
+export async function latestWineVersion(flavor: string, fetchImpl: typeof fetch = fetch): Promise<string | null> {
   try {
     const response = await fetchImpl(GCENX_RELEASES, { headers: { Accept: "application/vnd.github+json" } });
     if (!response.ok) {

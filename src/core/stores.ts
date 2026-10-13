@@ -67,7 +67,12 @@ const steamProvider: StoreProvider = {
   configured: (profile) => profile.depot !== 0,
   idLabel: "depot id",
   launchArgs: async () => [],
-  art: (profile) => ({ file: "key-art.jpg", urls: iconCandidates(profile.appid), prune: [], log: "the Steam library artwork" }),
+  art: (profile) => ({
+    file: "key-art.jpg",
+    urls: iconCandidates(profile.appid),
+    prune: [],
+    log: "the Steam library artwork",
+  }),
 };
 
 /** GOG: a DRM-free product, downloaded through the Galaxy content system. */

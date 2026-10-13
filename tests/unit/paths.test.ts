@@ -21,7 +21,10 @@ import { normalizeProfile } from "../../src/core/profile.ts";
 
 test("slugify produces folder-safe slugs", () => {
   assert.equal(slugify("Graveyard Keeper 2"), "graveyard-keeper-2");
-  assert.equal(slugify("Broken Sword - Shadow of the Templars: The Director's Cut (2009)"), "broken-sword-shadow-of-the-templars-the-director-s-cut-2009");
+  assert.equal(
+    slugify("Broken Sword - Shadow of the Templars: The Director's Cut (2009)"),
+    "broken-sword-shadow-of-the-templars-the-director-s-cut-2009",
+  );
   assert.equal(slugify("  Spaces  &&  Symbols  "), "spaces-symbols");
 });
 
@@ -32,10 +35,7 @@ test("envPrefix derives the legacy environment prefix", () => {
 });
 
 test("bundleName strips symbols and path separators for the .app name", () => {
-  assert.equal(
-    bundleName("The Settlers® 2: 10th Anniversary"),
-    "The Settlers 2 - 10th Anniversary",
-  );
+  assert.equal(bundleName("The Settlers® 2: 10th Anniversary"), "The Settlers 2 - 10th Anniversary");
   assert.equal(
     bundleName("The Settlers II - 10th Anniversary"),
     "The Settlers II - 10th Anniversary",

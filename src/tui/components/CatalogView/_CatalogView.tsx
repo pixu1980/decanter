@@ -78,7 +78,9 @@ export function CatalogView({ games, index, filter, onFilter, busy, pageSize }: 
         </box>
 
         {total === 0 ? (
-          <text fg={theme.muted}>{filter ? "no match" : busy ? "loading…" : "the catalog is empty — run list steam|gog|epic"}</text>
+          <text fg={theme.muted}>
+            {filter ? "no match" : busy ? "loading…" : "the catalog is empty — run list steam|gog|epic"}
+          </text>
         ) : (
           visible.map((game, offset) => {
             const position = start + offset;

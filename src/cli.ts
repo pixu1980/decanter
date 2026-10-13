@@ -9,7 +9,17 @@
 import { createInterface } from "node:readline/promises";
 import { addGame } from "./core/add.ts";
 import { flagBool, flagNumber, flagString, parseArgs, type ParsedArgs } from "./core/args.ts";
-import { CREDENTIAL_FIELDS, loadConfig, missingCredentials, requireEpic, requireGog, requireSteam, saveConfig, updateConfig, type Config } from "./core/config.ts";
+import {
+  CREDENTIAL_FIELDS,
+  loadConfig,
+  missingCredentials,
+  requireEpic,
+  requireGog,
+  requireSteam,
+  saveConfig,
+  updateConfig,
+  type Config,
+} from "./core/config.ts";
 import { gameInstalled, updateStatus } from "./core/depot.ts";
 import { exec, setDryRun } from "./core/exec.ts";
 import { exists, remove } from "./core/fsx.ts";
@@ -47,7 +57,13 @@ import { gogExchangeCode, gogLoginUrl, extractGogCode, ensureGogToken, gogLibrar
 import { epicExchangeCode, epicLoginUrl, extractEpicCode, ensureEpicToken, epicOwnedGames } from "./core/epic.ts";
 import type { WineRuntime, Store } from "./core/profile.ts";
 import { listGames, removeGameRecord, resolveGame } from "./core/registry.ts";
-import { detectSteamAccount, detectSteamId, steamcmdLogin, steamcmdLogout, steamLibraryCacheAppIds } from "./core/steamcmd.ts";
+import {
+  detectSteamAccount,
+  detectSteamId,
+  steamcmdLogin,
+  steamcmdLogout,
+  steamLibraryCacheAppIds,
+} from "./core/steamcmd.ts";
 import { steamOwnedGames } from "./core/store.ts";
 import { readAppInfoNames } from "./core/appinfo.ts";
 import { libraryFor, type LibraryGame } from "./core/library.ts";
@@ -322,9 +338,7 @@ async function cmdInit(args: ParsedArgs): Promise<void> {
   log(`credentials saved to ${configFile()}`);
   const missing = missingCredentials(next);
   log(
-    missing.length === 0
-      ? "every store is configured"
-      : `still empty: ${missing.map((field) => field.id).join(", ")}`,
+    missing.length === 0 ? "every store is configured" : `still empty: ${missing.map((field) => field.id).join(", ")}`,
   );
 }
 
@@ -341,8 +355,7 @@ async function cmdAuth(args: ParsedArgs): Promise<void> {
       return;
     }
     const config = await loadConfig();
-    const username =
-      arg || config.steamcmd.username || (await detectSteamAccount(config.steamRoot)) || "";
+    const username = arg || config.steamcmd.username || (await detectSteamAccount(config.steamRoot)) || "";
     if (!username) {
       die("give a Steam username: decanter login steam <username>");
     }

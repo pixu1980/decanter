@@ -25,7 +25,14 @@ export function ConfirmDialog({ title, message, detail }: ConfirmDialogProps) {
       border
       borderStyle="rounded"
       borderColor={theme.danger}
-      style={{ flexDirection: "column", width: Math.min(62, Math.max(28, width - 4)), paddingX: 2, paddingY: 1, gap: 1, backgroundColor: theme.panel }}
+      style={{
+        flexDirection: "column",
+        width: Math.min(62, Math.max(28, width - 4)),
+        paddingX: 2,
+        paddingY: 1,
+        gap: 1,
+        backgroundColor: theme.panel,
+      }}
     >
       <text fg={theme.strong}>{message}</text>
       {detail ? <text fg={theme.muted}>{detail}</text> : null}

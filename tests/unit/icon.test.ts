@@ -90,7 +90,8 @@ test("downloadGogArt removes stale Steam/SteamGridDB art", async () => {
   });
   writeFileSync(join(assets, "grid-art.png"), "an unrelated SteamGridDB image");
   writeFileSync(join(assets, "key-art.jpg"), "stale Steam art");
-  const fakeFetch = (async () => new Response(new Uint8Array(2048).fill(3), { status: 200 })) as unknown as typeof fetch;
+  const fakeFetch = (async () =>
+    new Response(new Uint8Array(2048).fill(3), { status: 200 })) as unknown as typeof fetch;
 
   try {
     await downloadGogArt(profile, assets, fakeFetch);

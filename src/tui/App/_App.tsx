@@ -10,7 +10,15 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { addGame } from "../../core/add.ts";
-import { CREDENTIAL_FIELDS, type Config, loadConfig, missingCredentials, requireEpic, requireGog, updateConfig } from "../../core/config.ts";
+import {
+  CREDENTIAL_FIELDS,
+  type Config,
+  loadConfig,
+  missingCredentials,
+  requireEpic,
+  requireGog,
+  updateConfig,
+} from "../../core/config.ts";
 import { buildCatalog, catalogAddArgs, matchesEntry, type CatalogEntry, type CatalogGame } from "../../core/library.ts";
 import { cancel, exec } from "../../core/exec.ts";
 import { exists, remove } from "../../core/fsx.ts";
@@ -378,9 +386,13 @@ export function App() {
           "runtime-rollback": () => cmdRuntimeRollback(current.slug),
           "steam-setup": () => cmdSteamSetup(current.slug),
           steam: async () => {
-            await exec("osascript", ["-e", `tell application "Terminal" to do script "decanter steam ${current.slug}"`], {
-              allowFailure: true,
-            });
+            await exec(
+              "osascript",
+              ["-e", `tell application "Terminal" to do script "decanter steam ${current.slug}"`],
+              {
+                allowFailure: true,
+              },
+            );
             log(`Windows Steam for ${current.slug} opened in Terminal`);
           },
           saves: () => cmdSaves(current.slug, { open: true }),
@@ -737,7 +749,15 @@ async function submitAdd(
   try {
     const result = await safeAction(
       () =>
-        addGame({ name: values.name || undefined, store: values.store, appid: values.appid, depot: values.depot, slug: values.slug, gogId: values.gogId, runtime: values.runtime as WineRuntime | undefined }),
+        addGame({
+          name: values.name || undefined,
+          store: values.store,
+          appid: values.appid,
+          depot: values.depot,
+          slug: values.slug,
+          gogId: values.gogId,
+          runtime: values.runtime as WineRuntime | undefined,
+        }),
       appendActivity,
     );
     setStatus(result.ok ? result.message : `error: ${result.message}`);
@@ -769,7 +789,9 @@ async function codeStartLogin(
   setOpen: (store: "gog" | "epic") => void,
 ): Promise<void> {
   const config = await loadConfig();
-  await exec("open", [store === "epic" ? epicLoginUrl(requireEpic(config)) : gogLoginUrl(requireGog(config))], { allowFailure: true });
+  await exec("open", [store === "epic" ? epicLoginUrl(requireEpic(config)) : gogLoginUrl(requireGog(config))], {
+    allowFailure: true,
+  });
   setOpen(store);
   setStatus(
     store === "epic"

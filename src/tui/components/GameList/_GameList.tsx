@@ -20,9 +20,7 @@ export function GameList({ rows, selected }: GameListProps) {
   const nameWidth = Math.max(10, width - 46);
   return (
     <Panel title={`Games${rows.length ? ` (${rows.length})` : ""}`} flexGrow={1}>
-      {rows.length === 0
-        ? <EmptyState />
-        : rows.map((row, index) => renderRow(row, index === selected, nameWidth))}
+      {rows.length === 0 ? <EmptyState /> : rows.map((row, index) => renderRow(row, index === selected, nameWidth))}
     </Panel>
   );
 }
@@ -51,9 +49,7 @@ function renderRow(row: GameRow, active: boolean, nameWidth: number) {
         {truncate(`${active ? symbols.pointer : " "} ${row.profile.name}`, nameWidth)}
       </text>
       <box style={{ flexDirection: "row", flexShrink: 0, gap: 2 }}>
-        <text fg={row.imported ? theme.success : theme.faint}>
-          {row.imported ? "installed" : "not installed"}
-        </text>
+        <text fg={row.imported ? theme.success : theme.faint}>{row.imported ? "installed" : "not installed"}</text>
         <text fg={updateColor(row.update)}>{updateLabel(row.update)}</text>
         <text fg={row.hasApp ? theme.success : theme.faint}>{row.hasApp ? "app" : "no app"}</text>
       </box>

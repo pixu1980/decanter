@@ -146,8 +146,7 @@ export async function importDepot(
 ): Promise<ImportResult> {
   const dirs = depotContentDirs(paths, profile);
   const depotDir = await findDepotDir(dirs);
-  const manifest =
-    options.manifest ?? (await latestManifest(depotCacheDirs(paths), profile.depot));
+  const manifest = options.manifest ?? (await latestManifest(depotCacheDirs(paths), profile.depot));
 
   if (!depotDir) {
     if (await gameInstalled(profile, paths)) {
@@ -208,10 +207,7 @@ export interface UpdateStatus {
 }
 
 /** Compare the installed manifest with the newest one Steam has cached. */
-export async function updateStatus(
-  profile: GameProfile,
-  paths: GamePaths,
-): Promise<UpdateStatus> {
+export async function updateStatus(profile: GameProfile, paths: GamePaths): Promise<UpdateStatus> {
   const depotDir = await findDepotDir(depotContentDirs(paths, profile));
   const installed = await readInstalledManifest(profile.slug);
   const latest = await latestManifest(depotCacheDirs(paths), profile.depot);

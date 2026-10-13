@@ -51,11 +51,7 @@ function countRows(actions: ActionItem[], start: number, end: number): number {
  * The window of actions that fits `size` rows and keeps `selected` visible.
  * Grows to the right first, then to the left, so the list reads naturally.
  */
-function windowActions(
-  actions: ActionItem[],
-  selected: number,
-  size: number,
-): { start: number; items: ActionItem[] } {
+function windowActions(actions: ActionItem[], selected: number, size: number): { start: number; items: ActionItem[] } {
   let start = Math.min(Math.max(0, selected), Math.max(0, actions.length - 1));
   let end = start + 1;
   for (;;) {
@@ -86,13 +82,7 @@ export function GameDetail({ row, fields, actions, selected, reserved = 12 }: Ga
     <box style={{ flexDirection: "column", flexGrow: 1, gap: 1 }}>
       <Identity row={row} width={inner} />
       <StatusPanel fields={fields} width={inner} />
-      <ActionsPanel
-        actions={items}
-        offset={start}
-        total={actions.length}
-        selected={selected}
-        width={inner}
-      />
+      <ActionsPanel actions={items} offset={start} total={actions.length} selected={selected} width={inner} />
     </box>
   );
 }

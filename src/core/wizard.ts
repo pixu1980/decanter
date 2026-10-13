@@ -6,13 +6,7 @@
 //
 // docs: docs/managing.md
 
-import {
-  CREDENTIAL_FIELDS,
-  loadConfig,
-  saveConfig,
-  type Config,
-  type CredentialField,
-} from "./config.ts";
+import { CREDENTIAL_FIELDS, loadConfig, saveConfig, type Config, type CredentialField } from "./config.ts";
 
 /** One wizard row: a credential field and its current value. */
 export interface WizardRow {

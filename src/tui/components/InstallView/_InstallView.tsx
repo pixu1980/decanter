@@ -37,10 +37,7 @@ export function InstallView({ title, store, id, lines, busy, pageSize }: Install
           <text fg={theme.muted}>starting…</text>
         ) : (
           tail.map((entry, index) => (
-            <text
-              key={`${index}-${entry.line}`}
-              fg={entry.level === "warn" ? theme.warning : theme.text}
-            >
+            <text key={`${index}-${entry.line}`} fg={entry.level === "warn" ? theme.warning : theme.text}>
               {entry.line.length > 140 ? `${entry.line.slice(0, 139)}…` : entry.line}
             </text>
           ))

@@ -29,9 +29,7 @@ async function withGame(fn: (fixture: Fixture) => Promise<void>): Promise<void> 
   process.env.DECANTER_HOME = home;
   try {
     await updateConfig({ applicationsDir: join(home, "Applications") });
-    await saveGame(
-      normalizeProfile({ name: "Test Game", slug: "test-game", appid: 1, depot: 2, exe: "test.exe" }),
-    );
+    await saveGame(normalizeProfile({ name: "Test Game", slug: "test-game", appid: 1, depot: 2, exe: "test.exe" }));
     const app = join(home, "Applications", "Test Game.app");
     mkdirSync(join(app, "Contents", "MacOS"), { recursive: true });
     writeFileSync(join(app, "Contents", "MacOS", "launch"), "#!/bin/sh\n");
@@ -127,11 +125,7 @@ test("remove purges the data and forgets the game", async () => {
       await openAction(setup, "remove");
       setup.mockInput.pressKey("y");
       await settle(setup, 300);
-      assert.equal(
-        existsSync(join(home, "games", "test-game")),
-        false,
-        "the registry record should be gone",
-      );
+      assert.equal(existsSync(join(home, "games", "test-game")), false, "the registry record should be gone");
       await setup.waitForFrame((frame) => frame.includes("No games registered yet"));
       assert.match(setup.captureCharFrame(), /0 game\(s\)/);
     } finally {

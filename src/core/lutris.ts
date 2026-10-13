@@ -41,11 +41,7 @@ export function parseLutrisInstallers(installers: LutrisInstaller[]): LutrisConf
   const overrides = new Set<string>();
   for (const installer of installers) {
     const script = installer.script ?? {};
-    const list = Array.isArray(script.winetricks)
-      ? script.winetricks
-      : script.winetricks
-        ? [script.winetricks]
-        : [];
+    const list = Array.isArray(script.winetricks) ? script.winetricks : script.winetricks ? [script.winetricks] : [];
     for (const trick of list) {
       if (trick) {
         tricks.add(trick);
@@ -128,9 +124,7 @@ async function findLutrisGame(
     const data = (await response.json()) as { results?: LutrisGame[]; next?: string | null };
     const results = data.results ?? [];
     const match = results.find((entry) =>
-      (entry.provider_games ?? []).some(
-        (provider) => provider.service === store && provider.slug === String(id),
-      ),
+      (entry.provider_games ?? []).some((provider) => provider.service === store && provider.slug === String(id)),
     );
     if (match) {
       return match;

@@ -41,17 +41,11 @@ function envOverride(profile: GameProfile, suffix: string): string | undefined {
 
 /** Compute the resolved paths for a game. */
 export function resolveGamePaths(profile: GameProfile, config: Config): GamePaths {
-  const prefix = expandPath(
-    envOverride(profile, "PREFIX") ?? profile.paths.prefix ?? defaultPrefixDir(profile.slug),
-  );
+  const prefix = expandPath(envOverride(profile, "PREFIX") ?? profile.paths.prefix ?? defaultPrefixDir(profile.slug));
   const app = expandPath(
-    envOverride(profile, "APP") ??
-      profile.paths.app ??
-      join(config.applicationsDir, `${appBundleName(profile)}.app`),
+    envOverride(profile, "APP") ?? profile.paths.app ?? join(config.applicationsDir, `${appBundleName(profile)}.app`),
   );
-  const steamRoot = expandPath(
-    envOverride(profile, "STEAM_ROOT") ?? profile.paths.steamRoot ?? config.steamRoot,
-  );
+  const steamRoot = expandPath(envOverride(profile, "STEAM_ROOT") ?? profile.paths.steamRoot ?? config.steamRoot);
 
   const gameDir = join(prefix, "drive_c", profile.installSubdir);
   const savesDir = expandPath(envOverride(profile, "SAVES") ?? gameSavesDir(profile.slug));

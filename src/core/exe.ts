@@ -58,9 +58,7 @@ export async function detectExecutable(gameDir: string, gameName = ""): Promise<
 
   found.sort((a, b) => b.size - a.size || a.name.localeCompare(b.name));
   const wanted = normalize(gameName);
-  const byName = wanted
-    ? found.find((item) => normalize(item.name.replace(/\.exe$/i, "")) === wanted)
-    : undefined;
+  const byName = wanted ? found.find((item) => normalize(item.name.replace(/\.exe$/i, "")) === wanted) : undefined;
 
   return {
     exe: (byName ?? found[0]!).name,

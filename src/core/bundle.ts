@@ -28,11 +28,7 @@ export function bundleRuntimeReady(app: string): boolean {
 }
 
 /** Build (or rebuild) the game's `.app`. */
-export async function buildApp(
-  profile: GameProfile,
-  paths: GamePaths,
-  wine: WineRuntime,
-): Promise<void> {
+export async function buildApp(profile: GameProfile, paths: GamePaths, wine: WineRuntime): Promise<void> {
   log(`building app bundle: ${paths.app}`);
   if (!isDryRun() && !exists(wine.distExe)) {
     die(`${wine.label} not found at ${wine.app} — run: decanter setup ${profile.slug}`);
@@ -170,9 +166,5 @@ function shellQuote(value: string): string {
 }
 
 function xml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

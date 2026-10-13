@@ -83,14 +83,8 @@ test("installRosettaWow64Fix skips Intel Macs and GPTK", async () => {
   await withTempHome(async () => {
     await withTempDir(async (dir) => {
       const prefix = await makePrefix(dir);
-      assert.equal(
-        await installRosettaWow64Fix(fakeRuntime(join(dir, "wine")), prefix, { arch: "x64" }),
-        false,
-      );
-      assert.equal(
-        await installRosettaWow64Fix(fakeRuntime(join(dir, "wine"), { name: "gptk" }), prefix),
-        false,
-      );
+      assert.equal(await installRosettaWow64Fix(fakeRuntime(join(dir, "wine")), prefix, { arch: "x64" }), false);
+      assert.equal(await installRosettaWow64Fix(fakeRuntime(join(dir, "wine"), { name: "gptk" }), prefix), false);
     });
   });
 });
@@ -136,18 +130,12 @@ test("applyWow64Fix rejects a DLL whose checksum does not match", async () => {
   await withTempHome(async () => {
     await withTempDir(async (dir) => {
       const runtimeDir = join(dir, "wine");
-      await writeFileIn(
-        join(runtimeDir, "lib", "wine", "x86_64-windows", "wow64cpu.dll"),
-        "original",
-      );
+      await writeFileIn(join(runtimeDir, "lib", "wine", "x86_64-windows", "wow64cpu.dll"), "original");
       const prefix = await makePrefix(dir);
       const fix: Wow64Fix = { url: "https://example.invalid/wow64cpu.dll", sha256: "0".repeat(64) };
       const { fetchImpl } = fetchOnce(PATCHED);
 
-      await assert.rejects(
-        () => applyWow64Fix(fix, fakeRuntime(runtimeDir), prefix, { fetchImpl }),
-        CliError,
-      );
+      await assert.rejects(() => applyWow64Fix(fix, fakeRuntime(runtimeDir), prefix, { fetchImpl }), CliError);
     });
   });
 });

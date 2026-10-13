@@ -5,12 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-import {
-  appBundleOpen,
-  appLaunchPattern,
-  isExeProcessName,
-  isWineProcessName,
-} from "../../src/core/lifecycle.ts";
+import { appBundleOpen, appLaunchPattern, isExeProcessName, isWineProcessName } from "../../src/core/lifecycle.ts";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -54,10 +49,7 @@ test("isWineProcessName accepts the loader and Windows executables", () => {
 
 test("isExeProcessName matches the game, not the virtual-desktop explorer", () => {
   assert.equal(isExeProcessName("bin/S2DNG.exe", "bin/S2DNG.exe"), true);
-  assert.equal(
-    isExeProcessName("C:\\the-settlers-2-10th-anniversary\\bin\\S2DNG.exe", "bin/S2DNG.exe"),
-    true,
-  );
+  assert.equal(isExeProcessName("C:\\the-settlers-2-10th-anniversary\\bin\\S2DNG.exe", "bin/S2DNG.exe"), true);
   assert.equal(isExeProcessName("C:\\windows\\system32\\explorer.exe", "bin/S2DNG.exe"), false);
   assert.equal(isExeProcessName("wine", "bin/S2DNG.exe"), false);
 });

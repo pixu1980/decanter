@@ -48,10 +48,7 @@ test("steamGridDbCandidates needs a key and drops non-image art", async () => {
     return new Response(JSON.stringify({ success: true, data }), { status: 200 });
   }) as unknown as typeof fetch;
 
-  assert.deepEqual(await steamGridDbCandidates(42, "key", fakeFetch), [
-    "https://cdn/icon.png",
-    "https://cdn/grid.jpg",
-  ]);
+  assert.deepEqual(await steamGridDbCandidates(42, "key", fakeFetch), ["https://cdn/icon.png", "https://cdn/grid.jpg"]);
 });
 
 test("searchApp returns the first hit", async () => {
@@ -90,9 +87,19 @@ test("storeApp returns null when the store has no entry", async () => {
 
 test("steamOwnedGames maps and sorts the Web API response", async () => {
   const fakeFetch = (async () =>
-    new Response(JSON.stringify({ response: { games: [{ appid: 2, name: "Beta" }, { appid: 1, name: "Alpha" }] } }), {
-      status: 200,
-    })) as unknown as typeof fetch;
+    new Response(
+      JSON.stringify({
+        response: {
+          games: [
+            { appid: 2, name: "Beta" },
+            { appid: 1, name: "Alpha" },
+          ],
+        },
+      }),
+      {
+        status: 200,
+      },
+    )) as unknown as typeof fetch;
 
   assert.deepEqual(await steamOwnedGames("key", "7656119", fakeFetch), [
     { appid: 1, name: "Alpha" },
