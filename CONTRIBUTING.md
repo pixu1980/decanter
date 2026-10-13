@@ -29,10 +29,11 @@ first run opens the setup wizard, or run `decanter init` from the CLI.
 ## Run the checks
 
 ```sh
+pnpm format      # prettier --write .
 pnpm typecheck   # tsc --noEmit
 pnpm test        # unit and integration tests
 pnpm test:tui    # OpenTUI render tests
-pnpm check       # all of the above
+pnpm check       # format:check, typecheck and both test suites
 ```
 
 `pnpm check` is what CI runs on every pull request and every push to `main`

@@ -82,6 +82,8 @@ the sources it consulted. No opinions - those belong in the review.
 
 | Governance: dependency updates | `ls .github/dependabot.yml`, `pulls?state=open` and the check runs | weekly npm updates grouped (runtime: `@opentui/*` and `react`; development), 5 open, `chore(deps)` messages. Dependabot opened PR #1 (runtime group) and PR #2 (development); CI ran `success` on both branches and PR #1 shows `pnpm check` and `commit messages` green |
 
+| Governance: formatting | `ls .editorconfig .prettierrc.json .prettierignore` and `pnpm format:check` | Prettier 3.9.10 (exact) formats the code and JSON; markdown, GitHub metadata and the lockfile are excluded, and `pnpm check` runs `format:check` first |
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`

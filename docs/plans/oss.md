@@ -22,9 +22,6 @@ finding stays open. This file is deleted by the run that finds nothing open.
   - [ ] **7.2**: Source-only: say so in the README and keep `private: true`.
   - [ ] **7.3**: Publishing: follow pix-process-npm-release (Trusted Publishing, provenance, staged publish), set `name`, drop `private`, add `repository`/`homepage`/`bugs`/`keywords`.
   - [ ] **7.4**: Either way, add the `repository` field so tools can link the source.
-- [ ] **Step 13 - OSS-013 (low)**: No linter, formatter or .editorconfig, so style consistency relies on review alone.
-  - [ ] **13.1**: Add .editorconfig.
-  - [ ] **13.2**: Add a formatter/linter and a `lint` script included in `pnpm check`.
 - [ ] **Step 14 - OSS-014 (info)**: No supply-chain artifacts beyond the license: no .gitattributes, no SBOM, no SAST, no signed releases.
   - [ ] **14.1**: Add .gitattributes (`* text=auto eol=lf`).
   - [ ] **14.2**: Decide with the maintainer whether to add CodeQL (SAST) and an SBOM in the release workflow.
