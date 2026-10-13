@@ -90,6 +90,26 @@ the sources it consulted. No opinions - those belong in the review.
 | Governance: SAST | `.github/workflows/codeql.yml` and the CodeQL runs | `javascript-typescript`, on push, pull request and a weekly schedule; `codeql-action` pinned to v3.38.3 |
 | Governance: SBOM and signed releases | the GitHub dependency graph and the release assets | GitHub generates an SBOM from the dependency graph (exportable from the repository page); a release carries no build artifact to sign, and npm provenance arrives with the publish workflow (OSS-007) |
 
+## Re-verification (2026-10-12)
+
+Every resolved finding was checked against the tree, not against the bookkeeping:
+the LICENSE holder and the inspirations (OSS-001), the CI workflow (OSS-002),
+CONTRIBUTING (OSS-003), SECURITY (OSS-004), the commit hook and the CI commit
+job (OSS-005), the changelog generator, the release workflow and the `v0.1.0` tag
+(OSS-006), `.nvmrc` and the floor check (OSS-008), the Covenant (OSS-009), the
+issue and PR templates (OSS-010), GOVERNANCE (OSS-011), the Dependabot config
+(OSS-012), the formatter and its check (OSS-013), `.gitattributes` and CodeQL
+(OSS-014), the funding file (OSS-015), and the `.gitignore` guards (OSS-016).
+24 checks, all pass.
+
+The check found one real gap: the CI command loop was missing `format:check`, so
+an unformatted pull request would have passed. Fixed in the same run.
+
+A scan of every object in the remote (a fresh mirror clone with all refs) found
+no credential literal. The local repository still held 25 dangling blobs from the
+backup bundle fetched during the earlier tree comparison; `git gc --prune=now`
+removed them. The `.archive` backup bundles keep the old values by design.
+
 ## Files read
 
 - `LICENSE`, `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `.gitignore`, `tsconfig.json`
