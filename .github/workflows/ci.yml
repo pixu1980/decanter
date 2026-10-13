@@ -26,7 +26,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          for task in typecheck test test:tui; do
+          for task in format:check typecheck test test:tui; do
             if pnpm "$task" > "$task.log" 2>&1; then
               cat "$task.log"
             else
