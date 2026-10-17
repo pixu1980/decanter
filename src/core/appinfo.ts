@@ -26,6 +26,10 @@ export interface AppInfoDepot {
   id: number;
   /** `config.oslist`, lowercased and split; empty when the entry has none. */
   os: string[];
+  /** `sharedinstall`/`depotfromapp`: a shared runtime or redistributable, not game content. */
+  shared?: boolean;
+  /** `dlcappid`: the depot belongs to a DLC, not the base game. */
+  dlc?: boolean;
 }
 
 /** What the AppInfo cache knows about one app. */
@@ -141,9 +145,20 @@ function readDepots(depots: KvObject | undefined): AppInfoDepot[] {
     if (!Number.isFinite(id)) {
       continue;
     }
-    const config = asObject(asObject(value)?.["config"]);
+    const depot = asObject(value);
+    const config = asObject(depot?.["config"]);
     const os = asString(config?.["oslist"])?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
-    out.push({ id, os });
+    const entry: AppInfoDepot = { id, os };
+
+    if (depot?.["sharedinstall"] || depot?.["depotfromapp"]) {
+      entry.shared = true;
+    }
+
+    if (depot?.["dlcappid"]) {
+      entry.dlc = true;
+    }
+
+    out.push(entry);
   }
   return out;
 }
@@ -152,18 +167,20 @@ function readDepots(depots: KvObject | undefined): AppInfoDepot[] {
  * The app's Windows content depot from the local cache, or `null`.
  *
  * Prefer a depot that names `windows`, then one with no OS list (Steam leaves it
- * empty for the base-game depot of many titles). Shared and tool depots usually
- * carry another `oslist`, so they are skipped.
+ * empty for the base-game depot of many titles). Shared, redistributable and DLC
+ * depots are skipped: they declare `windows` too, and `download_depot` on one of
+ * them fails with "Invalid default manifest (Missing configuration)".
  */
 export function appInfoWindowsDepot(entry: AppInfoEntry | undefined): number | null {
   if (!entry?.depots || entry.depots.length === 0) {
     return null;
   }
-  const windows = entry.depots.find((depot) => depot.os.includes("windows"));
+  const content = entry.depots.filter((depot) => !depot.shared && !depot.dlc);
+  const windows = content.find((depot) => depot.os.includes("windows"));
   if (windows) {
     return windows.id;
   }
-  const unknown = entry.depots.find((depot) => depot.os.length === 0);
+  const unknown = content.find((depot) => depot.os.length === 0);
   return unknown?.id ?? null;
 }
 

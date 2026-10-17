@@ -99,6 +99,62 @@ test("parseAppInfoEntries reads the depots and appInfoWindowsDepot picks the Win
   assert.equal(appInfoWindowsDepot(undefined), null);
 });
 
+/**
+ * A v41 AppInfo file for Noita (appid 881100): depot 228985 is the shared
+ * Steamworks redistributable, depot 881101 is the game content.
+ */
+function buildAppInfoWithSharedDepot(): Buffer {
+  const pool = ["root", "appid", "depots", "228985", "depotfromapp", "sharedinstall", "881101", "config", "oslist"];
+  const string = (index: number, value: string) =>
+    Buffer.concat([Buffer.from([0x01]), u32(index), Buffer.from(`${value}\u0000`, "utf8")]);
+  const kv = Buffer.concat([
+    Buffer.from([0x00]),
+    u32(0), // root container
+    Buffer.from([0x02]),
+    u32(1), // "appid"
+    i32(881100),
+    Buffer.from([0x00]),
+    u32(2), // "depots" container
+    Buffer.from([0x00]),
+    u32(3), // "228985" container
+    string(4, "228980"), // "depotfromapp"
+    string(5, "1"), // "sharedinstall"
+    Buffer.from([0x00]),
+    u32(7), // "config" container
+    string(8, "windows"), // "oslist"
+    Buffer.from([0x08]),
+    Buffer.from([0x08]),
+    Buffer.from([0x00]),
+    u32(6), // "881101" container
+    Buffer.from([0x00]),
+    u32(7), // "config" container
+    string(8, "windows"), // "oslist"
+    Buffer.from([0x08]),
+    Buffer.from([0x08]),
+    Buffer.from([0x08]),
+    Buffer.from([0x08]),
+    Buffer.from([0x08]),
+  ]);
+  const meta = Buffer.concat([u32(1), u32(0), u64(0n), Buffer.alloc(20), u32(0), Buffer.alloc(20)]);
+  const entry = Buffer.concat([u32(881100), u32(meta.length + kv.length), meta, kv]);
+  const table = Buffer.concat([
+    u32(pool.length),
+    ...pool.map((value) => Buffer.concat([Buffer.from(value, "utf8"), Buffer.from([0])])),
+  ]);
+  const header = Buffer.concat([u32(0x07564429), u32(1), u64(BigInt(16 + entry.length))]);
+
+  return Buffer.concat([header, entry, table]);
+}
+
+test("appInfoWindowsDepot skips the shared redistributable depot", () => {
+  const entry = parseAppInfoEntries(buildAppInfoWithSharedDepot()).get(881100);
+  assert.deepEqual(entry?.depots, [
+    { id: 228985, os: ["windows"], shared: true },
+    { id: 881101, os: ["windows"] },
+  ]);
+  assert.equal(appInfoWindowsDepot(entry), 881101);
+});
+
 /** A minimal v41 AppInfo file whose `common` carries a name and a type. */
 function buildAppInfoWithCommon(): Buffer {
   const pool = ["root", "appid", "common", "name", "type"];
