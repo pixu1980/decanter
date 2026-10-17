@@ -259,6 +259,13 @@ export function App() {
   const catalogPageSize = Math.max(3, height - (busy || activity.length > 0 ? 22 : 13));
   const activityShown = (busy || activity.length > 0) && view.name !== "install";
   const activityPage = 6;
+  // What the activity panel takes when it is on screen: its tail, or its one-row
+  // empty state, plus the two border rows and the gap above it.
+  const activityHeight = activityShown ? Math.max(1, Math.min(activityPage, activity.length)) + 3 : 0;
+  // The game list fills the column the catalog uses, without the filter box: the
+  // shell keeps 8 rows for the padding, the header, the status line and the panel
+  // border, and the activity panel takes its own height plus a gap.
+  const listPageSize = Math.max(1, height - 8 - activityHeight);
   // The shell keeps rows for the padding, the header, the status line and the
   // gaps; the activity panel adds its own rows when it is on screen.
   const detailReserved = 9 + (activityShown ? activityPage + 2 : 0);
@@ -661,7 +668,7 @@ export function App() {
         </box>
       ) : (
         <box style={{ flexDirection: "column", flexGrow: 1 }}>
-          {view.name === "games" ? <GameList rows={rows} selected={listIndex} /> : null}
+          {view.name === "games" ? <GameList rows={rows} selected={listIndex} pageSize={listPageSize} /> : null}
           {view.name === "setup" ? <SetupView rows={config ? wizardRows(config) : []} /> : null}
           {view.name === "detail" && current ? (
             <GameDetail

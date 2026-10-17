@@ -262,7 +262,7 @@ palette, so screens do not hard-code colors (ADR 005).
 A screen stays inside the terminal at any width. A flex column shrinks an
 overfull child and the rows then overlap, so every row carries `flexShrink: 0`,
 a list longer than its panel renders only a window around the selection
-(`GameDetail`, `CatalogView`, `Activity`, `LogsView`), every dialog caps its
+(`GameDetail`, `GameList`, `CatalogView`, `Activity`, `LogsView`), every dialog caps its
 width to the viewport, and each line is truncated to the space it has
 (`src/tui/text.ts`). `GameDetail` counts the group headers when it sizes its
 window and the shell reserves the activity panel's rows.
