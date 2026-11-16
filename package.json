@@ -32,9 +32,9 @@
     "react": "19.3.0"
   },
   "devDependencies": {
-    "@types/node": "26.6.4",
+    "@types/node": "26.6.6",
     "@types/react": "19.3.0",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "tsx": "4.23.15",
     "typescript": "7.0.2"
   }
